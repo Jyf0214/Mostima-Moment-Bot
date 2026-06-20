@@ -1,5 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { verifyWebhookSignature } from '@/lib/github/webhook';
+import { prisma } from '@/lib/prisma';
 import {
   handlePullRequest,
   handleIssueComment,
@@ -30,6 +31,19 @@ interface PREventPayload {
     number: number;
     head: { sha: string };
     base: { ref: string };
+  };
+}
+
+interface InstallationPayload {
+  action: string;
+  installation: {
+    id: number;
+    account: {
+      login: string;
+      id: number;
+      type: string;
+      avatar_url: string;
+    };
   };
 }
 
@@ -121,6 +135,55 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       case 'workflow_run':
         await handleWorkflowRun(payload as unknown as WorkflowPayload);
         break;
+
+      case 'installation': {
+        const installPayload = payload as unknown as InstallationPayload;
+        const { action, installation } = installPayload;
+
+        if (action === 'created' || action === 'reopened') {
+          console.log(
+            `[Webhook] Installation ${action}: ID=${installation.id}, account=${installation.account.login}`
+          );
+
+          // 查找管理员（取第一个管理员）
+          const admin = await prisma.admin.findFirst();
+          if (!admin) {
+            console.error('[Webhook] No admin found, cannot store installation');
+            break;
+          }
+
+          // 检查是否已存在
+          const existing = await prisma.gitHubInstallation.findUnique({
+            where: { installationId: installation.id },
+          });
+
+          if (existing) {
+            await prisma.gitHubInstallation.update({
+              where: { installationId: installation.id },
+              data: { isActive: true, adminId: admin.id },
+            });
+          } else {
+            await prisma.gitHubInstallation.create({
+              data: {
+                installationId: installation.id,
+                accountLogin: installation.account.login,
+                accountType: installation.account.type,
+                accountId: installation.account.id,
+                avatarUrl: installation.account.avatar_url,
+                adminId: admin.id,
+              },
+            });
+          }
+          console.log(`[Webhook] Installation record saved: ${installation.account.login}`);
+        } else if (action === 'deleted' || action === 'suspend') {
+          console.log(`[Webhook] Installation ${action}: ID=${installation.id}`);
+          await prisma.gitHubInstallation.updateMany({
+            where: { installationId: installation.id },
+            data: { isActive: false },
+          });
+        }
+        break;
+      }
 
       default:
         console.log(`Unhandled event: ${event}`);
