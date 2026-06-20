@@ -51,11 +51,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // 1. 验证签名
   const signature = req.headers['x-hub-signature-256'] as string;
-  const secret = process.env.ENCRYPTION_KEY;
+  const secret = process.env.WEBHOOK_SECRET;
 
   if (!secret) {
-    console.error('ENCRYPTION_KEY not configured');
-    return res.status(500).json({ error: 'Server configuration error' });
+    console.error('WEBHOOK_SECRET not configured');
+    return res.status(500).json({ error: 'Server configuration error: WEBHOOK_SECRET missing' });
   }
 
   if (!verifyWebhookSignature(rawBody, signature, secret)) {

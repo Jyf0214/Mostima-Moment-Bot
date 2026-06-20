@@ -12,7 +12,7 @@
 2. 填写以下信息：
    - **GitHub App name**：`Manticore Bot`（或自定义名称）
    - **Homepage URL**：你的应用地址，如 `https://your-domain.com`
-   - **Callback URL**：留空（本项目不使用 OAuth 回调）
+   - **Callback URL**：`https://your-domain.com/api/github/callback`（本地开发时为 `http://localhost:3001/api/github/callback`，安装回调必须配置此项）
    - **Webhook URL**：`https://your-domain.com/api/webhook/github`
    - **Webhook secret**：生成一个随机密钥并记录（见下方）
 3. **Permissions** 权限设置：

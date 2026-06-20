@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import crypto from 'crypto';
 import { getInstallationUrl } from '@/lib/github/installation';
+import { setCookie } from '@/lib/cookie';
 
 /**
  * GitHub App 安装入口
@@ -27,11 +28,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // 生成 CSRF state
   const state = crypto.randomUUID();
 
-  // 存入 cookie（600s 有效期）
-  res.setHeader(
-    'Set-Cookie',
-    `github_install_state=${state}; Path=/api/github; HttpOnly; SameSite=Lax; Max-Age=600; Secure`
-  );
+  // 存入 cookie（600s 有效期），根据协议自动决定 Secure 标志
+  res.setHeader('Set-Cookie', setCookie('github_install_state', state, { path: '/api/github' }));
 
   // 重定向到 GitHub 安装页面
   const url = getInstallationUrl(state);

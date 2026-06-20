@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import jwt from 'jsonwebtoken';
 import { prisma } from '@/lib/prisma';
+import { setCookie, clearCookie } from '@/lib/cookie';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -33,10 +34,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   // 清除 state cookie
-  res.setHeader(
-    'Set-Cookie',
-    'github_install_state=; Path=/api/github; HttpOnly; SameSite=Lax; Max-Age=0; Secure'
-  );
+  res.setHeader('Set-Cookie', clearCookie('github_install_state', { path: '/api/github' }));
 
   // 2. 校验管理员身份
   if (!JWT_SECRET) {

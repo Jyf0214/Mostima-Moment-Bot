@@ -1,4 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
+import { setCookie } from '@/lib/cookie';
 
 /**
  * GitHub OAuth 登录
@@ -24,11 +25,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     })
   ).toString('base64');
 
-  // 存储 state 到 cookie
-  res.setHeader(
-    'Set-Cookie',
-    `oauth_state=${state}; Path=/; HttpOnly; SameSite=Lax; Max-Age=600; Secure`
-  );
+  // 存储 state 到 cookie，根据协议自动决定 Secure 标志
+  res.setHeader('Set-Cookie', setCookie('oauth_state', state));
 
   // 构建 GitHub OAuth URL
   const scope = 'read:user user:email';

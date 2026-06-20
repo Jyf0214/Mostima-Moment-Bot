@@ -8,6 +8,7 @@ import {
   updateAdminLogin,
   discardNonAdminData,
 } from '@/lib/db';
+import { setCookie, clearCookie } from '@/lib/cookie';
 
 const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
@@ -43,7 +44,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   // 清除 state cookie
-  res.setHeader('Set-Cookie', 'oauth_state=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0; Secure');
+  res.setHeader('Set-Cookie', clearCookie('oauth_state'));
 
   if (!code) {
     return res.status(400).json({ error: 'Authorization code not provided' });
@@ -119,10 +120,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     );
 
     // 设置 JWT cookie
-    res.setHeader(
-      'Set-Cookie',
-      `auth_token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}; Secure`
-    );
+    res.setHeader('Set-Cookie', setCookie('auth_token', token, { maxAge: 7 * 24 * 60 * 60 }));
 
     // 重定向到首页
     return res.redirect('/');
