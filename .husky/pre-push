@@ -1,0 +1,30 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+echo "🚀 Running pre-push checks..."
+
+# 全量构建应用
+echo "📦 Building application..."
+npm run build
+if [ $? -ne 0 ]; then
+  echo "❌ Build failed. Push rejected."
+  exit 1
+fi
+
+# 构建服务器
+echo "🔧 Building server..."
+npm run server:build
+if [ $? -ne 0 ]; then
+  echo "❌ Server build failed. Push rejected."
+  exit 1
+fi
+
+# 运行完整测试套件
+echo "🧪 Running full test suite..."
+npm test
+if [ $? -ne 0 ]; then
+  echo "❌ Tests failed. Push rejected."
+  exit 1
+fi
+
+echo "✅ Pre-push checks passed"
