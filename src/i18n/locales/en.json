@@ -142,7 +142,15 @@
     "triggerRulesDesc": "Configure when to trigger CI/CD checks (branches, PRs, etc.)",
     "webhookConfig": "Webhook Settings",
     "webhookConfigDesc": "Configure Webhook event filtering and notifications",
-    "todo": "Under development, coming soon"
+    "activeRules": "rules active",
+    "checkSteps": "Check Steps",
+    "signatureVerify": "Signature Verification",
+    "acceptedEvents": "Accepted Events",
+    "saveConfig": "Save Config",
+    "resetDefaults": "Reset Defaults",
+    "saveSuccess": "Configuration saved successfully",
+    "saveFailed": "Save failed",
+    "resetSuccess": "Reset to defaults"
   },
   "envPage": {
     "title": "Environment Variables",

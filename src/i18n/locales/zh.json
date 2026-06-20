@@ -142,7 +142,15 @@
     "triggerRulesDesc": "配置何时触发 CI/CD 检查（分支、PR 等）",
     "webhookConfig": "Webhook 设置",
     "webhookConfigDesc": "配置 Webhook 事件过滤和通知",
-    "todo": "功能开发中，敬请期待"
+    "activeRules": "条规则已启用",
+    "checkSteps": "检查步骤",
+    "signatureVerify": "签名验证",
+    "acceptedEvents": "接受事件",
+    "saveConfig": "保存配置",
+    "resetDefaults": "恢复默认",
+    "saveSuccess": "配置保存成功",
+    "saveFailed": "保存失败",
+    "resetSuccess": "已恢复默认配置"
   },
   "envPage": {
     "title": "环境变量配置",
