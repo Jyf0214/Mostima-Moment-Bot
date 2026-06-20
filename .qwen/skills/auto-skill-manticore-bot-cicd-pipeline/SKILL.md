@@ -1,14 +1,15 @@
 ---
 name: manticore-bot-cicd-pipeline
-description: Pure deterministic CI/CD bot implementation with Express, GitHub webhooks, CI checks, and PR reporting
+description: Pure deterministic CI/CD bot implementation with Express, GitHub webhooks, CI checks, PR reporting, and GitHub OAuth authentication
 source: auto-skill
-extracted_at: '2026-06-20T01:28:58.122Z'
+extracted_at: '2026-06-20T02:10:00.000Z'
 ---
 
 # Manticore Bot CI/CD Pipeline Implementation
 
 ## Overview
-Building a pure deterministic CI/CD bot (no AI/LLM) as an independent Express server that receives GitHub webhooks, executes CI checks, and posts Vercel-style PR reports.
+
+Building a pure deterministic CI/CD bot (no AI/LLM) as an independent Express server that receives GitHub webhooks, executes CI checks, posts Vercel-style PR reports, and supports GitHub OAuth authentication.
 
 ## Architecture Decision: Express vs Next.js API Routes
 
@@ -34,307 +35,217 @@ src/
 │   │   ├── runner.ts            # CI pipeline executor
 │   │   ├── checks.ts            # Quality gate checks
 │   │   └── reporter.ts          # PR report generator
-│   └── git/
-│       └── workspace.ts         # Git workspace coordination
+│   ├── git/
+│   │   └── workspace.ts         # Git workspace coordination
+│   ├── crypto.ts                # AES-256-GCM encryption
+│   ├── db.ts                    # Database operations (Prisma)
+│   └── prisma.ts                # Prisma client
 ├── types/
 │   └── express.d.ts             # Express type extensions
-└── pages/                       # Next.js frontend (Vercel deployment)
+├── pages/
+│   ├── api/
+│   │   ├── auth/
+│   │   │   ├── login.ts         # GitHub OAuth login
+│   │   │   ├── callback.ts      # OAuth callback
+│   │   │   ├── logout.ts        # Logout
+│   │   │   ├── me.ts            # Get current user
+│   │   │   └── status.ts        # Check app status
+│   │   ├── setup.ts             # Initial setup API
+│   │   └── init.ts              # Database initialization
+│   ├── setup.tsx                # Setup page
+│   └── index.tsx                # Home page
+└── proxy.ts                     # Next.js 16 proxy (middleware)
 ```
 
-## Key Implementation Patterns
+## GitHub OAuth Authentication Flow
 
-### 1. Express Server Entry Point
+### 1. First User Becomes Admin
+
 ```typescript
-// src/server.ts
-import express from 'express';
-import { webhookRouter } from './routes/webhook';
+// src/pages/api/auth/callback.ts
+const isNew = await isNewApplication();
+let admin = await getAdmin(userData.id);
 
-const app = express();
-const PORT = process.env.BOT_PORT || 3001;
-
-// Middleware: parse JSON and preserve raw body for signature verification
-app.use(express.json({
-  verify: (req: any, res, buf) => {
-    req.rawBody = buf;
-  }
-}));
-
-app.use('/api/webhook', webhookRouter);
-app.get('/health', (req, res) => res.json({ status: 'ok' }));
-
-app.listen(PORT, () => {
-  console.log(`Manticore Bot running on port ${PORT}`);
-});
+if (isNew && !admin) {
+  // First user becomes admin
+  admin = await createAdmin(userData.id, userData.login, userData.avatar_url);
+} else if (!admin) {
+  // Non-admin rejected, data discarded
+  await discardNonAdminData(userData.id);
+  return res.status(403).json({ error: '只有管理员可以访问此应用' });
+}
 ```
 
-### 2. GitHub Webhook Signature Verification (Node.js built-in crypto)
+### 2. Encrypted Private Key Storage
+
 ```typescript
-// src/lib/github/webhook.ts
+// src/lib/crypto.ts
 import crypto from 'crypto';
 
-export function verifyWebhookSignature(
-  rawBody: Buffer,
-  signature: string,
-  secret: string
-): boolean {
-  if (!signature || !secret) return false;
+const ALGORITHM = 'aes-256-gcm';
 
-  const expectedSignature = 'sha256=' +
-    crypto.createHmac('sha256', secret)
-      .update(rawBody)
-      .digest('hex');
-
-  return crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(expectedSignature)
-  );
+export function encrypt(data: string, password: string): string {
+  const salt = crypto.randomBytes(64);
+  const key = deriveKey(password, salt);
+  const iv = crypto.randomBytes(16);
+  const cipher = crypto.createCipheriv(ALGORITHM, key, iv);
+  const encrypted = Buffer.concat([cipher.update(data, 'utf8'), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return `${salt.toString('hex')}:${iv.toString('hex')}:${tag.toString('hex')}:${encrypted.toString('hex')}`;
 }
 ```
 
-**Important**: Use Node.js built-in `crypto`, NOT `crypto-js` (minimal dependencies principle).
+### 3. Setup Page Flow
 
-### 3. Express Type Extension for rawBody
 ```typescript
-// src/types/express.d.ts
-import { Request } from 'express';
-
-declare global {
-  namespace Express {
-    interface Request {
-      rawBody?: Buffer;
-    }
-  }
-}
-
-export {};
+// src/pages/setup.tsx
+// 1. Check if new application
+// 2. If new, show setup form
+// 3. Upload private key file
+// 4. Configure GitHub App ID, Webhook Secret, Repo info
+// 5. Save to database (encrypted)
+// 6. Redirect to GitHub OAuth login
 ```
 
-### 4. CI Check Execution with Fail-Fast
-```typescript
-// src/lib/ci/runner.ts
-export async function runCIChecks(): Promise<CheckResult[]> {
-  const steps = [
-    { name: 'Dependencies', command: 'npm ci' },
-    { name: 'Lint', command: 'npm run lint' },
-    { name: 'TypeScript', command: 'npx tsc --noEmit' },
-    { name: 'Build', command: 'npm run build' },
-  ];
+## Database Schema (Prisma)
 
-  const results: CheckResult[] = [];
-  
-  for (const step of steps) {
-    const result = executeCheckStep(step.name, step.command, workspaceDir);
-    results.push(result);
+```prisma
+// prisma/schema.prisma
+model Admin {
+  id          Int      @id @default(autoincrement())
+  githubId    Int      @unique
+  githubLogin String   @unique @map("github_login")
+  avatarUrl   String?  @map("avatar_url")
+  createdAt   DateTime @default(now()) @map("created_at")
+  lastLogin   DateTime @default(now()) @map("last_login")
+  builds      Build[]
+}
 
-    // Fail-fast: mark remaining steps as SKIP
-    if (result.status === 'FAIL') {
-      const remaining = steps.slice(steps.indexOf(step) + 1);
-      for (const r of remaining) {
-        results.push({ step: r.name, status: 'SKIP', duration: 0, exitCode: -1 });
-      }
-      break;
-    }
-  }
-  return results;
+model WebhookConfig {
+  id                    Int      @id @default(autoincrement())
+  appId                 String   @map("app_id")
+  webhookSecretEncrypted String @map("webhook_secret_encrypted")
+  privateKeyEncrypted   String   @map("private_key_encrypted")
+  repoOwner             String   @map("repo_owner")
+  repoName              String   @map("repo_name")
+  isActive              Boolean  @default(true) @map("is_active")
 }
 ```
 
-### 5. Vercel-Style PR Report
-```typescript
-// src/lib/ci/reporter.ts
-export function generatePRReport(prNumber: number, results: CheckResult[]): string {
-  const rows = results.map(r => {
-    const icon = r.status === 'PASS' ? '✅' : r.status === 'FAIL' ? '❌' : '➖';
-    return `| **${r.step}** | ${icon} ${r.status} | ${r.output || '-'} |`;
-  }).join('\n');
+## Git Hooks Configuration
 
-  return `
-### 🔍 Manticore Build & Check Report (PR #${prNumber})
+### pre-commit Hook
 
-| Check Category | Status | Details |
-| :--- | :---: | :--- |
-${rows}
+```bash
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
 
----
-*Generated automatically by Manticore Bot.*
-`.trim();
-}
+# Run lint-staged (check staged files)
+npx lint-staged
+
+# TypeScript type check
+npx tsc --noEmit
+
+# Run tests
+npm test
 ```
 
-## TypeScript Configuration
+### pre-push Hook
 
-### Server TypeScript Config (tsconfig.server.json)
-```json
-{
-  "compilerOptions": {
-    "target": "ES2020",
-    "module": "commonjs",
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "strict": true,
-    "esModuleInterop": true
-  },
-  "include": ["src/server.ts", "src/routes/**/*", "src/lib/**/*", "src/types/**/*"],
-  "exclude": ["node_modules", "dist", "src/pages/**/*"]
-}
-```
+```bash
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
 
-### package.json Scripts
-```json
-{
-  "scripts": {
-    "server:dev": "tsx watch src/server.ts",
-    "server:build": "tsc --project tsconfig.server.json",
-    "server:start": "node dist/server.js"
-  }
-}
-```
+# Full build
+npm run build
 
-## Docker Configuration
+# Server build
+npm run server:build
 
-### Dockerfile
-```dockerfile
-FROM node:20-alpine
-WORKDIR /app
-
-COPY package*.json ./
-RUN npm ci --production
-
-COPY src/ ./src/
-COPY tsconfig.server.json ./
-RUN npx tsc --project tsconfig.server.json
-
-RUN mkdir -p /app/workspace
-EXPOSE 3001
-
-CMD ["node", "dist/server.js"]
-```
-
-### Environment Variables
-```env
-GITHUB_APP_ID=your_app_id
-GITHUB_PRIVATE_KEY_PATH=/app/private-key.pem
-GITHUB_WEBHOOK_SECRET=your_webhook_secret
-REPO_OWNER=your_username
-REPO_NAME=your_repo
-WEBHOOK_SECRET=your_webhook_secret
-BOT_PORT=3001
-WORKSPACE_DIR=/app/workspace
-PUBLIC_URL=https://your-domain.com
-COLLABORATORS=user1,user2
+# Full test suite
+npm test
 ```
 
 ## Common Pitfalls and Fixes
 
 ### 1. rawBody Type Error
+
 **Problem**: `Property 'rawBody' does not exist on type 'Request'`
 **Fix**: Create `src/types/express.d.ts` to extend Express Request type.
 
 ### 2. Buffer undefined Check
+
 **Problem**: `Argument of type 'Buffer | undefined' is not assignable to parameter of type 'Buffer'`
 **Fix**: Add null check: `if (!req.rawBody || !verifyWebhookSignature(...))`
 
 ### 3. Next.js API Routes vs Express
+
 **Problem**: Next.js API routes only work within Next.js runtime
 **Fix**: Use standalone Express server for Docker deployment, keep Next.js for frontend only.
 
 ### 4. Crypto Library Choice
+
 **Problem**: Using `crypto-js` adds unnecessary dependency
 **Fix**: Use Node.js built-in `crypto` module for HMAC-SHA256.
 
-## Docker 自动构建工作流
+### 5. Mantine v7 spacing → gap
 
-### GitHub Actions 配置
-```yaml
-# .github/workflows/docker-build.yml
-name: Docker 构建与推送
+**Problem**: `spacing` prop no longer exists in Mantine v7
+**Fix**: Use `gap` prop instead: `<Stack gap="md">`
 
-on:
-  push:
-    branches: [main]
-    tags: ['v*']
-  pull_request:
-    branches: [main]
+### 6. Next.js 16 middleware → proxy
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+**Problem**: `middleware` function export is deprecated in Next.js 16
+**Fix**: Rename file to `proxy.ts` and export function named `proxy`
 
-jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
+## Environment Variables
 
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
+```env
+# GitHub OAuth
+GITHUB_CLIENT_ID=your_client_id
+GITHUB_CLIENT_SECRET=your_client_secret
+GITHUB_REDIRECT_URI=http://localhost:3000/api/auth/callback
 
-      - name: 登录 GitHub Container Registry
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+# JWT
+JWT_SECRET=your_jwt_secret
 
-      - name: 提取元数据
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-            type=sha
+# Encryption
+ENCRYPTION_KEY=your_encryption_key
 
-      - name: 构建并推送
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: docker/Dockerfile
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          platforms: linux/amd64,linux/arm64
+# Database
+DATABASE_URL=postgresql://user:pass@localhost:5432/manticore
+
+# Bot Server
+BOT_PORT=3001
+WORKSPACE_DIR=/app/workspace
 ```
 
-### 使用方式
+## Test Coverage
+
+- **Crypto module**: 8 test cases (encrypt/decrypt, special characters, format validation)
+- **JWT authentication**: 4 test cases (token generation, verification, expiration)
+- **PR reporter**: 3 test cases (report format, all-pass, output truncation)
+- **Database operations**: 4 test cases (isNewApplication, getAdmin, createAdmin, updateAdminLogin)
+- **Auth flow**: 6 test cases (JWT validation, OAuth flow, admin binding)
+- **Encryption storage**: 8 test cases (private key, webhook secret, security features)
+
+**Total: 33 test cases, all passing**
+
+## Verification Commands
+
 ```bash
-# 拉取镜像
-docker pull ghcr.io/jyf0214/mostima-moment-bot:main
+# Run tests
+npm test
 
-# 运行容器
-docker run -d -p 3001:3001 \
-  -e GITHUB_APP_ID=xxx \
-  -e GITHUB_WEBHOOK_SECRET=xxx \
-  ghcr.io/jyf0214/mostima-moment-bot:main
-```
+# Build application
+npm run build
 
-## Verification Checklist
+# Build server
+npm run server:build
 
-### Signature Verification
-```bash
-PAYLOAD='{"action":"opened"}'
-SIGNATURE="sha256=$(echo -n "$PAYLOAD" | openssl dgst -sha256 -hmac "test_secret" | awk '{print $2}')"
+# Check types
+npx tsc --noEmit
 
-curl -X POST http://localhost:3001/api/webhook/github \
-  -H "Content-Type: application/json" \
-  -H "X-Hub-Signature-256: $SIGNATURE" \
-  -d "$PAYLOAD"
-# Expected: 200 OK
-```
-
-### Invalid Signature Rejection
-```bash
-curl -X POST http://localhost:3001/api/webhook/github \
-  -H "Content-Type: application/json" \
-  -d '{"action":"opened"}'
-# Expected: 401 Unauthorized
-```
-
-### Health Check
-```bash
-curl http://localhost:3001/health
-# Expected: {"status":"ok","service":"manticore-bot"}
+# Lint code
+npm run lint
 ```
