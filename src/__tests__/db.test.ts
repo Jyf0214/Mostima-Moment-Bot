@@ -4,6 +4,8 @@ import { isNewApplication, getAdmin, createAdmin, updateAdminLogin } from '@/lib
 // 模拟 Prisma
 jest.mock('@/lib/prisma', () => ({
   prisma: {
+    $queryRaw: jest.fn().mockResolvedValue([{ exists: true }]),
+    $executeRawUnsafe: jest.fn(),
     admin: {
       count: jest.fn(),
       findUnique: jest.fn(),
@@ -16,6 +18,8 @@ jest.mock('@/lib/prisma', () => ({
 describe('数据库操作', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // ensureTables() caches result in module; reset $queryRaw to report tables exist
+    (prisma.$queryRaw as jest.Mock).mockResolvedValue([{ exists: true }]);
   });
 
   describe('isNewApplication', () => {
