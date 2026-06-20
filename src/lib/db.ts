@@ -1,7 +1,4 @@
 import { prisma } from './prisma';
-import { encrypt, decrypt } from './crypto';
-
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default-key-change-in-production';
 
 /**
  * 检查是否为全新应用（无管理员）
@@ -23,11 +20,7 @@ export async function getAdmin(githubId: number) {
 /**
  * 创建管理员
  */
-export async function createAdmin(
-  githubId: number,
-  githubLogin: string,
-  avatarUrl: string
-) {
+export async function createAdmin(githubId: number, githubLogin: string, avatarUrl: string) {
   return prisma.admin.create({
     data: {
       githubId,
@@ -48,7 +41,7 @@ export async function updateAdminLogin(githubId: number) {
 }
 
 /**
- * 获取配置
+ * 获取配置（自动解密）
  */
 export async function getConfig(key: string): Promise<string | null> {
   const config = await prisma.appConfig.findUnique({
@@ -59,23 +52,19 @@ export async function getConfig(key: string): Promise<string | null> {
     return null;
   }
 
-  if (config.encrypted) {
-    return decrypt(config.configValue, ENCRYPTION_KEY);
-  }
-
+  // 中间件已自动解密
   return config.configValue;
 }
 
 /**
- * 设置配置
+ * 设置配置（自动加密）
  */
 export async function setConfig(key: string, value: string, encrypted: boolean = false) {
-  const configValue = encrypted ? encrypt(value, ENCRYPTION_KEY) : value;
-
+  // 中间件会自动加密 configValue 字段
   return prisma.appConfig.upsert({
     where: { configKey: key },
-    update: { configValue, encrypted },
-    create: { configKey: key, configValue, encrypted },
+    update: { configValue: value, encrypted },
+    create: { configKey: key, configValue: value, encrypted },
   });
 }
 
@@ -89,7 +78,7 @@ export async function getWebhookConfig() {
 }
 
 /**
- * 设置 Webhook 配置
+ * 设置 Webhook 配置（自动加密敏感字段）
  */
 export async function setWebhookConfig(
   appId: string,
@@ -104,12 +93,12 @@ export async function setWebhookConfig(
     data: { isActive: false },
   });
 
-  // 插入新配置
+  // 插入新配置（中间件自动加密 webhookSecretEncrypted 和 privateKeyEncrypted）
   return prisma.webhookConfig.create({
     data: {
       appId,
-      webhookSecretEncrypted: encrypt(webhookSecret, ENCRYPTION_KEY),
-      privateKeyEncrypted: encrypt(privateKey, ENCRYPTION_KEY),
+      webhookSecretEncrypted: webhookSecret,
+      privateKeyEncrypted: privateKey,
       repoOwner,
       repoName,
     },
@@ -117,7 +106,7 @@ export async function setWebhookConfig(
 }
 
 /**
- * 解密 Webhook 配置
+ * 获取解密后的 Webhook 配置
  */
 export async function getDecryptedWebhookConfig() {
   const config = await getWebhookConfig();
@@ -125,21 +114,18 @@ export async function getDecryptedWebhookConfig() {
     return null;
   }
 
+  // 中间件已自动解密 webhookSecretEncrypted 和 privateKeyEncrypted
   return {
     ...config,
-    webhookSecret: decrypt(config.webhookSecretEncrypted, ENCRYPTION_KEY),
-    privateKey: decrypt(config.privateKeyEncrypted, ENCRYPTION_KEY),
+    webhookSecret: config.webhookSecretEncrypted,
+    privateKey: config.privateKeyEncrypted,
   };
 }
 
 /**
  * 创建构建记录
  */
-export async function createBuild(
-  prNumber: number,
-  branchName: string,
-  triggerUser: string
-) {
+export async function createBuild(prNumber: number, branchName: string, triggerUser: string) {
   return prisma.build.create({
     data: {
       prNumber,
@@ -154,11 +140,7 @@ export async function createBuild(
 /**
  * 更新构建状态
  */
-export async function updateBuildStatus(
-  buildId: number,
-  status: string,
-  totalDuration?: number
-) {
+export async function updateBuildStatus(buildId: number, status: string, totalDuration?: number) {
   return prisma.build.update({
     where: { id: buildId },
     data: {
