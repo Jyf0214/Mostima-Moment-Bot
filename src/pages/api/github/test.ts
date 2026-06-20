@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import jwt from 'jsonwebtoken';
 import { prisma } from '@/lib/prisma';
-import { generateJWT } from '@/lib/github/auth';
+import { generateJWT, getAppId, getPrivateKey } from '@/lib/github/auth';
 import i18n from '@/i18n';
 
 interface TestResult {
@@ -66,7 +66,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   }
 
-  // ── 2. 私钥文件可读性 ──
+  // ── 2. 私钥可用性检查 ──
+  let privateKeyAvailable = false;
   const privateKeyPath = process.env.GITHUB_PRIVATE_KEY_PATH;
   if (privateKeyPath) {
     try {
@@ -82,6 +83,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             status: 'pass',
             message: t('githubTest.privateKeyPass', { path: privateKeyPath }),
           });
+          privateKeyAvailable = true;
         } else {
           results.push({
             name: t('githubTest.privateKey'),
@@ -99,93 +101,111 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
       }
     } catch {
-      results.push({
-        name: t('githubTest.privateKey'),
-        status: 'fail',
-        message: t('githubTest.privateKeyReadFail'),
-        detail: privateKeyPath,
-      });
+      // 文件不存在，尝试数据库
+    }
+  }
+
+  // 如果文件不可用，尝试从数据库读取
+  if (!privateKeyAvailable) {
+    try {
+      const dbKey = await getPrivateKey();
+      if (dbKey) {
+        results.push({
+          name: t('githubTest.privateKey'),
+          status: 'pass',
+          message: t('githubTest.privateKeyPass', { path: 'database' }),
+        });
+        privateKeyAvailable = true;
+      }
+    } catch {
+      if (!privateKeyAvailable) {
+        results.push({
+          name: t('githubTest.privateKey'),
+          status: 'fail',
+          message: t('githubTest.privateKeyReadFail'),
+          detail: 'No file or database key available',
+        });
+      }
     }
   }
 
   // ── 3. JWT 生成测试 ──
-  const appId = process.env.GITHUB_APP_ID;
-  if (appId && privateKeyPath) {
-    try {
-      const token = generateJWT(appId, privateKeyPath);
-      const decoded = jwt.decode(token) as { iss?: string; exp?: number; iat?: number } | null;
-      if (decoded && decoded.iss === appId && decoded.exp && decoded.iat) {
-        const expiresIn = decoded.exp - decoded.iat;
-        results.push({
-          name: t('githubTest.jwtGenerate'),
-          status: 'pass',
-          message: t('githubTest.jwtPass', { appId: decoded.iss, expiresIn: String(expiresIn) }),
-        });
-      } else {
-        results.push({
-          name: t('githubTest.jwtGenerate'),
-          status: 'fail',
-          message: t('githubTest.jwtDecodeFail'),
-        });
-      }
-    } catch (err) {
+  try {
+    const appId = await getAppId();
+    const privateKey = await getPrivateKey();
+    const token = generateJWT(appId, privateKey);
+    const decoded = jwt.decode(token) as { iss?: string; exp?: number; iat?: number } | null;
+    if (decoded && decoded.iss === appId && decoded.exp && decoded.iat) {
+      const expiresIn = decoded.exp - decoded.iat;
+      results.push({
+        name: t('githubTest.jwtGenerate'),
+        status: 'pass',
+        message: t('githubTest.jwtPass', { appId: decoded.iss, expiresIn: String(expiresIn) }),
+      });
+    } else {
       results.push({
         name: t('githubTest.jwtGenerate'),
         status: 'fail',
-        message: t('githubTest.jwtError', {
-          error: err instanceof Error ? err.message : String(err),
-        }),
+        message: t('githubTest.jwtDecodeFail'),
       });
     }
+  } catch (err) {
+    results.push({
+      name: t('githubTest.jwtGenerate'),
+      status: 'fail',
+      message: t('githubTest.jwtError', {
+        error: err instanceof Error ? err.message : String(err),
+      }),
+    });
   }
 
   // ── 4. GitHub API 通信测试 ──
-  if (appId && privateKeyPath) {
-    try {
-      const appJwt = generateJWT(appId, privateKeyPath);
-      const response = await fetch('https://api.github.com/app', {
-        headers: {
-          Authorization: `Bearer ${appJwt}`,
-          Accept: 'application/vnd.github.v3+json',
-        },
-      });
+  try {
+    const apiAppId = await getAppId();
+    const privateKey = await getPrivateKey();
+    const appJwt = generateJWT(apiAppId, privateKey);
+    const response = await fetch('https://api.github.com/app', {
+      headers: {
+        Authorization: `Bearer ${appJwt}`,
+        Accept: 'application/vnd.github.v3+json',
+      },
+    });
 
-      if (response.ok) {
-        const app = (await response.json()) as {
-          name: string;
-          slug: string;
-          created_at: string;
-          html_url: string;
-        };
-        results.push({
-          name: t('githubTest.apiComm'),
-          status: 'pass',
-          message: t('githubTest.apiCommPass', { name: app.name, slug: app.slug }),
-          detail: t('githubTest.apiCommDetail', {
-            date: new Date(app.created_at).toLocaleDateString('zh-CN'),
-          }),
-        });
-      } else {
-        const body = await response.text();
-        results.push({
-          name: t('githubTest.apiComm'),
-          status: 'fail',
-          message: t('githubTest.apiCommFail', {
-            status: String(response.status),
-            statusText: response.statusText,
-          }),
-          detail: body.slice(0, 200),
-        });
-      }
-    } catch (err) {
+    if (response.ok) {
+      const app = (await response.json()) as {
+        name: string;
+        slug: string;
+        created_at: string;
+        html_url: string;
+      };
+      results.push({
+        name: t('githubTest.apiComm'),
+        status: 'pass',
+        message: t('githubTest.apiCommPass', { name: app.name, slug: app.slug }),
+        detail: t('githubTest.apiCommDetail', {
+          date: new Date(app.created_at).toLocaleDateString('zh-CN'),
+        }),
+      });
+    } else {
+      const body = await response.text();
       results.push({
         name: t('githubTest.apiComm'),
         status: 'fail',
-        message: t('githubTest.apiCommError', {
-          error: err instanceof Error ? err.message : String(err),
+        message: t('githubTest.apiCommFail', {
+          status: String(response.status),
+          statusText: response.statusText,
         }),
+        detail: body.slice(0, 200),
       });
     }
+  } catch (err) {
+    results.push({
+      name: t('githubTest.apiComm'),
+      status: 'fail',
+      message: t('githubTest.apiCommError', {
+        error: err instanceof Error ? err.message : String(err),
+      }),
+    });
   }
 
   // ── 5. Installation 状态检查 ──
