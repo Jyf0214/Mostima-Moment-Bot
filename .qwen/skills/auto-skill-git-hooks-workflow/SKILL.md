@@ -2,7 +2,7 @@
 name: git-hooks-workflow-configuration
 description: Git hooks setup with husky, lint-staged, pre-commit/pre-push configuration, and GitHub Actions workflow optimization
 source: auto-skill
-extracted_at: '2026-06-20T02:43:50.287Z'
+extracted_at: '2026-06-20T03:50:00.000Z'
 ---
 
 # Git Hooks and Workflow Configuration
@@ -38,12 +38,9 @@ npx husky init
 }
 ```
 
-### pre-commit Hook
+### pre-commit Hook (Husky v10+)
 
 ```bash
-#!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
-
 echo "🔍 Running pre-commit checks..."
 
 # Run lint-staged (check staged files)
@@ -68,12 +65,11 @@ fi
 echo "✅ Pre-commit checks passed"
 ```
 
-### pre-push Hook
+**Husky v10 Breaking Change**: Remove `#!/bin/sh` and `. "$(dirname "$0")/_/husky.sh"` from hooks. Hooks are now plain shell scripts without the husky.sh sourcing.
+
+### pre-push Hook (Husky v10+)
 
 ```bash
-#!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
-
 echo "🚀 Running pre-push checks..."
 
 # Full build
@@ -81,14 +77,6 @@ echo "📦 Building application..."
 npm run build
 if [ $? -ne 0 ]; then
   echo "❌ Build failed. Push rejected."
-  exit 1
-fi
-
-# Server build
-echo "🔧 Building server..."
-npm run server:build
-if [ $? -ne 0 ]; then
-  echo "❌ Server build failed. Push rejected."
   exit 1
 fi
 

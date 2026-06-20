@@ -71,15 +71,18 @@ ls node_modules/.package-lock.json
 在 "Permissions" 部分，设置以下权限：
 
 **Repository permissions:**
+
 - [x] Contents: Read（读取代码）
 - [x] Pull requests: Read & Write（读写 PR）
 - [x] Issues: Read & Write（读写 Issue）
 - [x] Metadata: Read（读取元数据）
 
 **Organization permissions:**
+
 - [ ] 保持默认（无权限）
 
 **User permissions:**
+
 - [ ] 保持默认（无权限）
 
 ### 2.4 订阅事件
@@ -93,6 +96,7 @@ ls node_modules/.package-lock.json
 ### 2.5 安装范围
 
 在 "Where can this GitHub App be installed?" 部分：
+
 - 选择 "Only on this account"
 
 ### 2.6 创建 App
@@ -165,7 +169,7 @@ head -1 private-key.pem
 ### 4.1 开发模式
 
 ```bash
-npm run server:dev
+npm run dev
 ```
 
 预期输出：
@@ -185,7 +189,7 @@ curl http://localhost:3001/health
 预期输出：
 
 ```json
-{"status":"ok","service":"manticore-bot"}
+{ "status": "ok", "service": "manticore-bot" }
 ```
 
 ### 4.3 停止服务器
@@ -551,7 +555,7 @@ ls -la private-key.pem
 **检查服务器日志：**
 
 ```bash
-npm run server:dev
+npm run dev
 # 观察是否有请求到达
 ```
 

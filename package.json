@@ -9,9 +9,6 @@
     "lint": "next lint",
     "lint:fix": "next lint --fix",
     "typecheck": "tsc --noEmit",
-    "server:dev": "tsx watch src/server.ts",
-    "server:build": "tsc --project tsconfig.server.json",
-    "server:start": "node dist/server.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -37,8 +34,6 @@
     "@tabler/icons-react": "^3.44.0",
     "chart.js": "^4.4.0",
     "chartjs-adapter-moment": "^1.0.1",
-    "compression": "^1.8.1",
-    "express": "^5.2.1",
     "formidable": "^3.5.4",
     "i18next": "^26.3.1",
     "i18next-browser-languagedetector": "^8.2.0",
@@ -54,8 +49,6 @@
     "react-i18next": "^17.0.8"
   },
   "devDependencies": {
-    "@types/compression": "^1.8.1",
-    "@types/express": "^5.0.6",
     "@types/formidable": "^3.5.1",
     "@types/jest": "^30.0.0",
     "@types/jsonwebtoken": "^9.0.10",
@@ -69,8 +62,6 @@
     "lint-staged": "^16.4.0",
     "prettier": "^3.8.4",
     "ts-jest": "^29.4.11",
-    "ts-node": "^10.9.2",
-    "tsx": "^4.22.4",
     "typescript": "^5.9.3"
   }
 }

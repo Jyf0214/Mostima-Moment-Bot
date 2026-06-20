@@ -1,8 +1,8 @@
 ---
 name: manticore-bot-cicd-pipeline
-description: Pure deterministic CI/CD bot implementation with Express, GitHub webhooks, CI checks, PR reporting, and GitHub OAuth authentication
+description: Pure deterministic CI/CD bot implementation with Next.js API Routes, GitHub webhooks, CI checks, PR reporting, and GitHub OAuth authentication
 source: auto-skill
-extracted_at: '2026-06-20T02:10:00.000Z'
+extracted_at: '2026-06-20T04:00:00.000Z'
 ---
 
 # Manticore Bot CI/CD Pipeline Implementation
@@ -11,15 +11,104 @@ extracted_at: '2026-06-20T02:10:00.000Z'
 
 Building a pure deterministic CI/CD bot (no AI/LLM) as an independent Express server that receives GitHub webhooks, executes CI checks, posts Vercel-style PR reports, and supports GitHub OAuth authentication.
 
-## Architecture Decision: Express vs Next.js API Routes
+## Architecture Decision: Express → Next.js API Routes
 
-**Key learning**: For a standalone Docker deployment, use Express server, NOT Next.js API routes.
+**Key learning**: Consolidate Express server into Next.js API Routes for unified single-port deployment.
 
-- Next.js API routes only execute within Next.js runtime
-- Standalone Docker requires explicit server entry point
-- Express provides clearer separation between frontend (Vercel) and bot (Docker)
+- Initial approach: Standalone Express server on separate port
+- Problem: Users expected unified service, two ports confusing
+- Solution: Migrate all Express routes to Next.js API Routes
+- Benefit: Single `npm run dev` starts everything, one port, one process
 
-## Project Structure
+### Express → Next.js Migration
+
+```typescript
+// ❌ Express route (src/routes/webhook.ts)
+import { Router } from 'express';
+export const webhookRouter = Router();
+webhookRouter.post('/github', async (req, res) => { ... });
+
+// ✅ Next.js API Route (src/pages/api/webhook/github.ts)
+import { NextApiRequest, NextApiResponse } from 'next';
+export const config = { api: { bodyParser: false } };
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // Parse raw body for signature verification
+  const chunks: Buffer[] = [];
+  for await (const chunk of req) {
+    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+  }
+  const rawBody = Buffer.concat(chunks);
+  // ... rest of handler
+}
+```
+
+### Webhook Body Parsing
+
+Next.js API Routes require manual raw body parsing for webhook signature verification:
+
+```typescript
+export const config = { api: { bodyParser: false } };
+
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const chunks: Buffer[] = [];
+  for await (const chunk of req) {
+    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+  }
+  const rawBody = Buffer.concat(chunks);
+  // Use rawBody for HMAC-SHA256 verification
+}
+```
+
+### GitHub API Without Octokit
+
+Avoid octokit ESM compatibility issues by using native fetch:
+
+```typescript
+// ❌ octokit has ESM/CJS compatibility issues
+import { Octokit } from 'octokit';
+const octokit = new Octokit({ auth: jwt });
+
+// ✅ Use native fetch API
+const response = await fetch('https://api.github.com/repos/...', {
+  headers: { Authorization: `Bearer ${token}` },
+});
+```
+
+### Standalone Docker Output
+
+```javascript
+// next.config.js
+const nextConfig = {
+  reactStrictMode: true,
+  output: 'standalone', // Required for Docker deployment
+};
+module.exports = nextConfig;
+```
+
+### Dockerfile for Next.js Standalone
+
+```dockerfile
+FROM node:20-alpine
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --ignore-scripts
+
+COPY prisma/ ./prisma/
+RUN npx prisma generate
+
+COPY . .
+RUN npm run build
+
+RUN npm prune --omit=dev
+
+EXPOSE 3001
+ENV PORT=3001
+
+CMD ["npm", "start"]
+```
+
+## Project Structure (Unified Next.js)
 
 ```
 src/

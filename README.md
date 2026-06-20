@@ -110,24 +110,24 @@ cp /path/to/your-private-key.pem ./private-key.pem
 **开发模式：**
 
 ```bash
-npm run server:dev
+npm run dev
 ```
 
 **生产模式：**
 
 ```bash
-npm run server:build
-npm run server:start
+npm run build
+npm start
 ```
 
 ### 6. 验证服务器
 
 ```bash
 # 健康检查
-curl http://localhost:3001/health
+curl http://localhost:3001/api/health
 
 # 预期响应
-{"status":"ok","service":"manticore-bot"}
+{"status":"ok","service":"manticore-bot","timestamp":"...","uptime":...}
 ```
 
 ## GitHub App 配置
@@ -308,15 +308,12 @@ Mostima-Moment-Bot/
 │   │   │   └── reporter.ts          # PR 报告生成
 │   │   └── git/
 │   │       └── workspace.ts         # Git 工作区协调
-│   ├── types/
-│   │   └── express.d.ts             # Express 类型扩展
-│   └── pages/                       # Next.js 前端（Vercel 部署）
+│   ├── pages/                       # Next.js 前端页面与 API
 ├── docker/
 │   ├── Dockerfile
 │   └── docker-compose.yml
 ├── .env.example                     # 环境变量模板
-├── tsconfig.json                    # Next.js TypeScript 配置
-├── tsconfig.server.json             # 服务器 TypeScript 配置
+├── tsconfig.json                    # TypeScript 配置
 └── package.json
 ```
 
@@ -324,15 +321,12 @@ Mostima-Moment-Bot/
 
 ```bash
 # 开发
-npm run server:dev          # 启动服务器开发模式（热重载）
 npm run dev                 # 启动 Next.js 开发服务器
 
 # 构建
-npm run server:build        # 编译服务器 TypeScript
-npm run build               # 构建 Next.js 前端
+npm run build               # 构建 Next.js 应用
 
 # 生产
-npm run server:start        # 启动生产服务器
 npm start                   # 启动 Next.js 生产服务器
 
 # 代码质量
@@ -364,7 +358,7 @@ ls -la private-key.pem
 # 3. 检查服务器日志
 
 # 查看服务器日志
-npm run server:dev
+npm run dev
 ```
 
 ### CI 检查失败

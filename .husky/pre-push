@@ -8,14 +8,6 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-# 构建服务器
-echo "🔧 Building server..."
-npm run server:build
-if [ $? -ne 0 ]; then
-  echo "❌ Server build failed. Push rejected."
-  exit 1
-fi
-
 # 运行完整测试套件
 echo "🧪 Running full test suite..."
 npm test
