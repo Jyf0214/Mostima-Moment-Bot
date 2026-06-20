@@ -5,11 +5,12 @@
  * 1. js-ci.yml    → push to main/master + PR to main/master → CI 验证
  * 2. webpack.yml  → push to main + PR to main → 构建检查
  * 3. qwen-security-auditor.yml → PR opened/synchronize → 安全审计
- * 4. qwen-issue-solver.yml → Issue labeled auto-fix / comment @qwen-code /fix → 自动修复
+ * 4. qwen-issue-solver.yml → Issue labeled auto-fix / comment @{BOT_NAME} /fix → 自动修复
  * 5. qwen-scheduled-scanner.yml → 定期巡检
  */
 
 import type { TriggerRule } from './types';
+import { getBotSlug } from '@/lib/ci/config';
 
 /**
  * CI 验证规则（对应 js-ci.yml）
@@ -55,24 +56,30 @@ export const SECURITY_AUDIT_RULE: TriggerRule = {
 
 /**
  * 自动修复规则（对应 qwen-issue-solver.yml）
- * 触发条件：Issue 被贴 auto-fix 标签，或评论 @qwen-code /fix
+ * 触发条件：Issue 被贴 auto-fix 标签，或评论 @{BOT_NAME} /fix
+ *
+ * 使用函数生成，因为 commentPattern 依赖运行时的 BOT_NAME 配置。
  */
-export const AUTO_FIX_RULE: TriggerRule = {
-  id: 'auto-fix',
-  name: 'Autonomous Issue Solver',
-  enabled: true,
-  events: ['issue', 'issue_comment'],
-  // Issue 事件：label 为 auto-fix
-  labels: ['auto-fix'],
-  // Comment 事件：需要特定权限 + 评论匹配
-  requiredAuthorAssociation: ['OWNER', 'MEMBER', 'COLLABORATOR'],
-  commentPattern: '^@qwen-code\\s+/fix',
-  concurrency: {
-    group: 'auto-fix-issue-{{issue_number}}',
-    cancelInProgress: false, // 不取消，排队等待
-  },
-  checks: [{ name: 'Run Auto Fix', type: 'custom', command: 'auto-fix' }],
-};
+export function getAutoFixRule(): TriggerRule {
+  const botSlug = getBotSlug();
+  return {
+    id: 'auto-fix',
+    name: 'Autonomous Issue Solver',
+    enabled: true,
+    events: ['issue', 'issue_comment'],
+    labels: ['auto-fix'],
+    requiredAuthorAssociation: ['OWNER', 'MEMBER', 'COLLABORATOR'],
+    commentPattern: `^@${botSlug}\\s+/fix`,
+    concurrency: {
+      group: 'auto-fix-issue-{{issue_number}}',
+      cancelInProgress: false,
+    },
+    checks: [{ name: 'Run Auto Fix', type: 'custom', command: 'auto-fix' }],
+  };
+}
+
+/** @deprecated 使用 getAutoFixRule() 代替，此导出仅供测试向后兼容 */
+export const AUTO_FIX_RULE: TriggerRule = getAutoFixRule();
 
 /**
  * 构建检查规则（对应 webpack.yml）
@@ -99,9 +106,9 @@ export const BUILD_CHECK_RULE: TriggerRule = {
 /**
  * 所有默认规则
  */
-export const DEFAULT_RULES: TriggerRule[] = [
-  CI_VERIFICATION_RULE,
-  SECURITY_AUDIT_RULE,
-  AUTO_FIX_RULE,
-  BUILD_CHECK_RULE,
-];
+export function getDefaultRules(): TriggerRule[] {
+  return [CI_VERIFICATION_RULE, SECURITY_AUDIT_RULE, getAutoFixRule(), BUILD_CHECK_RULE];
+}
+
+/** @deprecated 使用 getDefaultRules() 代替，此导出仅供测试向后兼容 */
+export const DEFAULT_RULES: TriggerRule[] = getDefaultRules();

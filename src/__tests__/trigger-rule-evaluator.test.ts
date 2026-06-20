@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { evaluateRule, evaluateAllRules, findFirstMatch } from '@/lib/ci/triggers/rule-evaluator';
 import { DEFAULT_RULES } from '@/lib/ci/triggers/default-rules';
 import type { TriggerRule, WebhookPayload } from '@/lib/ci/triggers/types';
+import { getBotSlug } from '@/lib/ci/config';
 
 describe('规则匹配引擎', () => {
   describe('evaluateRule - 基础匹配', () => {
@@ -170,17 +171,17 @@ describe('规则匹配引擎', () => {
       events: ['issue_comment'],
       actions: ['created'],
       requiredAuthorAssociation: ['OWNER', 'MEMBER', 'COLLABORATOR'],
-      commentPattern: '^@qwen-code\\s+/fix',
+      commentPattern: `^@${getBotSlug()}\\s+/fix`,
       labels: ['auto-fix'],
       checks: [],
     };
 
-    it('应该匹配 OWNER 发送的 @qwen-code /fix 评论', () => {
+    it('应该匹配 OWNER 发送的 @{BOT_NAME} /fix 评论', () => {
       const payload: WebhookPayload = {
         event: 'issue_comment',
         action: 'created',
         authorAssociation: 'OWNER',
-        commentBody: '@qwen-code /fix please fix this bug',
+        commentBody: `@${getBotSlug()} /fix please fix this bug`,
         labels: ['auto-fix'],
       };
       expect(evaluateRule(commentRule, payload).matched).toBe(true);
@@ -191,7 +192,7 @@ describe('规则匹配引擎', () => {
         event: 'issue_comment',
         action: 'created',
         authorAssociation: 'MEMBER',
-        commentBody: '@qwen-code /fix',
+        commentBody: `@${getBotSlug()} /fix`,
         labels: ['auto-fix'],
       };
       expect(evaluateRule(commentRule, payload).matched).toBe(true);
@@ -202,7 +203,7 @@ describe('规则匹配引擎', () => {
         event: 'issue_comment',
         action: 'created',
         authorAssociation: 'NONE',
-        commentBody: '@qwen-code /fix',
+        commentBody: `@${getBotSlug()} /fix`,
         labels: ['auto-fix'],
       };
       const result = evaluateRule(commentRule, payload);
@@ -228,7 +229,7 @@ describe('规则匹配引擎', () => {
         event: 'issue_comment',
         action: 'edited',
         authorAssociation: 'OWNER',
-        commentBody: '@qwen-code /fix',
+        commentBody: `@${getBotSlug()} /fix`,
         labels: ['auto-fix'],
       };
       const result = evaluateRule(commentRule, payload);

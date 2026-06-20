@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { normalizePayload, matchWebhook, matchWebhookFirst } from '@/lib/ci/triggers/index';
 import { DEFAULT_RULES } from '@/lib/ci/triggers/default-rules';
+import { getBotSlug } from '@/lib/ci/config';
 
 describe('Webhook 载荷标准化与匹配', () => {
   describe('normalizePayload', () => {
@@ -68,7 +69,7 @@ describe('Webhook 载荷标准化与匹配', () => {
         comment: {
           user: { login: 'owner1' },
           author_association: 'OWNER',
-          body: '@qwen-code /fix please help',
+          body: `@${getBotSlug()} /fix please help`,
         },
         repository: { full_name: 'Jyf0214/Mostima-Moment-Bot' },
       };
@@ -76,7 +77,7 @@ describe('Webhook 载荷标准化与匹配', () => {
       expect(result.event).toBe('issue_comment');
       expect(result.action).toBe('created');
       expect(result.issueNumber).toBe(10);
-      expect(result.commentBody).toBe('@qwen-code /fix please help');
+      expect(result.commentBody).toBe(`@${getBotSlug()} /fix please help`);
       expect(result.authorAssociation).toBe('OWNER');
       expect(result.labels).toEqual(['auto-fix']);
     });

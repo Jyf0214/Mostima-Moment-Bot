@@ -12,6 +12,7 @@ import {
   buildIssueFixResumePrompt,
   buildIssueFixReply,
 } from '../qwen/prompts';
+import { getFixCommand, getBotMention } from './config';
 
 interface IssuePayload {
   issue: {
@@ -26,9 +27,9 @@ interface IssuePayload {
 /**
  * 判断是否应触发 Issue 自动修复
  *
- * 触发条件（复原 ZhouZBoss-Web 规则）：
+ * 触发条件：
  * 1. Issue 被贴上 `auto-fix` 标签
- * 2. 评论以 `@qwen-code /fix` 开头，且评论者是 OWNER/MEMBER/COLLABORATOR
+ * 2. 评论以 `@{BOT_NAME} /fix` 开头，且评论者是 OWNER/MEMBER/COLLABORATOR
  */
 export function shouldTriggerIssueFix(eventName: string, payload: IssuePayload): boolean {
   if (eventName === 'issues' && payload.label?.name === 'auto-fix') {
@@ -38,9 +39,10 @@ export function shouldTriggerIssueFix(eventName: string, payload: IssuePayload):
   if (eventName === 'issue_comment') {
     const body = payload.comment?.body || '';
     const assoc = payload.comment?.author_association || '';
-    const isQwenCommand = body.startsWith('@qwen-code /fix');
+    const fixCmd = getFixCommand();
+    const isFixCommand = body.startsWith(fixCmd);
     const isAuthorized = ['OWNER', 'MEMBER', 'COLLABORATOR'].includes(assoc);
-    return isQwenCommand && isAuthorized;
+    return isFixCommand && isAuthorized;
   }
 
   return false;
@@ -115,7 +117,9 @@ export async function solveIssue(
   let prompt = '';
 
   if (isResume && eventName === 'issue_comment') {
-    const userFeedback = commentBody.replace(/^@qwen-code\s*\/fix\s*/i, '').trim();
+    const userFeedback = commentBody
+      .replace(new RegExp(`^${getBotMention()}\\s*\\/fix\\s*`, 'i'), '')
+      .trim();
     prompt = buildIssueFixResumePrompt(prBranch, userFeedback);
   } else {
     prompt = buildIssueFixInitialPrompt(prBranch, issueNumber);
