@@ -1,6 +1,6 @@
 # Manticore Bot
 
-纯确定性 CI/CD 自动检查与部署反馈机器人，作为低配 Vercel 机器人。
+纯确定性 CI/CD 自动检查与部署反馈机器人。
 
 ## 功能特性
 
@@ -9,27 +9,19 @@
 - **Git 工作区协调**：自动分支切换、主分支同步、冲突检测
 - **质量卡口校验**：npm ci → lint → tsc → build 四步检查
 - **PR 报告生成**：Vercel 风格状态表格，自动在 PR 下留言
+- **GitHub 一键登录**：OAuth 认证，首个用户自动绑定管理员
+- **环境变量检查**：缺失必要配置时阻止应用访问
 
 ## 架构
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    Vercel 部署                          │
+│                    Next.js 单一服务                      │
 │  ┌─────────────────────────────────────────────────┐   │
-│  │  Mostima-Moment-Bot 前端                        │   │
-│  │  - Mantine v7 + Chart.js                        │   │
-│  │  - Next.js 14 Pages Router                      │   │
-│  └─────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────┘
-                          │
-                          ▼
-┌─────────────────────────────────────────────────────────┐
-│                 独立 Docker 服务                         │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │  Manticore Bot (Express)                        │   │
-│  │  - 端口: 3001                                   │   │
-│  │  - Webhook: POST /api/webhook/github            │   │
-│  │  - 健康检查: GET /health                        │   │
+│  │  - Mantine v9 + Chart.js                        │   │
+│  │  - Next.js 16 Pages Router                      │   │
+│  │  - API Routes (Webhook / Auth / Health)         │   │
+│  │  - Proxy Middleware (认证检查)                   │   │
 │  └─────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────┘
                           ▲
@@ -46,35 +38,125 @@
 
 - Node.js 20+
 - npm 10+
+- PostgreSQL（用于数据持久化）
+- GitHub App（用于 Webhook 和 OAuth 登录）
 - Docker（可选，用于容器化部署）
-- GitHub App（用于 Webhook 和 API 访问）
 
-### 1. 克隆仓库
+---
+
+## 1. 克隆仓库并安装依赖
 
 ```bash
 git clone https://github.com/your-username/Mostima-Moment-Bot.git
 cd Mostima-Moment-Bot
-```
-
-### 2. 安装依赖
-
-```bash
 npm install
 ```
 
-### 3. 配置环境变量
+---
 
-复制环境变量模板并填写配置：
+## 2. 创建 GitHub App
+
+### 2.1 注册 GitHub App
+
+1. 打开 https://github.com/settings/apps/new
+2. 填写以下信息：
+
+| 字段                | 值                                                      |
+| ------------------- | ------------------------------------------------------- |
+| **GitHub App name** | `Manticore Bot`（或自定义名称）                         |
+| **Description**     | `CI/CD 自动检查与部署反馈机器人`                        |
+| **Homepage URL**    | `https://your-domain.com`（或 `http://localhost:3000`） |
+
+### 2.2 配置 Webhook
+
+在 "Webhook" 部分：
+
+| 字段               | 值                                           |
+| ------------------ | -------------------------------------------- |
+| **Webhook URL**    | `https://your-domain.com/api/webhook/github` |
+| **Webhook secret** | 点击 "Generate a new webhook secret" 生成    |
+
+> ⚠️ **重要**：记住这个 secret，后续需要配置到环境变量 `WEBHOOK_SECRET`。
+
+### 2.3 配置权限
+
+在 "Permissions" 部分，设置以下权限：
+
+**Repository permissions:**
+
+- [x] Contents: Read
+- [x] Pull requests: Read & Write
+- [x] Issues: Read & Write
+- [x] Metadata: Read
+
+**Subscribe to events:**
+
+- [x] Pull request
+- [x] Issue comment
+- [x] Workflow run
+
+### 2.4 安装范围
+
+在 "Where can this GitHub App be installed?" 部分：
+
+- 选择 "Only on this account"
+
+### 2.5 创建并获取凭证
+
+1. 点击 **"Create GitHub App"**
+2. 记录 **App ID**（页面顶部显示的数字，例如 `123456`）
+3. 点击 **"Generate a private key"**
+4. 下载私钥文件（`.pem` 格式）
+5. 将私钥文件保存到项目根目录，命名为 `private-key.pem`
+
+```bash
+# 将下载的私钥文件移动到项目根目录
+mv ~/Downloads/your-app-name-*.pem ./private-key.pem
+```
+
+### 2.6 安装 App 到仓库
+
+1. 在 App 设置页面，点击左侧 **"Install App"**
+2. 选择要安装的仓库
+3. 点击 **"Install"**
+4. 记录 **Installation ID**（URL 中的数字）
+
+---
+
+## 3. 配置环境变量
+
+### 3.1 复制模板
 
 ```bash
 cp .env.example .env.local
 ```
 
-编辑 `.env.local`，填写以下配置：
+### 3.2 编辑 `.env.local`
 
 ```env
+# ===========================================
+# 必要环境变量（缺失将导致应用无法访问）
+# ===========================================
+
+# GitHub OAuth 配置（用于一键登录）
+GITHUB_CLIENT_ID=your_client_id
+GITHUB_CLIENT_SECRET=your_client_secret
+
+# JWT 密钥（用于用户认证）
+JWT_SECRET=your_jwt_secret
+
+# 加密密钥（用于加密存储敏感数据）
+ENCRYPTION_KEY=your_encryption_key
+
+# 数据库连接字符串
+DATABASE_URL=postgresql://user:password@localhost:5432/manticore
+
+# ===========================================
+# 可选环境变量
+# ===========================================
+
 # GitHub App 配置
-GITHUB_APP_ID=your_app_id
+GITHUB_APP_ID=123456
 GITHUB_PRIVATE_KEY_PATH=./private-key.pem
 GITHUB_WEBHOOK_SECRET=your_webhook_secret
 
@@ -82,301 +164,419 @@ GITHUB_WEBHOOK_SECRET=your_webhook_secret
 REPO_OWNER=your_username
 REPO_NAME=your_repo
 
-# Webhook 密钥（用于签名验证）
+# Webhook 密钥（用于签名验证，与 GitHub App 的 Webhook secret 一致）
 WEBHOOK_SECRET=your_webhook_secret
 
 # 服务器配置
-BOT_PORT=3001
-WORKSPACE_DIR=./workspace
-
-# Webhook 可达性（GitHub Webhook URL）
-PUBLIC_URL=https://your-domain.com
+PORT=3001
 
 # 合作者列表（逗号分隔，用于手动重试鉴权）
 COLLABORATORS=user1,user2
 ```
 
-### 4. 下载 GitHub App 私钥
-
-从 GitHub App 设置页面下载私钥文件，保存为 `private-key.pem`：
+### 3.3 生成密钥
 
 ```bash
-# 将私钥文件保存到项目根目录
-cp /path/to/your-private-key.pem ./private-key.pem
+# 生成 JWT_SECRET
+openssl rand -hex 32
+
+# 生成 ENCRYPTION_KEY
+openssl rand -hex 32
 ```
 
-### 5. 启动服务器
+---
 
-**开发模式：**
+## 4. 配置 GitHub OAuth
+
+### 4.1 创建 OAuth App
+
+1. 打开 https://github.com/settings/developers
+2. 点击 **"New OAuth App"**
+3. 填写以下信息：
+
+| 字段                           | 值                                          |
+| ------------------------------ | ------------------------------------------- |
+| **Application name**           | `Manticore Bot`                             |
+| **Homepage URL**               | `https://your-domain.com`                   |
+| **Authorization callback URL** | `https://your-domain.com/api/auth/callback` |
+
+4. 点击 **"Register application"**
+5. 记录 **Client ID**
+6. 点击 **"Generate a new client secret"**
+7. 记录 **Client Secret**（只显示一次）
+
+### 4.2 更新环境变量
+
+```env
+GITHUB_CLIENT_ID=your_client_id
+GITHUB_CLIENT_SECRET=your_client_secret
+```
+
+---
+
+## 5. 配置数据库
+
+### 5.1 安装 PostgreSQL
+
+```bash
+# Ubuntu/Debian
+sudo apt update
+sudo apt install postgresql postgresql-contrib
+
+# macOS
+brew install postgresql@16
+brew services start postgresql@16
+
+# Docker
+docker run -d --name postgres \
+  -e POSTGRES_USER=user \
+  -e POSTGRES_PASSWORD=password \
+  -e POSTGRES_DB=manticore \
+  -p 5432:5432 \
+  postgres:16-alpine
+```
+
+### 5.2 创建数据库
+
+```bash
+# 连接 PostgreSQL
+psql -U user -d postgres
+
+# 创建数据库
+CREATE DATABASE manticore;
+
+# 退出
+\q
+```
+
+### 5.3 运行数据库迁移
+
+```bash
+npx prisma generate
+npx prisma migrate dev
+```
+
+---
+
+## 6. 启动应用
+
+### 6.1 开发模式
 
 ```bash
 npm run dev
 ```
 
-**生产模式：**
+应用将在 http://localhost:3000 启动。
+
+### 6.2 首次访问
+
+1. 打开 http://localhost:3000
+2. 如果是全新应用，会自动跳转到 Setup 页面
+3. 上传 GitHub App 私钥文件
+4. 填写 App ID 和 Webhook Secret
+5. 点击 **"使用 GitHub 登录"**
+6. 第一个登录的用户将自动绑定为管理员
+
+### 6.3 生产模式
 
 ```bash
 npm run build
-npm start
+PORT=3001 npm start
 ```
 
-### 6. 验证服务器
+---
+
+## 7. Webhook 可达性配置
+
+### 7.1 开发环境 - 使用 ngrok
 
 ```bash
-# 健康检查
-curl http://localhost:3001/api/health
+# 安装 ngrok
+npm install -g ngrok
 
-# 预期响应
-{"status":"ok","service":"manticore-bot","timestamp":"...","uptime":...}
+# 启动隧道
+ngrok http 3000
+
+# 输出示例：
+# Forwarding  https://xxxx-xxx.ngrok.io -> http://localhost:3000
 ```
 
-## GitHub App 配置
+将 `https://xxxx-xxx.ngrok.io/api/webhook/github` 设置为 GitHub App 的 Webhook URL。
 
-### 创建 GitHub App
-
-1. 访问 https://github.com/settings/apps/new
-2. 填写 App 名称和描述
-3. 配置 Webhook URL：`https://your-domain.com/api/webhook/github`
-4. 配置 Webhook secret：与环境变量 `WEBHOOK_SECRET` 一致
-5. 设置权限：
-   - Repository permissions:
-     - Contents: Read
-     - Pull requests: Read & Write
-     - Issues: Read & Write
-   - Subscribe to events:
-     - Pull request
-     - Issue comment
-     - Workflow run
-6. 生成并下载私钥文件
-
-### 安装 GitHub App
-
-1. 在 App 设置页面点击 "Install App"
-2. 选择要安装的仓库
-3. 记录 Installation ID（用于后续配置）
-
-## Webhook 可达性
-
-### 开发环境
-
-使用隧道工具暴露本地端口：
-
-**ngrok：**
+### 7.2 开发环境 - 使用 cloudflared
 
 ```bash
-ngrok http 3001
+# 安装 cloudflared
+# macOS
+brew install cloudflared
+
+# Linux
+wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
+chmod +x cloudflared-linux-amd64
+sudo mv cloudflared-linux-amd64 /usr/local/bin/cloudflared
+
+# 启动隧道
+cloudflared tunnel --url http://localhost:3000
 ```
 
-**cloudflared：**
+### 7.3 生产环境 - 使用 Nginx + Let's Encrypt
+
+#### 安装 Nginx 和 Certbot
 
 ```bash
-cloudflared tunnel --url http://localhost:3001
+# Ubuntu/Debian
+sudo apt update
+sudo apt install nginx certbot python3-certbot-nginx
+
+# CentOS/RHEL
+sudo yum install nginx
+sudo yum install certbot python3-certbot-nginx
 ```
 
-### 生产环境
+#### 创建 Nginx 配置
 
-使用反向代理（Nginx/Caddy）提供 HTTPS：
+```bash
+sudo nano /etc/nginx/sites-available/manticore-bot
+```
 
-**Nginx 示例：**
+写入以下内容：
 
 ```nginx
+# HTTP → HTTPS 重定向
 server {
-    listen 443 ssl;
+    listen 80;
+    listen [::]:80;
+    server_name your-domain.com;
+    return 301 https://$host$request_uri;
+}
+
+# HTTPS 反向代理
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
     server_name your-domain.com;
 
-    ssl_certificate /path/to/cert.pem;
-    ssl_certificate_key /path/to/key.pem;
+    # SSL 证书（Certbot 会自动配置）
+    ssl_certificate /etc/letsencrypt/live/your-domain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
-    location /api/webhook/ {
-        proxy_pass http://localhost:3001;
+    # 代理设置
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        proxy_read_timeout 60s;
+        proxy_connect_timeout 60s;
+    }
+
+    # 静态文件缓存
+    location ~* \.(jpg|jpeg|png|gif|ico|css|js)$ {
+        proxy_pass http://127.0.0.1:3000;
+        expires 7d;
+        add_header Cache-Control "public, immutable";
     }
 }
 ```
 
-## Docker 部署
+#### 启用配置
 
-### 构建镜像
+```bash
+sudo ln -s /etc/nginx/sites-available/manticore-bot /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+#### 获取 SSL 证书
+
+```bash
+sudo certbot --nginx -d your-domain.com
+```
+
+#### 自动续期
+
+```bash
+sudo certbot renew --dry-run
+```
+
+---
+
+## 8. Docker 部署
+
+### 8.1 构建并启动
 
 ```bash
 cd docker
-docker-compose build
+docker-compose up -d --build
 ```
 
-### 启动服务
-
-```bash
-docker-compose up -d
-```
-
-### 查看日志
+### 8.2 查看日志
 
 ```bash
 docker-compose logs -f manticore-bot
 ```
 
-### 停止服务
+### 8.3 停止服务
 
 ```bash
 docker-compose down
 ```
 
-## 事件处理
-
-### pull_request 事件
-
-当 PR 被创建或更新时，自动执行：
-
-1. 切换到 PR 分支
-2. 同步主分支（检测冲突）
-3. 执行 CI 检查：
-   - `npm ci`（依赖安装）
-   - `npm run lint`（代码规范）
-   - `npx tsc --noEmit`（类型检查）
-   - `npm run build`（构建）
-4. 生成 Vercel 风格报告
-5. 在 PR 下留言
-
-### issue_comment 事件
-
-支持手动重试命令（仅合作者可用）：
-
-- `/rebuild` - 重新执行 CI 检查
-- `/retry` - 重新执行 CI 检查
-
-### workflow_run 事件
-
-记录外部 GitHub Actions 工作流结果。
-
-## 验证清单
-
-### 安全网关验证
+### 8.4 自定义端口
 
 ```bash
-# 测试签名验证
-PAYLOAD='{"action":"opened"}'
-SIGNATURE="sha256=$(echo -n "$PAYLOAD" | openssl dgst -sha256 -hmac "your_webhook_secret" | awk '{print $2}')"
+PORT=8080 docker-compose up -d
+```
 
-curl -X POST http://localhost:3001/api/webhook/github \
+---
+
+## 9. 验证部署
+
+### 9.1 健康检查
+
+```bash
+curl http://localhost:3000/api/health
+# 预期：{"status":"ok","service":"manticore-bot",...}
+```
+
+### 9.2 环境变量检查
+
+```bash
+curl http://localhost:3000/api/env-check
+# 预期：{"isConfigured":true,...}
+```
+
+### 9.3 Webhook 签名验证
+
+```bash
+PAYLOAD='{"action":"opened","pull_request":{"number":1}}'
+SECRET="your_webhook_secret"
+SIGNATURE="sha256=$(echo -n "$PAYLOAD" | openssl dgst -sha256 -hmac "$SECRET" | awk '{print $2}')"
+
+curl -X POST http://localhost:3000/api/webhook/github \
   -H "Content-Type: application/json" \
   -H "X-Hub-Signature-256: $SIGNATURE" \
+  -H "X-GitHub-Event: pull_request" \
   -d "$PAYLOAD"
-
-# 预期：200 OK
+# 预期：{"received":true}
 ```
 
+### 9.4 测试无签名请求
+
 ```bash
-# 测试无签名请求
-curl -X POST http://localhost:3001/api/webhook/github \
+curl -X POST http://localhost:3000/api/webhook/github \
   -H "Content-Type: application/json" \
   -d '{"action":"opened"}'
-
-# 预期：401 Unauthorized
+# 预期：{"error":"Invalid signature"}
 ```
 
-### CI 检查验证
+---
+
+## 10. 故障排查
+
+### 环境变量缺失
+
+**症状**：页面显示 "环境变量配置缺失"
+
+**解决**：检查 `.env.local` 文件，确保以下变量已配置：
+
+- `GITHUB_CLIENT_ID`
+- `GITHUB_CLIENT_SECRET`
+- `JWT_SECRET`
+- `ENCRYPTION_KEY`
+- `DATABASE_URL`
+
+### 端口被占用
+
+**症状**：`Error: listen EADDRINUSE: address already in use`
+
+**解决**：
 
 ```bash
-# 测试完整 CI 流程
-npm ci
-npm run lint
-npx tsc --noEmit
-npm run build
+# 查找占用端口的进程
+lsof -i :3000
 
-# 预期：所有步骤退出码为 0
+# 杀死进程
+kill -9 <PID>
+
+# 或使用其他端口
+PORT=3001 npm start
 ```
 
-## 项目结构
+### 数据库连接失败
 
+**症状**：`Can't reach database server`
+
+**解决**：
+
+```bash
+# 检查 PostgreSQL 是否运行
+sudo systemctl status postgresql
+
+# 检查连接字符串
+echo $DATABASE_URL
+
+# 测试连接
+psql $DATABASE_URL
 ```
-Mostima-Moment-Bot/
-├── src/
-│   ├── server.ts                    # Express 服务器入口
-│   ├── routes/
-│   │   └── webhook.ts               # Webhook 路由
-│   ├── lib/
-│   │   ├── github/
-│   │   │   ├── webhook.ts           # 签名验证
-│   │   │   ├── auth.ts              # JWT 认证
-│   │   │   └── api.ts               # GitHub API 封装
-│   │   ├── ci/
-│   │   │   ├── runner.ts            # CI 流程执行器
-│   │   │   ├── checks.ts            # 质量卡口校验
-│   │   │   └── reporter.ts          # PR 报告生成
-│   │   └── git/
-│   │       └── workspace.ts         # Git 工作区协调
-│   ├── pages/                       # Next.js 前端页面与 API
-├── docker/
-│   ├── Dockerfile
-│   └── docker-compose.yml
-├── .env.example                     # 环境变量模板
-├── tsconfig.json                    # TypeScript 配置
-└── package.json
+
+### Webhook 未接收
+
+**症状**：PR 创建后没有自动检查
+
+**排查步骤**：
+
+1. 检查 GitHub App 的 Webhook URL 是否正确
+2. 检查 Webhook secret 是否与环境变量 `WEBHOOK_SECRET` 一致
+3. 查看 GitHub App 的 "Recent deliveries" 页面
+4. 检查服务器日志
+
+### Docker 构建失败
+
+**症状**：`docker build` 报错
+
+**解决**：
+
+```bash
+# 清理 Docker 缓存
+docker system prune -a
+
+# 重新构建
+docker-compose build --no-cache
 ```
+
+---
 
 ## 可用命令
 
 ```bash
 # 开发
-npm run dev                 # 启动 Next.js 开发服务器
-
-# 构建
-npm run build               # 构建 Next.js 应用
-
-# 生产
-npm start                   # 启动 Next.js 生产服务器
+npm run dev                 # 启动开发服务器
+npm run build               # 构建生产版本
+npm start                   # 启动生产服务器
 
 # 代码质量
 npm run lint                # 运行 ESLint
+npm run lint:fix            # 自动修复 ESLint 问题
+npm run typecheck           # TypeScript 类型检查
+
+# 测试
+npm test                    # 运行所有测试
+npm run test:watch          # 监听模式运行测试
+npm run test:coverage       # 生成覆盖率报告
+
+# 数据库
+npm run prisma:generate     # 生成 Prisma Client
+npm run prisma:migrate      # 运行数据库迁移
+npm run prisma:studio       # 打开 Prisma Studio
 ```
-
-## 故障排查
-
-### 服务器无法启动
-
-```bash
-# 检查端口占用
-lsof -i :3001
-
-# 检查环境变量
-echo $GITHUB_APP_ID
-echo $WEBHOOK_SECRET
-
-# 检查私钥文件
-ls -la private-key.pem
-```
-
-### Webhook 未接收
-
-```bash
-# 检查 GitHub App 配置
-# 1. 确认 Webhook URL 正确
-# 2. 确认 Webhook secret 与环境变量一致
-# 3. 检查服务器日志
-
-# 查看服务器日志
-npm run dev
-```
-
-### CI 检查失败
-
-```bash
-# 手动执行 CI 步骤
-npm ci
-npm run lint
-npx tsc --noEmit
-npm run build
-
-# 查看具体错误信息
-```
-
-## 后续迭代
-
-- [ ] 阶段 7：数据持久化（PostgreSQL）
-- [ ] 阶段 8：前端控制面板（Chart.js 图表）
 
 ## 许可证
 

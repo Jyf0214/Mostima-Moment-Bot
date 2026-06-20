@@ -2,7 +2,7 @@
 name: git-hooks-workflow-configuration
 description: Git hooks setup with husky, lint-staged, pre-commit/pre-push configuration, and GitHub Actions workflow optimization
 source: auto-skill
-extracted_at: '2026-06-20T03:50:00.000Z'
+extracted_at: '2026-06-20T04:00:00.000Z'
 ---
 
 # Git Hooks and Workflow Configuration
@@ -93,7 +93,7 @@ echo "✅ Pre-push checks passed"
 
 ## GitHub Actions Docker Build Workflow
 
-### Basic Multi-Platform Build
+### AMD64-Only Build (Fast)
 
 ```yaml
 name: Docker 构建与推送
@@ -153,42 +153,35 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
 ```
 
-### Optimized Dockerfile
+### Optimized Dockerfile (Next.js Standalone)
 
 ```dockerfile
 FROM node:20-alpine
 
 WORKDIR /app
 
-# Install all dependencies (including dev for TypeScript compilation)
+# Install dependencies
 COPY package*.json ./
 RUN npm ci --ignore-scripts
 
-# Copy Prisma schema
+# Copy Prisma schema and generate client
 COPY prisma/ ./prisma/
-
-# Generate Prisma Client
 RUN npx prisma generate
 
-# Copy source and config
-COPY src/ ./src/
-COPY tsconfig.server.json ./
-
-# Compile TypeScript
-RUN npx tsc --project tsconfig.server.json
+# Copy source and build
+COPY . .
+RUN npm run build
 
 # Remove dev dependencies
 RUN npm prune --omit=dev
 
-# Create workspace directory
-RUN mkdir -p /app/workspace
+ENV PORT=3001
+EXPOSE ${PORT}
 
-EXPOSE 3001
-
-CMD ["node", "dist/server.js"]
+CMD ["sh", "-c", "npm start -- -p $PORT"]
 ```
 
 ## Common Issues and Fixes
@@ -218,22 +211,24 @@ RUN npx prisma generate
 
 **Problem**: Missing type definitions when using `--omit=dev`
 
-**Fix**: Install all dependencies, compile, then prune:
+**Fix**: Install all dependencies, build with Next.js, then prune:
 
 ```dockerfile
 RUN npm ci --ignore-scripts
-RUN npx tsc --project tsconfig.server.json
+COPY . .
+RUN npm run build
 RUN npm prune --omit=dev
 ```
 
-### 4. Parallel Docker build cache issues
+### 4. Port configuration
 
-**Problem**: Splitting AMD64/ARM64 into separate jobs causes cache conflicts
+**Problem**: Application ignores PORT environment variable
 
-**Fix**: Use single job with multi-platform build:
+**Fix**: Next.js respects PORT env var. Use `npm start -- -p $PORT` in Docker:
 
-```yaml
-platforms: linux/amd64,linux/arm64
+```dockerfile
+ENV PORT=3001
+CMD ["sh", "-c", "npm start -- -p $PORT"]
 ```
 
 ## Verification Commands

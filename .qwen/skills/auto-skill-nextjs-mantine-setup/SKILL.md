@@ -2,7 +2,7 @@
 name: nextjs-mantine-setup
 description: Next.js 16 with Mantine v9 project setup including common pitfalls and fixes
 source: auto-skill
-extracted_at: '2026-06-20T02:10:00.000Z'
+extracted_at: '2026-06-20T04:00:00.000Z'
 ---
 
 # Next.js 16 + Mantine v9 Project Setup
@@ -19,6 +19,7 @@ Setting up a Next.js 16 application with Mantine UI v9, i18next, and Chart.js.
 - `i18next` (`^26.3.1`), `react-i18next` (`^17.0.8`)
 - `chart.js`, `react-chartjs-2`, `chartjs-adapter-moment`
 - `moment`, `moment-precise-range-plugin`
+- `prisma`, `@prisma/client` (`^6.19.3`)
 
 ## Version Changes (v14 → v16, v7 → v9)
 
@@ -27,12 +28,15 @@ Setting up a Next.js 16 application with Mantine UI v9, i18next, and Chart.js.
 1. **Turbopack**: Default build system (faster than Webpack)
 2. **middleware → proxy**: Rename `middleware.ts` to `proxy.ts`, export function named `proxy`
 3. **ESLint 9**: New flat config format (`eslint.config.mjs`)
+4. **Standalone output**: `output: 'standalone'` for Docker deployment
+5. **TypeScript target**: Must be ES2017+ (not ES5) for Unicode regex support
 
 ### Mantine 9 Changes
 
 1. **React 19**: Required peer dependency
 2. **Removed @mantine/ds**: No longer compatible with v9
 3. **Props renamed**: `spacing` → `gap` on layout components
+4. **FileInput**: `placeholder` prop removed
 
 ## Common Pitfalls and Fixes
 
@@ -100,16 +104,9 @@ export function proxy(request: NextRequest) { ... }
 
 ```javascript
 // eslint.config.mjs
-import { dirname } from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
 const eslintConfig = {
   extends: ['next/core-web-vitals'],
 };
-
 export default eslintConfig;
 ```
 
@@ -126,7 +123,25 @@ export default eslintConfig;
 <FileInput />
 ```
 
-## Project Structure Template
+### 9. TypeScript target must be ES2017+
+
+**Problem**: `u` regex flag requires ES6+ target
+**Fix**: Set target to ES2017 in tsconfig.json
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2017"
+  }
+}
+```
+
+### 10. Standalone output for Docker
+
+**Problem**: `next start` doesn't work with `output: 'standalone'`
+**Fix**: For Docker, use `node .next/standalone/server.js`. For local dev, remove `output: 'standalone'`.
+
+## Project Structure
 
 ```
 src/
@@ -134,7 +149,8 @@ src/
 │   ├── _app.tsx      # MantineProvider + i18n
 │   ├── _document.tsx # HTML document
 │   ├── index.tsx
-│   └── setup.tsx     # Initial setup page
+│   ├── setup.tsx     # Initial setup page
+│   └── env-error.tsx # Environment variable error page
 ├── i18n/
 │   ├── index.ts
 │   └── locales/
@@ -147,93 +163,28 @@ src/
 ├── pages/api/
 │   ├── auth/         # GitHub OAuth
 │   ├── init.ts       # Database initialization
-│   └── setup.ts      # Setup API
+│   ├── setup.ts      # Setup API
+│   ├── env-check.ts  # Environment variable check
+│   └── health.ts     # Health check
 ├── theme.ts
 └── proxy.ts          # Next.js 16 proxy (middleware)
-```
-
-## TypeScript Configuration
-
-### tsconfig.json
-
-```json
-{
-  "compilerOptions": {
-    "target": "es5",
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "preserve",
-    "incremental": true,
-    "plugins": [{ "name": "next" }],
-    "paths": { "@/*": ["./src/*"] }
-  },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
-}
-```
-
-## Package.json Scripts
-
-```json
-{
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint",
-    "lint:fix": "next lint --fix",
-    "typecheck": "tsc --noEmit",
-    "test": "jest",
-    "server:dev": "tsx watch src/server.ts",
-    "server:build": "tsc --project tsconfig.server.json"
-  }
-}
-```
-
-## Git Hooks Setup (Husky + lint-staged)
-
-```bash
-# Install
-npm install -D husky lint-staged prettier
-
-# Initialize
-npx husky init
-```
-
-### package.json lint-staged config
-
-```json
-{
-  "lint-staged": {
-    "*.{ts,tsx}": ["eslint --fix", "prettier --write"],
-    "*.{json,md,yml}": ["prettier --write"]
-  }
-}
 ```
 
 ## Environment Variables
 
 ```env
-# Next.js
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-
-# GitHub OAuth
+# Required (app won't start without these)
 GITHUB_CLIENT_ID=your_client_id
 GITHUB_CLIENT_SECRET=your_client_secret
-GITHUB_REDIRECT_URI=http://localhost:3000/api/auth/callback
-
-# Database
-DATABASE_URL=postgresql://user:pass@localhost:5432/manticore
-
-# Security
 JWT_SECRET=your_jwt_secret
 ENCRYPTION_KEY=your_encryption_key
+DATABASE_URL=postgresql://user:pass@localhost:5432/manticore
+
+# Optional
+PORT=3001
+GITHUB_APP_ID=your_app_id
+GITHUB_WEBHOOK_SECRET=your_webhook_secret
+REPO_OWNER=your_username
+REPO_NAME=your_repo
+PUBLIC_URL=https://your-domain.com
 ```
