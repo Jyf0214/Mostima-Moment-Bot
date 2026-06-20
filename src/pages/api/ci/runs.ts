@@ -49,11 +49,15 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
 
   const limit = Math.min(Number(req.query.limit) || 50, 200);
   const offset = Math.max(Number(req.query.offset) || 0, 0);
+  const botOnly = req.query.botOnly === 'true';
+
+  const where: Record<string, unknown> = { repoFullName: repo };
+  if (botOnly) where.isBotInitiated = true;
 
   try {
     const [runs, total] = await Promise.all([
       db.ciRun.findMany({
-        where: { repoFullName: repo },
+        where,
         orderBy: { createdAt: 'desc' },
         take: limit,
         skip: offset,
@@ -69,6 +73,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
           triggeredBy: true,
           ruleId: true,
           checksRan: true,
+          isBotInitiated: true,
           startedAt: true,
           completedAt: true,
           duration: true,
@@ -93,8 +98,9 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
  */
 async function handleGetRepos(req: NextApiRequest, res: NextApiResponse) {
   try {
-    // 获取最近 500 条运行记录，按仓库分组统计
+    // 获取最近 500 条 bot 触发的运行记录，按仓库分组统计
     const recentRuns = (await db.ciRun.findMany({
+      where: { isBotInitiated: true },
       orderBy: { createdAt: 'desc' },
       take: 500,
       select: {
@@ -141,7 +147,9 @@ async function handleGetRepos(req: NextApiRequest, res: NextApiResponse) {
     // 也统计每个仓库的总数（包括不在最近 500 条中的）
     const repoNames = Array.from(repoMap.keys());
     const countResults = await Promise.all(
-      repoNames.map((name) => db.ciRun.count({ where: { repoFullName: name } }))
+      repoNames.map((name) =>
+        db.ciRun.count({ where: { repoFullName: name, isBotInitiated: true } })
+      )
     );
 
     const repos = repoNames.map((name, i) => ({

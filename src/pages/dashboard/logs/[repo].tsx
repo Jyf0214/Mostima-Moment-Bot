@@ -109,6 +109,7 @@ export default function RepoLogsDetailPage() {
           repo: repoName,
           limit: String(pageSize),
           offset: String(page * pageSize),
+          botOnly: 'true',
         });
         const res = await fetch(`/api/ci/runs?${params}`);
         if (res.ok) {

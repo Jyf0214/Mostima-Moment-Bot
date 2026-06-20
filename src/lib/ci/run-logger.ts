@@ -41,6 +41,7 @@ export async function recordCiRun(params: {
   checksRan?: string[];
   logs?: string;
   duration?: number;
+  isBotInitiated?: boolean;
 }): Promise<number | null> {
   try {
     const run = await db.ciRun.create({
@@ -57,6 +58,7 @@ export async function recordCiRun(params: {
         ruleId: params.ruleId?.slice(0, 100) || null,
         checksRan: params.checksRan || [],
         logs: params.logs?.slice(0, MAX_LOG_LENGTH) || null,
+        isBotInitiated: params.isBotInitiated || false,
         startedAt: params.status === 'running' || !params.status ? new Date() : null,
         completedAt: ['success', 'failure', 'cancelled'].includes(params.status || '')
           ? new Date()

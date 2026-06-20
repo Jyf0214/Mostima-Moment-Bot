@@ -259,17 +259,27 @@ describe('Webhook 事件日志记录', () => {
       await handler(req, res);
 
       expect(res._getStatusCode()).toBe(200);
-      expect(mockRecordCiRun).toHaveBeenCalledTimes(1);
+      // PR opened 事件会记录 2 条：CI 检查 + 安全审计
+      expect(mockRecordCiRun).toHaveBeenCalledTimes(2);
 
-      const callArgs = mockRecordCiRun.mock.calls[0][0];
-      expect(callArgs.repo).toBe('owner/repo');
-      expect(callArgs.event).toBe('pull_request');
-      expect(callArgs.action).toBe('opened');
-      expect(callArgs.branch).toBe('feature/test');
-      expect(callArgs.commitSha).toBe('abc123');
-      expect(callArgs.prNumber).toBe(42);
-      expect(callArgs.status).toBe('running');
-      expect(callArgs.triggeredBy).toBe('testuser');
+      // 第一条：PR CI 检查（用户触发）
+      const ciCallArgs = mockRecordCiRun.mock.calls[0][0];
+      expect(ciCallArgs.repo).toBe('owner/repo');
+      expect(ciCallArgs.event).toBe('pull_request');
+      expect(ciCallArgs.action).toBe('opened');
+      expect(ciCallArgs.branch).toBe('feature/test');
+      expect(ciCallArgs.commitSha).toBe('abc123');
+      expect(ciCallArgs.prNumber).toBe(42);
+      expect(ciCallArgs.status).toBe('running');
+      expect(ciCallArgs.triggeredBy).toBe('testuser');
+      expect(ciCallArgs.isBotInitiated).toBeFalsy();
+
+      // 第二条：安全审计（bot 触发）
+      const auditCallArgs = mockRecordCiRun.mock.calls[1][0];
+      expect(auditCallArgs.repo).toBe('owner/repo');
+      expect(auditCallArgs.event).toBe('security_audit');
+      expect(auditCallArgs.isBotInitiated).toBe(true);
+      expect(auditCallArgs.triggeredBy).toBe('bot');
     });
   });
 

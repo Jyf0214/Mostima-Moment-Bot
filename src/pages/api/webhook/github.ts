@@ -159,15 +159,40 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             }
           });
 
-        // PR 安全审计
+        // PR 安全审计（bot 自身的工作流）
         if (prPayload.action === 'opened' || prPayload.action === 'synchronize') {
           const prNumber = prPayload.pull_request.number;
           const baseBranch = prPayload.pull_request.base.ref;
           const headSha = prPayload.pull_request.head.sha;
 
-          auditPR(prNumber, baseBranch, headSha, workspaceDir).catch((err) => {
-            console.error(`Security audit failed for PR #${prNumber}:`, err);
+          const auditRunId = await recordCiRun({
+            repo,
+            event: 'security_audit',
+            action: prPayload.action,
+            branch: baseBranch,
+            commitSha: headSha,
+            prNumber,
+            status: 'running',
+            triggeredBy: 'bot',
+            isBotInitiated: true,
           });
+
+          auditPR(prNumber, baseBranch, headSha, workspaceDir)
+            .then(() => {
+              if (auditRunId) {
+                updateCiRun(auditRunId, { status: 'success', conclusion: 'success' });
+              }
+            })
+            .catch((err) => {
+              console.error(`Security audit failed for PR #${prNumber}:`, err);
+              if (auditRunId) {
+                updateCiRun(auditRunId, {
+                  status: 'failure',
+                  conclusion: 'failure',
+                  logs: err instanceof Error ? err.message : String(err),
+                });
+              }
+            });
         }
         break;
       }
@@ -179,9 +204,41 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Issue 自动修复
         if (shouldTriggerIssueFix(event, issuePayload)) {
           console.log(`[Webhook] Issue auto-fix triggered for Issue #${issuePayload.issue.number}`);
-          solveIssue(event, issuePayload, workspaceDir).catch((err) => {
-            console.error(`Issue solver failed:`, err);
+
+          // 记录 bot 触发的工作流日志
+          const issueRepo = String(
+            (payload as Record<string, unknown>).repository
+              ? ((payload as Record<string, unknown>).repository as Record<string, unknown>)
+                  .full_name || ''
+              : ''
+          );
+          const issueRunId = await recordCiRun({
+            repo: issueRepo,
+            event: event === 'issues' ? 'issue_labeled' : 'issue_comment',
+            action: event === 'issues' ? 'auto-fix' : 'fix-command',
+            prNumber: issuePayload.issue.number,
+            status: 'running',
+            triggeredBy: 'bot',
+            isBotInitiated: true,
+            logs: `Issue #${issuePayload.issue.number}: ${issuePayload.issue.title}`,
           });
+
+          solveIssue(event, issuePayload, workspaceDir)
+            .then(() => {
+              if (issueRunId) {
+                updateCiRun(issueRunId, { status: 'success', conclusion: 'success' });
+              }
+            })
+            .catch((err) => {
+              console.error(`Issue solver failed:`, err);
+              if (issueRunId) {
+                updateCiRun(issueRunId, {
+                  status: 'failure',
+                  conclusion: 'failure',
+                  logs: err instanceof Error ? err.message : String(err),
+                });
+              }
+            });
         }
 
         // 原有的 issue_comment 重试逻辑
