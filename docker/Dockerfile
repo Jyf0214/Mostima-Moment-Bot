@@ -25,6 +25,9 @@ RUN npm prune --omit=dev
 # 创建工作区目录
 RUN mkdir -p /app/workspace
 
-EXPOSE 3001
+# 默认端口
+ENV BOT_PORT=3001
 
-CMD ["node", "dist/server.js"]
+EXPOSE ${BOT_PORT}
+
+CMD ["sh", "-c", "node dist/server.js"]
