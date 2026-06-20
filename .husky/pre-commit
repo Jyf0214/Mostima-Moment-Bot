@@ -1,6 +1,3 @@
-#!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
-
 echo "🔍 Running pre-commit checks..."
 
 # 运行 lint-staged（检查暂存文件的语法）
