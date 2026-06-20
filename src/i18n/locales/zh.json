@@ -206,7 +206,16 @@
     "githubClientSecret": "1. 在 OAuth App 页面（同上）\n2. 点击 \"Generate a new client secret\"\n3. 立即复制 secret 值（仅显示一次！）\n4. 如果丢失，需删除后重新生成",
     "jwtSecret": "在终端运行:\nopenssl rand -hex 32\n\n然后将 64 位十六进制字符串复制到 .env.local",
     "encryptionKey": "在终端运行:\nopenssl rand -hex 32\n\n然后将 64 位十六进制字符串复制到 .env.local",
-    "databaseUrl": "方案 A - Docker（推荐）:\ndocker run -d --name postgres -e POSTGRES_USER=user -e POSTGRES_PASSWORD=password -e POSTGRES_DB=manticore -p 5432:5432 postgres:16-alpine\n\n然后设置: postgresql://user:password@localhost:5432/manticore\n\n方案 B - 本地 PostgreSQL:\n1. 安装: sudo apt install postgresql\n2. 创建数据库: psql -U postgres -c \"CREATE DATABASE manticore;\"\n3. 根据实际情况填写连接字符串"
+    "databaseUrl": "方案 A - Docker（推荐）:\ndocker run -d --name postgres -e POSTGRES_USER=user -e POSTGRES_PASSWORD=password -e POSTGRES_DB=manticore -p 5432:5432 postgres:16-alpine\n\n然后设置: postgresql://user:password@localhost:5432/manticore\n\n方案 B - 本地 PostgreSQL:\n1. 安装: sudo apt install postgresql\n2. 创建数据库: psql -U postgres -c \"CREATE DATABASE manticore;\"\n3. 根据实际情况填写连接字符串",
+    "githubAppId": "步骤：\n1. 打开 https://github.com/settings/apps\n2. 点击你创建的 App 名称\n3. 页面顶部「About」区域显示的「GitHub App ID」即为所需值\n4. 或在 URL 格式中查看：https://github.com/settings/apps/{slug}",
+    "githubAppSlug": "步骤：\n1. 打开 https://github.com/settings/apps\n2. 点击你创建的 App 名称\n3. 页面 URL 中的名称即为 slug\n4. 或在 App 设置页「GitHub App name」下方可见\n5. 安装链接格式：https://github.com/apps/{slug}/installations/new",
+    "githubPrivateKeyPath": "步骤：\n1. 在 GitHub App 设置页底部「Private keys」区域\n2. 点击「Generate a private key」\n3. 下载 .pem 文件\n4. 将文件放到服务器上，如：/app/private-key.pem\n5. 填写文件的绝对路径或相对于项目根目录的路径",
+    "webhookSecret": "步骤：\n1. 在 GitHub App 设置页「Webhooks」区域\n2. 如果创建时已设置，使用当时的密钥\n3. 如果需要新生成，在终端运行：openssl rand -base64 32\n4. 将生成的密钥同时填入 .env 和 GitHub App 的 Webhook secret\n5. 两边必须完全一致",
+    "repoOwner": "填写你的 GitHub 用户名或组织名。\n\n示例：\n- 个人仓库：Jyf0214\n- 组织仓库：my-org-name\n\n可在 GitHub 仓库页面 URL 中查看：https://github.com/{REPO_OWNER}/{REPO_NAME}",
+    "repoName": "填写目标仓库名称。\n\n示例：Mostima-Moment-Bot\n\n可在 GitHub 仓库页面 URL 中查看：https://github.com/{owner}/{REPO_NAME}",
+    "collaborators": "允许通过 PR 评论触发 CI 重试的用户列表，逗号分隔。\n\n示例：user1,user2,bot-account\n\n这些用户可以在 PR 评论中输入 /rebuild 或 /retry 来手动触发 CI 检查。\n\n留空则无人可以手动触发。",
+    "workspaceDir": "CI 检查时的 Git 工作区目录。\n\n默认值：当前目录（即项目根目录）\n\n在 Docker 部署中，可通过 docker-compose.yml 的 volumes 挂载一个专用目录，如：./workspace",
+    "appUrl": "应用的公开访问地址，用于生成 OAuth 回调 URL。\n\n示例：\n- 本地开发：http://localhost:3001\n- 生产环境：https://manticore-bot.example.com\n\n注意：不要以 / 结尾"
   },
   "api": {
     "methodNotAllowed": "Method not allowed",

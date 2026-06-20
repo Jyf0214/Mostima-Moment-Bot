@@ -4,7 +4,15 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ProCard } from '@/components/ui/ProCard';
 import { Button } from '@/components/ui/Button';
-import { CheckCircle2, XCircle, RefreshCw, Search, Shield } from 'lucide-react';
+import {
+  CheckCircle2,
+  XCircle,
+  RefreshCw,
+  Search,
+  Shield,
+  ChevronDown,
+  BookOpen,
+} from 'lucide-react';
 
 interface EnvVarDetail {
   key: string;
@@ -13,6 +21,7 @@ interface EnvVarDetail {
   configured: boolean;
   description: string;
   usage: string;
+  hint: string;
 }
 
 interface EnvGroup {
@@ -26,6 +35,7 @@ export default function EnvVarsPage() {
   const [groups, setGroups] = useState<EnvGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [expandedVar, setExpandedVar] = useState<string | null>(null);
 
   useEffect(() => {
     loadEnvStatus();
@@ -127,51 +137,92 @@ export default function EnvVarsPage() {
             <h3 className="text-sm font-medium text-white/60 mb-3">{group.name}</h3>
             <div className="space-y-2">
               {group.vars.map((v) => (
-                <ProCard
+                <EnvVarCard
                   key={v.key}
-                  className={`bg-white/5 backdrop-blur-xl border transition-all ${
-                    v.configured ? 'border-emerald-500/20' : 'border-red-500/20'
-                  }`}
-                  padding="p-4"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <code className="text-sm font-mono text-white font-medium">{v.key}</code>
-                        {v.required && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-500/10 text-red-400 font-medium">
-                            {t('envPage.required')}
-                          </span>
-                        )}
-                        {!v.required && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/10 text-white/40 font-medium">
-                            {t('envPage.optional')}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-white/50 text-xs mb-1.5">{v.description}</p>
-                      <p className="text-purple-400/80 text-xs leading-relaxed">{v.usage}</p>
-                    </div>
-                    <div className="shrink-0 mt-1">
-                      {v.configured ? (
-                        <div className="flex items-center gap-1.5 text-emerald-400">
-                          <CheckCircle2 className="h-4 w-4" />
-                          <span className="text-xs">{t('envPage.configuredLabel')}</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1.5 text-red-400">
-                          <XCircle className="h-4 w-4" />
-                          <span className="text-xs">{t('envPage.missingLabel')}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </ProCard>
+                  variable={v}
+                  expanded={expandedVar === v.key}
+                  onToggle={() => setExpandedVar(expandedVar === v.key ? null : v.key)}
+                />
               ))}
             </div>
           </div>
         ))}
       </div>
     </div>
+  );
+}
+
+function EnvVarCard({
+  variable: v,
+  expanded,
+  onToggle,
+}: {
+  variable: EnvVarDetail;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <ProCard
+      className={`bg-white/5 backdrop-blur-xl border transition-all ${
+        v.configured ? 'border-emerald-500/20' : 'border-red-500/20'
+      }`}
+      padding="p-4"
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <code className="text-sm font-mono text-white font-medium">{v.key}</code>
+            {v.required && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-500/10 text-red-400 font-medium">
+                {t('envPage.required')}
+              </span>
+            )}
+            {!v.required && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/10 text-white/40 font-medium">
+                {t('envPage.optional')}
+              </span>
+            )}
+          </div>
+          <p className="text-white/50 text-xs mb-1.5">{v.description}</p>
+          <p className="text-purple-400/80 text-xs leading-relaxed">{v.usage}</p>
+        </div>
+        <div className="shrink-0 mt-1">
+          {v.configured ? (
+            <div className="flex items-center gap-1.5 text-emerald-400">
+              <CheckCircle2 className="h-4 w-4" />
+              <span className="text-xs">{t('envPage.configuredLabel')}</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 text-red-400">
+              <XCircle className="h-4 w-4" />
+              <span className="text-xs">{t('envPage.missingLabel')}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 获取教程按钮 */}
+      <button
+        onClick={onToggle}
+        className="mt-3 flex items-center gap-2 text-xs text-purple-400 hover:text-purple-300 transition-colors"
+      >
+        <BookOpen className="h-3.5 w-3.5" />
+        <span>{t('envPage.howToGet')}</span>
+        <ChevronDown
+          className={`h-3.5 w-3.5 transition-transform ${expanded ? 'rotate-180' : ''}`}
+        />
+      </button>
+
+      {/* 展开的教程内容 */}
+      {expanded && (
+        <div className="mt-3 p-3 rounded-lg bg-white/5 border border-white/10">
+          <pre className="text-xs text-white/60 whitespace-pre-wrap font-mono leading-relaxed">
+            {v.hint}
+          </pre>
+        </div>
+      )}
+    </ProCard>
   );
 }

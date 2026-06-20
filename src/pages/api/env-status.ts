@@ -10,6 +10,7 @@ interface EnvVarDef {
   required: boolean;
   descriptionKey: string;
   usageKey: string;
+  hintKey: string;
 }
 
 interface JwtPayload {
@@ -24,6 +25,7 @@ const ENV_VARS: EnvVarDef[] = [
     required: true,
     descriptionKey: 'envVarDescriptions.githubClientId',
     usageKey: 'envUsage.githubClientId',
+    hintKey: 'envVarHints.githubClientId',
   },
   {
     key: 'GITHUB_CLIENT_SECRET',
@@ -31,6 +33,7 @@ const ENV_VARS: EnvVarDef[] = [
     required: true,
     descriptionKey: 'envVarDescriptions.githubClientSecret',
     usageKey: 'envUsage.githubClientSecret',
+    hintKey: 'envVarHints.githubClientSecret',
   },
   {
     key: 'JWT_SECRET',
@@ -38,6 +41,7 @@ const ENV_VARS: EnvVarDef[] = [
     required: true,
     descriptionKey: 'envVarDescriptions.jwtSecret',
     usageKey: 'envUsage.jwtSecret',
+    hintKey: 'envVarHints.jwtSecret',
   },
   {
     key: 'ENCRYPTION_KEY',
@@ -45,6 +49,7 @@ const ENV_VARS: EnvVarDef[] = [
     required: true,
     descriptionKey: 'envVarDescriptions.encryptionKey',
     usageKey: 'envUsage.encryptionKey',
+    hintKey: 'envVarHints.encryptionKey',
   },
   {
     key: 'DATABASE_URL',
@@ -52,6 +57,7 @@ const ENV_VARS: EnvVarDef[] = [
     required: true,
     descriptionKey: 'envVarDescriptions.databaseUrl',
     usageKey: 'envUsage.databaseUrl',
+    hintKey: 'envVarHints.databaseUrl',
   },
   // GitHub App
   {
@@ -60,6 +66,7 @@ const ENV_VARS: EnvVarDef[] = [
     required: false,
     descriptionKey: 'envVarDescriptions.githubAppId',
     usageKey: 'envUsage.githubAppId',
+    hintKey: 'envVarHints.githubAppId',
   },
   {
     key: 'GITHUB_APP_SLUG',
@@ -67,6 +74,7 @@ const ENV_VARS: EnvVarDef[] = [
     required: false,
     descriptionKey: 'envVarDescriptions.githubAppSlug',
     usageKey: 'envUsage.githubAppSlug',
+    hintKey: 'envVarHints.githubAppSlug',
   },
   {
     key: 'GITHUB_PRIVATE_KEY_PATH',
@@ -74,6 +82,7 @@ const ENV_VARS: EnvVarDef[] = [
     required: false,
     descriptionKey: 'envVarDescriptions.githubPrivateKeyPath',
     usageKey: 'envUsage.githubPrivateKeyPath',
+    hintKey: 'envVarHints.githubPrivateKeyPath',
   },
   {
     key: 'WEBHOOK_SECRET',
@@ -81,6 +90,7 @@ const ENV_VARS: EnvVarDef[] = [
     required: false,
     descriptionKey: 'envVarDescriptions.webhookSecret',
     usageKey: 'envUsage.webhookSecret',
+    hintKey: 'envVarHints.webhookSecret',
   },
   // CI/CD
   {
@@ -89,6 +99,7 @@ const ENV_VARS: EnvVarDef[] = [
     required: false,
     descriptionKey: 'envVarDescriptions.repoOwner',
     usageKey: 'envUsage.repoOwner',
+    hintKey: 'envVarHints.repoOwner',
   },
   {
     key: 'REPO_NAME',
@@ -96,6 +107,7 @@ const ENV_VARS: EnvVarDef[] = [
     required: false,
     descriptionKey: 'envVarDescriptions.repoName',
     usageKey: 'envUsage.repoName',
+    hintKey: 'envVarHints.repoName',
   },
   {
     key: 'COLLABORATORS',
@@ -103,6 +115,7 @@ const ENV_VARS: EnvVarDef[] = [
     required: false,
     descriptionKey: 'envVarDescriptions.collaborators',
     usageKey: 'envUsage.collaborators',
+    hintKey: 'envVarHints.collaborators',
   },
   {
     key: 'WORKSPACE_DIR',
@@ -110,6 +123,7 @@ const ENV_VARS: EnvVarDef[] = [
     required: false,
     descriptionKey: 'envVarDescriptions.workspaceDir',
     usageKey: 'envUsage.workspaceDir',
+    hintKey: 'envVarHints.workspaceDir',
   },
   // App
   {
@@ -118,6 +132,7 @@ const ENV_VARS: EnvVarDef[] = [
     required: false,
     descriptionKey: 'envVarDescriptions.appUrl',
     usageKey: 'envUsage.appUrl',
+    hintKey: 'envVarHints.appUrl',
   },
 ];
 
@@ -159,6 +174,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       configured: !!process.env[v.key],
       description: i18n.t(v.descriptionKey),
       usage: i18n.t(v.usageKey),
+      hint: i18n.t(v.hintKey),
     })),
   }));
 
