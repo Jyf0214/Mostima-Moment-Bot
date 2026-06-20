@@ -1,47 +1,38 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
-  Container,
-  Paper,
-  Title,
-  Text,
-  Button,
-  Stack,
-  FileInput,
-  TextInput,
-  Alert,
-  Loader,
-  Center,
-  Box,
-  Group,
-  Stepper,
-  ThemeIcon,
-  Divider,
-  SimpleGrid,
-  Card,
-  Badge,
-} from '@mantine/core';
-import {
-  IconUpload,
-  IconBrandGithub,
-  IconCheck,
-  IconAlertCircle,
-  IconKey,
-  IconSettings,
-  IconRocket,
-  IconArrowRight,
-  IconArrowLeft,
-  IconServer,
-  IconFileCode,
-  IconGitBranch,
-  IconWebhook,
-  IconChartBar,
-  IconMessageCircle,
-} from '@tabler/icons-react';
+  Upload,
+  Check,
+  AlertCircle,
+  Key,
+  Settings,
+  Rocket,
+  ArrowRight,
+  ArrowLeft,
+  Server,
+  FileCode,
+  GitBranch,
+  Webhook,
+  BarChart3,
+  MessageCircle,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-const featureIcons = [IconRocket, IconWebhook, IconChartBar, IconMessageCircle, IconSettings];
+function GithubIcon({ size = 24, className }: { size?: number; className?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+    </svg>
+  );
+}
+
+const featureIcons = [Rocket, Webhook, BarChart3, MessageCircle, Settings];
+
+const gradientBg = 'bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e]';
+const glassPanel = 'bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl';
+const inputBase =
+  'w-full rounded-lg border border-white/15 bg-white/5 px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-colors';
 
 export default function SetupPage() {
   const { t } = useTranslation();
@@ -56,6 +47,7 @@ export default function SetupPage() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [activeStep, setActiveStep] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     checkAppStatus();
@@ -66,7 +58,7 @@ export default function SetupPage() {
       const response = await fetch('/api/auth/status');
       const data = await response.json();
       setIsNew(data.isNew);
-    } catch (err) {
+    } catch {
       setError(t('setup.checkStatusFailed'));
     } finally {
       setLoading(false);
@@ -126,639 +118,501 @@ export default function SetupPage() {
     setActiveStep((prev) => Math.max(prev - 1, 0));
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    setPrivateKey(file);
+  };
+
+  /* ---------- Loading state ---------- */
   if (loading) {
     return (
-      <Box
-        style={{
-          minHeight: '100vh',
-          background: 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)',
-        }}
-      >
-        <Center h="100vh">
-          <Stack align="center" gap="md">
-            <Loader size="xl" color="blue" />
-            <Text c="dimmed" size="sm">
-              {t('setup.title')}
-            </Text>
-          </Stack>
-        </Center>
-      </Box>
+      <div className={`${gradientBg} min-h-screen flex items-center justify-center`}>
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-white/20 border-t-blue-500" />
+          <p className="text-sm text-white/50">{t('setup.title')}</p>
+        </div>
+      </div>
     );
   }
 
+  /* ---------- Success state ---------- */
   if (success) {
     return (
-      <Box
-        style={{
-          minHeight: '100vh',
-          background: 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)',
-        }}
-      >
-        <Center h="100vh" p="xl">
-          <Paper
-            shadow="xl"
-            p={48}
-            radius="xl"
-            style={{
-              maxWidth: 480,
-              width: '100%',
-              background: 'rgba(255, 255, 255, 0.05)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-            }}
+      <div className={`${gradientBg} min-h-screen flex items-center justify-center p-6`}>
+        <div className={`${glassPanel} max-w-md w-full p-12 flex flex-col items-center gap-8`}>
+          <div className="h-24 w-24 rounded-full bg-gradient-to-br from-teal-500 to-green-500 flex items-center justify-center shadow-lg shadow-green-500/20">
+            <Check className="h-12 w-12 text-white" />
+          </div>
+
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-white">{t('setup.complete')}</h2>
+            <p className="mt-2 text-white/60">{t('setup.completeSubtitle')}</p>
+          </div>
+
+          <a
+            href="/api/auth/login"
+            className="flex items-center justify-center gap-2 w-full rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-6 py-3 text-lg font-semibold text-white shadow-lg shadow-blue-500/25 transition-all hover:from-blue-500 hover:to-cyan-400 hover:shadow-blue-500/40"
           >
-            <Stack align="center" gap="xl">
-              <ThemeIcon
-                size={96}
-                radius="xl"
-                variant="gradient"
-                gradient={{ from: 'teal', to: 'green', deg: 135 }}
-              >
-                <IconCheck size={48} />
-              </ThemeIcon>
-
-              <Stack align="center" gap="xs">
-                <Title order={2} c="white">
-                  {t('setup.complete')}
-                </Title>
-                <Text c="dimmed" size="md" ta="center">
-                  {t('setup.completeSubtitle')}
-                </Text>
-              </Stack>
-
-              <Button
-                component="a"
-                href="/api/auth/login"
-                leftSection={<IconBrandGithub size={20} />}
-                size="lg"
-                radius="md"
-                variant="gradient"
-                gradient={{ from: 'blue', to: 'cyan', deg: 135 }}
-                fullWidth
-              >
-                {t('setup.loginGithub')}
-              </Button>
-            </Stack>
-          </Paper>
-        </Center>
-      </Box>
+            <GithubIcon className="h-5 w-5" />
+            {t('setup.loginGithub')}
+          </a>
+        </div>
+      </div>
     );
   }
 
+  /* ---------- Welcome-back state ---------- */
   if (!isNew) {
     return (
-      <Box
-        style={{
-          minHeight: '100vh',
-          background: 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)',
-        }}
-      >
-        <Center h="100vh" p="xl">
-          <Paper
-            shadow="xl"
-            p={48}
-            radius="xl"
-            style={{
-              maxWidth: 480,
-              width: '100%',
-              background: 'rgba(255, 255, 255, 0.05)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-            }}
+      <div className={`${gradientBg} min-h-screen flex items-center justify-center p-6`}>
+        <div className={`${glassPanel} max-w-md w-full p-12 flex flex-col items-center gap-8`}>
+          <div className="h-18 w-18 rounded-full bg-gradient-to-br from-blue-600 to-violet-500 flex items-center justify-center shadow-lg shadow-violet-500/20">
+            <GithubIcon className="h-9 w-9 text-white" />
+          </div>
+
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-white">{t('setup.welcomeBack')}</h2>
+            <p className="mt-2 text-white/60">{t('setup.welcomeBackSubtitle')}</p>
+          </div>
+
+          <a
+            href="/api/auth/login"
+            className="flex items-center justify-center gap-2 w-full rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-6 py-3 text-lg font-semibold text-white shadow-lg shadow-blue-500/25 transition-all hover:from-blue-500 hover:to-cyan-400 hover:shadow-blue-500/40"
           >
-            <Stack align="center" gap="xl">
-              <ThemeIcon
-                size={72}
-                radius="xl"
-                variant="gradient"
-                gradient={{ from: 'blue', to: 'violet', deg: 135 }}
-              >
-                <IconBrandGithub size={36} />
-              </ThemeIcon>
-
-              <Stack align="center" gap="xs">
-                <Title order={2} c="white">
-                  {t('setup.welcomeBack')}
-                </Title>
-                <Text c="dimmed" size="md" ta="center">
-                  {t('setup.welcomeBackSubtitle')}
-                </Text>
-              </Stack>
-
-              <Button
-                component="a"
-                href="/api/auth/login"
-                leftSection={<IconBrandGithub size={20} />}
-                size="lg"
-                radius="md"
-                variant="gradient"
-                gradient={{ from: 'blue', to: 'cyan', deg: 135 }}
-                fullWidth
-              >
-                {t('setup.loginGithub')}
-              </Button>
-            </Stack>
-          </Paper>
-        </Center>
-      </Box>
+            <GithubIcon className="h-5 w-5" />
+            {t('setup.loginGithub')}
+          </a>
+        </div>
+      </div>
     );
   }
 
+  /* ---------- Main setup wizard ---------- */
+  const steps = [
+    { label: t('setup.stepCredentials'), desc: t('setup.stepCredentialsDesc'), icon: Key },
+    { label: t('setup.stepRepository'), desc: t('setup.stepRepositoryDesc'), icon: GitBranch },
+    { label: t('setup.stepReview'), desc: t('setup.stepReviewDesc'), icon: Rocket },
+  ];
+
   return (
-    <Box
-      style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)',
-      }}
-    >
-      <Container size="xl" py="xl">
+    <div className={`${gradientBg} min-h-screen`}>
+      <div className="mx-auto max-w-screen-xl px-6 py-12">
         {/* Header */}
-        <Stack align="center" gap="xs" mb="xl">
-          <Title order={1} c="white">
-            {t('setup.title')}
-          </Title>
-          <Text c="dimmed" size="lg">
-            {t('setup.subtitle')}
-          </Text>
-        </Stack>
+        <div className="text-center mb-10">
+          <h1 className="text-3xl font-bold text-white">{t('setup.title')}</h1>
+          <p className="mt-2 text-lg text-white/60">{t('setup.subtitle')}</p>
+        </div>
 
         {/* Stepper */}
-        <Paper
-          shadow="xl"
-          p="lg"
-          radius="xl"
-          mb="xl"
-          style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-          }}
-        >
-          <Stepper active={activeStep} onStepClick={setActiveStep} color="blue" size="lg">
-            <Stepper.Step
-              label={t('setup.stepCredentials')}
-              description={t('setup.stepCredentialsDesc')}
-              icon={<IconKey size={18} />}
-              completedIcon={<IconCheck size={18} />}
-            />
-            <Stepper.Step
-              label={t('setup.stepRepository')}
-              description={t('setup.stepRepositoryDesc')}
-              icon={<IconGitBranch size={18} />}
-              completedIcon={<IconCheck size={18} />}
-            />
-            <Stepper.Step
-              label={t('setup.stepReview')}
-              description={t('setup.stepReviewDesc')}
-              icon={<IconRocket size={18} />}
-              completedIcon={<IconCheck size={18} />}
-            />
-          </Stepper>
-        </Paper>
+        <div className={`${glassPanel} p-6 mb-8`}>
+          <div className="flex items-center justify-between">
+            {steps.map((step, idx) => {
+              const StepIcon = step.icon;
+              const isActive = idx === activeStep;
+              const isComplete = idx < activeStep;
+              return (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setActiveStep(idx)}
+                  className="flex flex-1 items-center gap-3 group cursor-pointer"
+                >
+                  {/* Circle */}
+                  <div
+                    className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-all ${
+                      isComplete
+                        ? 'bg-green-500 text-white shadow-lg shadow-green-500/30'
+                        : isActive
+                          ? 'bg-gradient-to-br from-blue-600 to-cyan-500 text-white shadow-lg shadow-blue-500/30'
+                          : 'bg-white/10 text-white/40 group-hover:bg-white/15'
+                    }`}
+                  >
+                    {isComplete ? <Check className="h-5 w-5" /> : <StepIcon className="h-5 w-5" />}
+                  </div>
+                  {/* Label */}
+                  <div className="hidden sm:block text-left">
+                    <p
+                      className={`text-sm font-semibold ${
+                        isActive || isComplete ? 'text-white' : 'text-white/40'
+                      }`}
+                    >
+                      {step.label}
+                    </p>
+                    <p className="text-xs text-white/40">{step.desc}</p>
+                  </div>
+                  {/* Connector */}
+                  {idx < steps.length - 1 && (
+                    <div
+                      className={`mx-3 hidden sm:block h-px flex-1 ${
+                        idx < activeStep ? 'bg-green-500/50' : 'bg-white/10'
+                      }`}
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
+        {/* Error */}
         {error && (
-          <Alert
-            color="red"
-            icon={<IconAlertCircle size={16} />}
-            mb="lg"
-            radius="md"
-            styles={{
-              root: {
-                background: 'rgba(248, 113, 113, 0.1)',
-                border: '1px solid rgba(248, 113, 113, 0.3)',
-              },
-            }}
-          >
-            {error}
-          </Alert>
+          <div className="mb-6 flex items-start gap-3 rounded-lg border border-red-400/30 bg-red-500/10 px-4 py-3 text-red-300">
+            <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+            <p className="text-sm">{error}</p>
+          </div>
         )}
 
-        <SimpleGrid cols={{ base: 1, md: 2 }} spacing="xl">
-          {/* Left panel - Description */}
-          <Paper
-            shadow="xl"
-            p="xl"
-            radius="xl"
-            style={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-            }}
-          >
-            <Stack gap="lg">
-              <Group gap="md">
-                <ThemeIcon
-                  size={48}
-                  radius="md"
-                  variant="gradient"
-                  gradient={{ from: 'blue', to: 'violet', deg: 135 }}
-                >
-                  <IconSettings size={24} />
-                </ThemeIcon>
-                <Title order={3} c="white">
-                  {t('setup.featureTitle')}
-                </Title>
-              </Group>
+        {/* Two-column layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Left panel - Features */}
+          <div className={`${glassPanel} p-8`}>
+            <div className="flex items-center gap-4 mb-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-violet-500 shadow-lg shadow-violet-500/20">
+                <Settings className="h-6 w-6 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-white">{t('setup.featureTitle')}</h3>
+            </div>
 
-              <Divider color="rgba(255, 255, 255, 0.1)" />
+            <hr className="mb-6 border-white/10" />
 
-              <Stack gap="md">
-                {[
-                  t('setup.feature1'),
-                  t('setup.feature2'),
-                  t('setup.feature3'),
-                  t('setup.feature4'),
-                  t('setup.feature5'),
-                ].map((feature, index) => {
-                  const FeatureIcon = featureIcons[index];
-                  return (
-                    <Group key={index} gap="md" wrap="nowrap">
-                      <ThemeIcon
-                        size={36}
-                        radius="md"
-                        variant="light"
-                        color="blue"
-                        style={{ flexShrink: 0 }}
-                      >
-                        <FeatureIcon size={18} />
-                      </ThemeIcon>
-                      <Text c="rgba(255, 255, 255, 0.8)" size="sm">
-                        {feature}
-                      </Text>
-                    </Group>
-                  );
-                })}
-              </Stack>
-            </Stack>
-          </Paper>
+            <div className="flex flex-col gap-4">
+              {[
+                t('setup.feature1'),
+                t('setup.feature2'),
+                t('setup.feature3'),
+                t('setup.feature4'),
+                t('setup.feature5'),
+              ].map((feature, index) => {
+                const FeatureIcon = featureIcons[index];
+                return (
+                  <div key={index} className="flex items-center gap-4">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-400">
+                      <FeatureIcon className="h-5 w-5" />
+                    </div>
+                    <p className="text-sm text-white/80">{feature}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
 
           {/* Right panel - Form */}
-          <Paper
-            shadow="xl"
-            p="xl"
-            radius="xl"
-            style={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-            }}
-          >
+          <div className={`${glassPanel} p-8`}>
             {/* Step 0: Credentials */}
             {activeStep === 0 && (
-              <Stack gap="lg">
-                <Group gap="md">
-                  <ThemeIcon
-                    size={40}
-                    radius="md"
-                    variant="gradient"
-                    gradient={{ from: 'blue', to: 'cyan', deg: 135 }}
-                  >
-                    <IconKey size={20} />
-                  </ThemeIcon>
-                  <Stack gap={0}>
-                    <Title order={4} c="white">
-                      {t('setup.credentialsTitle')}
-                    </Title>
-                    <Text c="dimmed" size="sm">
-                      {t('setup.credentialsDesc')}
-                    </Text>
-                  </Stack>
-                </Group>
+              <div className="flex flex-col gap-6">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-cyan-500 shadow-lg shadow-cyan-500/20">
+                    <Key className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-bold text-white">{t('setup.credentialsTitle')}</h4>
+                    <p className="text-sm text-white/50">{t('setup.credentialsDesc')}</p>
+                  </div>
+                </div>
 
-                <Divider color="rgba(255, 255, 255, 0.1)" />
+                <hr className="border-white/10" />
 
-                <Card
-                  p="lg"
-                  radius="md"
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.03)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                  }}
-                >
-                  <Stack gap="md">
-                    <FileInput
-                      label={t('setup.privateKey')}
-                      placeholder={t('setup.privateKeyPlaceholder')}
-                      accept=".pem"
-                      value={privateKey}
-                      onChange={setPrivateKey}
-                      required
-                      leftSection={<IconUpload size={16} />}
-                      size="md"
-                      styles={{
-                        input: {
-                          background: 'rgba(255, 255, 255, 0.05)',
-                          border: '1px dashed rgba(255, 255, 255, 0.2)',
-                          color: 'white',
-                          minHeight: 56,
-                        },
-                        label: { color: 'rgba(255, 255, 255, 0.8)' },
-                        placeholder: { color: 'rgba(255, 255, 255, 0.4)' },
-                      }}
-                    />
+                <div className="rounded-xl border border-white/8 bg-white/[0.03] p-6">
+                  <div className="flex flex-col gap-5">
+                    {/* File upload */}
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-white/80">
+                        {t('setup.privateKey')}
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex w-full items-center gap-3 rounded-lg border border-dashed border-white/20 bg-white/5 px-4 py-3.5 text-left transition-colors hover:border-blue-500/40 hover:bg-white/[0.07]"
+                      >
+                        <Upload className="h-4 w-4 shrink-0 text-white/40" />
+                        <span
+                          className={`text-sm ${
+                            privateKey ? 'text-white' : 'text-white/40'
+                          } truncate`}
+                        >
+                          {privateKey ? privateKey.name : t('setup.privateKeyPlaceholder')}
+                        </span>
+                        {privateKey && (
+                          <Check className="ml-auto h-4 w-4 shrink-0 text-green-400" />
+                        )}
+                      </button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".pem"
+                        onChange={handleFileChange}
+                        className="hidden"
+                      />
+                    </div>
 
-                    <TextInput
-                      label={t('setup.appId')}
-                      placeholder={t('setup.appIdPlaceholder')}
-                      value={appId}
-                      onChange={(e) => setAppId(e.currentTarget.value)}
-                      required
-                      size="md"
-                      styles={{
-                        input: {
-                          background: 'rgba(255, 255, 255, 0.05)',
-                          border: '1px solid rgba(255, 255, 255, 0.15)',
-                          color: 'white',
-                        },
-                        label: { color: 'rgba(255, 255, 255, 0.8)' },
-                      }}
-                    />
+                    {/* App ID */}
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-white/80">
+                        {t('setup.appId')}
+                      </label>
+                      <input
+                        type="text"
+                        value={appId}
+                        onChange={(e) => setAppId(e.target.value)}
+                        placeholder={t('setup.appIdPlaceholder')}
+                        required
+                        className={inputBase}
+                      />
+                    </div>
 
-                    <TextInput
-                      label={t('setup.webhookSecret')}
-                      placeholder={t('setup.webhookSecretPlaceholder')}
-                      value={webhookSecret}
-                      onChange={(e) => setWebhookSecret(e.currentTarget.value)}
-                      required
-                      size="md"
-                      styles={{
-                        input: {
-                          background: 'rgba(255, 255, 255, 0.05)',
-                          border: '1px solid rgba(255, 255, 255, 0.15)',
-                          color: 'white',
-                        },
-                        label: { color: 'rgba(255, 255, 255, 0.8)' },
-                      }}
-                    />
-                  </Stack>
-                </Card>
+                    {/* Webhook Secret */}
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-white/80">
+                        {t('setup.webhookSecret')}
+                      </label>
+                      <input
+                        type="text"
+                        value={webhookSecret}
+                        onChange={(e) => setWebhookSecret(e.target.value)}
+                        placeholder={t('setup.webhookSecretPlaceholder')}
+                        required
+                        className={inputBase}
+                      />
+                    </div>
+                  </div>
+                </div>
 
-                <Group justify="flex-end" mt="md">
-                  <Button
+                <div className="flex justify-end mt-2">
+                  <button
+                    type="button"
                     onClick={handleNext}
-                    rightSection={<IconArrowRight size={16} />}
-                    size="md"
-                    radius="md"
-                    variant="gradient"
-                    gradient={{ from: 'blue', to: 'cyan', deg: 135 }}
+                    className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition-all hover:from-blue-500 hover:to-cyan-400 hover:shadow-blue-500/40"
                   >
                     {t('setup.next')}
-                  </Button>
-                </Group>
-              </Stack>
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
             )}
 
             {/* Step 1: Repository */}
             {activeStep === 1 && (
-              <Stack gap="lg">
-                <Group gap="md">
-                  <ThemeIcon
-                    size={40}
-                    radius="md"
-                    variant="gradient"
-                    gradient={{ from: 'violet', to: 'blue', deg: 135 }}
-                  >
-                    <IconServer size={20} />
-                  </ThemeIcon>
-                  <Stack gap={0}>
-                    <Title order={4} c="white">
-                      {t('setup.repoConfigTitle')}
-                    </Title>
-                    <Text c="dimmed" size="sm">
-                      {t('setup.repoConfigDesc')}
-                    </Text>
-                  </Stack>
-                </Group>
+              <div className="flex flex-col gap-6">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-violet-600 to-blue-500 shadow-lg shadow-violet-500/20">
+                    <Server className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-bold text-white">{t('setup.repoConfigTitle')}</h4>
+                    <p className="text-sm text-white/50">{t('setup.repoConfigDesc')}</p>
+                  </div>
+                </div>
 
-                <Divider color="rgba(255, 255, 255, 0.1)" />
+                <hr className="border-white/10" />
 
-                <Card
-                  p="lg"
-                  radius="md"
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.03)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                  }}
-                >
-                  <Stack gap="md">
-                    <TextInput
-                      label={t('setup.repoOwner')}
-                      placeholder={t('setup.repoOwnerPlaceholder')}
-                      value={repoOwner}
-                      onChange={(e) => setRepoOwner(e.currentTarget.value)}
-                      required
-                      leftSection={<IconBrandGithub size={16} />}
-                      size="md"
-                      styles={{
-                        input: {
-                          background: 'rgba(255, 255, 255, 0.05)',
-                          border: '1px solid rgba(255, 255, 255, 0.15)',
-                          color: 'white',
-                        },
-                        label: { color: 'rgba(255, 255, 255, 0.8)' },
-                        section: { color: 'rgba(255, 255, 255, 0.5)' },
-                      }}
-                    />
+                <div className="rounded-xl border border-white/8 bg-white/[0.03] p-6">
+                  <div className="flex flex-col gap-5">
+                    {/* Repo Owner */}
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-white/80">
+                        {t('setup.repoOwner')}
+                      </label>
+                      <div className="relative">
+                        <GithubIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
+                        <input
+                          type="text"
+                          value={repoOwner}
+                          onChange={(e) => setRepoOwner(e.target.value)}
+                          placeholder={t('setup.repoOwnerPlaceholder')}
+                          required
+                          className={`${inputBase} pl-10`}
+                        />
+                      </div>
+                    </div>
 
-                    <TextInput
-                      label={t('setup.repoName')}
-                      placeholder={t('setup.repoNamePlaceholder')}
-                      value={repoName}
-                      onChange={(e) => setRepoName(e.currentTarget.value)}
-                      required
-                      leftSection={<IconFileCode size={16} />}
-                      size="md"
-                      styles={{
-                        input: {
-                          background: 'rgba(255, 255, 255, 0.05)',
-                          border: '1px solid rgba(255, 255, 255, 0.15)',
-                          color: 'white',
-                        },
-                        label: { color: 'rgba(255, 255, 255, 0.8)' },
-                        section: { color: 'rgba(255, 255, 255, 0.5)' },
-                      }}
-                    />
-                  </Stack>
-                </Card>
+                    {/* Repo Name */}
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-white/80">
+                        {t('setup.repoName')}
+                      </label>
+                      <div className="relative">
+                        <FileCode className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
+                        <input
+                          type="text"
+                          value={repoName}
+                          onChange={(e) => setRepoName(e.target.value)}
+                          placeholder={t('setup.repoNamePlaceholder')}
+                          required
+                          className={`${inputBase} pl-10`}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-                <Group justify="space-between" mt="md">
-                  <Button
+                <div className="flex justify-between mt-2">
+                  <button
+                    type="button"
                     onClick={handlePrevious}
-                    leftSection={<IconArrowLeft size={16} />}
-                    size="md"
-                    radius="md"
-                    variant="subtle"
-                    color="gray"
+                    className="flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white/60 transition-colors hover:bg-white/5 hover:text-white/80"
                   >
+                    <ArrowLeft className="h-4 w-4" />
                     {t('setup.previous')}
-                  </Button>
-                  <Button
+                  </button>
+                  <button
+                    type="button"
                     onClick={handleNext}
-                    rightSection={<IconArrowRight size={16} />}
-                    size="md"
-                    radius="md"
-                    variant="gradient"
-                    gradient={{ from: 'blue', to: 'cyan', deg: 135 }}
+                    className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition-all hover:from-blue-500 hover:to-cyan-400 hover:shadow-blue-500/40"
                   >
                     {t('setup.next')}
-                  </Button>
-                </Group>
-              </Stack>
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
             )}
 
             {/* Step 2: Review */}
             {activeStep === 2 && (
-              <Stack gap="lg">
-                <Group gap="md">
-                  <ThemeIcon
-                    size={40}
-                    radius="md"
-                    variant="gradient"
-                    gradient={{ from: 'green', to: 'teal', deg: 135 }}
-                  >
-                    <IconRocket size={20} />
-                  </ThemeIcon>
-                  <Stack gap={0}>
-                    <Title order={4} c="white">
-                      {t('setup.reviewTitle')}
-                    </Title>
-                    <Text c="dimmed" size="sm">
-                      {t('setup.reviewDesc')}
-                    </Text>
-                  </Stack>
-                </Group>
+              <div className="flex flex-col gap-6">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-green-600 to-teal-500 shadow-lg shadow-teal-500/20">
+                    <Rocket className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-bold text-white">{t('setup.reviewTitle')}</h4>
+                    <p className="text-sm text-white/50">{t('setup.reviewDesc')}</p>
+                  </div>
+                </div>
 
-                <Divider color="rgba(255, 255, 255, 0.1)" />
+                <hr className="border-white/10" />
 
-                {/* App Info */}
-                <Card
-                  p="lg"
-                  radius="md"
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.03)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                  }}
-                >
-                  <Stack gap="md">
-                    <Group gap="sm">
-                      <IconKey size={16} color="var(--mantine-color-blue-4)" />
-                      <Text fw={600} c="white" size="sm">
-                        {t('setup.appInfo')}
-                      </Text>
-                    </Group>
+                {/* App Info Card */}
+                <div className="rounded-xl border border-white/8 bg-white/[0.03] p-6">
+                  <div className="flex flex-col gap-4">
+                    <div className="flex items-center gap-2">
+                      <Key className="h-4 w-4 text-blue-400" />
+                      <p className="text-sm font-semibold text-white">{t('setup.appInfo')}</p>
+                    </div>
 
-                    <SimpleGrid cols={1} spacing="sm">
-                      <Group justify="space-between">
-                        <Text c="dimmed" size="sm">
-                          {t('setup.privateKey')}:
-                        </Text>
-                        <Badge color={privateKey ? 'green' : 'red'} variant="light" size="sm">
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm text-white/50">{t('setup.privateKey')}:</p>
+                        <span
+                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                            privateKey
+                              ? 'bg-green-500/15 text-green-400'
+                              : 'bg-red-500/15 text-red-400'
+                          }`}
+                        >
                           {privateKey ? privateKey.name : t('setup.fillAllFields')}
-                        </Badge>
-                      </Group>
+                        </span>
+                      </div>
 
-                      <Group justify="space-between">
-                        <Text c="dimmed" size="sm">
-                          {t('setup.appId')}:
-                        </Text>
-                        <Badge color={appId ? 'green' : 'red'} variant="light" size="sm">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm text-white/50">{t('setup.appId')}:</p>
+                        <span
+                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                            appId ? 'bg-green-500/15 text-green-400' : 'bg-red-500/15 text-red-400'
+                          }`}
+                        >
                           {appId || '-'}
-                        </Badge>
-                      </Group>
+                        </span>
+                      </div>
 
-                      <Group justify="space-between">
-                        <Text c="dimmed" size="sm">
-                          {t('setup.webhookSecret')}:
-                        </Text>
-                        <Badge color={webhookSecret ? 'green' : 'red'} variant="light" size="sm">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm text-white/50">{t('setup.webhookSecret')}:</p>
+                        <span
+                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                            webhookSecret
+                              ? 'bg-green-500/15 text-green-400'
+                              : 'bg-red-500/15 text-red-400'
+                          }`}
+                        >
                           {webhookSecret ? '***' : '-'}
-                        </Badge>
-                      </Group>
-                    </SimpleGrid>
-                  </Stack>
-                </Card>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-                {/* Repo Info */}
-                <Card
-                  p="lg"
-                  radius="md"
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.03)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                  }}
-                >
-                  <Stack gap="md">
-                    <Group gap="sm">
-                      <IconServer size={16} color="var(--mantine-color-violet-4)" />
-                      <Text fw={600} c="white" size="sm">
-                        {t('setup.repoInfo')}
-                      </Text>
-                    </Group>
+                {/* Repo Info Card */}
+                <div className="rounded-xl border border-white/8 bg-white/[0.03] p-6">
+                  <div className="flex flex-col gap-4">
+                    <div className="flex items-center gap-2">
+                      <Server className="h-4 w-4 text-violet-400" />
+                      <p className="text-sm font-semibold text-white">{t('setup.repoInfo')}</p>
+                    </div>
 
-                    <SimpleGrid cols={1} spacing="sm">
-                      <Group justify="space-between">
-                        <Text c="dimmed" size="sm">
-                          {t('setup.repoOwner')}:
-                        </Text>
-                        <Badge color={repoOwner ? 'green' : 'red'} variant="light" size="sm">
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm text-white/50">{t('setup.repoOwner')}:</p>
+                        <span
+                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                            repoOwner
+                              ? 'bg-green-500/15 text-green-400'
+                              : 'bg-red-500/15 text-red-400'
+                          }`}
+                        >
                           {repoOwner || '-'}
-                        </Badge>
-                      </Group>
+                        </span>
+                      </div>
 
-                      <Group justify="space-between">
-                        <Text c="dimmed" size="sm">
-                          {t('setup.repoName')}:
-                        </Text>
-                        <Badge color={repoName ? 'green' : 'red'} variant="light" size="sm">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm text-white/50">{t('setup.repoName')}:</p>
+                        <span
+                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                            repoName
+                              ? 'bg-green-500/15 text-green-400'
+                              : 'bg-red-500/15 text-red-400'
+                          }`}
+                        >
                           {repoName || '-'}
-                        </Badge>
-                      </Group>
-                    </SimpleGrid>
-                  </Stack>
-                </Card>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
-                <Group justify="space-between" mt="md">
-                  <Button
+                <div className="flex justify-between mt-2">
+                  <button
+                    type="button"
                     onClick={handlePrevious}
-                    leftSection={<IconArrowLeft size={16} />}
-                    size="md"
-                    radius="md"
-                    variant="subtle"
-                    color="gray"
+                    className="flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white/60 transition-colors hover:bg-white/5 hover:text-white/80"
                   >
+                    <ArrowLeft className="h-4 w-4" />
                     {t('setup.previous')}
-                  </Button>
-                  <Button
+                  </button>
+                  <button
+                    type="button"
                     onClick={handleSubmit}
-                    loading={submitting}
-                    leftSection={<IconUpload size={16} />}
-                    size="md"
-                    radius="md"
-                    variant="gradient"
-                    gradient={{ from: 'green', to: 'teal', deg: 135 }}
+                    disabled={submitting}
+                    className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-green-600 to-teal-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-teal-500/25 transition-all hover:from-green-500 hover:to-teal-400 hover:shadow-teal-500/40 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {t('setup.saveConfig')}
-                  </Button>
-                </Group>
-              </Stack>
+                    {submitting ? (
+                      <>
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+                        {t('setup.saveConfig')}
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4" />
+                        {t('setup.saveConfig')}
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
             )}
-          </Paper>
-        </SimpleGrid>
+          </div>
+        </div>
 
         {/* Footer - Skip Login */}
-        <Group justify="center" mt="xl">
-          <Button
-            component="a"
+        <div className="flex justify-center mt-10">
+          <a
             href="/api/auth/login"
-            variant="subtle"
-            color="gray"
-            leftSection={<IconBrandGithub size={18} />}
-            size="md"
+            className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white/50 transition-colors hover:bg-white/5 hover:text-white/70 rounded-lg"
           >
+            <GithubIcon className="h-4 w-4" />
             {t('setup.skipLogin')}
-          </Button>
-        </Group>
-      </Container>
-    </Box>
+          </a>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -2,8 +2,9 @@
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
+  transpilePackages: ['antd', '@ant-design/icons'],
   experimental: {
-    optimizePackageImports: ['@tabler/icons-react', '@mantine/core', '@mantine/hooks'],
+    optimizePackageImports: ['lucide-react'],
   },
 };
 

@@ -1,36 +1,26 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import {
-  Container,
-  Paper,
-  Stack,
-  Text,
-  Title,
-  Button,
-  Loader,
-  Center,
-  Avatar,
-  Group,
-  Badge,
-  ThemeIcon,
-  SimpleGrid,
-  Box,
-  ActionIcon,
-  Divider,
-  Card,
-} from '@mantine/core';
-import {
-  IconBrandGithub,
-  IconLogout,
-  IconSettings,
-  IconTerminal2,
-  IconFileReport,
-  IconLock,
-  IconRocket,
-  IconArrowRight,
-} from '@tabler/icons-react';
+import { LogOut, Settings, Terminal, FileText, Lock, Rocket, ArrowRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+
+/* ------------------------------------------------------------------ */
+/*  Inline SVG — lucide-react v1 dropped brand icons                   */
+/* ------------------------------------------------------------------ */
+
+function GithubIcon({ size = 24 }: { size?: number }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+    >
+      <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
+    </svg>
+  );
+}
 
 interface User {
   githubId: number;
@@ -38,6 +28,56 @@ interface User {
   avatarUrl: string;
   isAdmin: boolean;
 }
+
+/* ------------------------------------------------------------------ */
+/*  Color helpers — map FeatureCard color prop to Tailwind classes     */
+/* ------------------------------------------------------------------ */
+
+const featureColorMap = {
+  blue: {
+    bg: 'bg-blue-50',
+    text: 'text-blue-600',
+  },
+  violet: {
+    bg: 'bg-violet-50',
+    text: 'text-violet-600',
+  },
+  teal: {
+    bg: 'bg-teal-50',
+    text: 'text-teal-600',
+  },
+} as const;
+
+/* ------------------------------------------------------------------ */
+/*  FeatureCard — self-contained card for the features grid            */
+/* ------------------------------------------------------------------ */
+
+interface FeatureCardProps {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  color: 'blue' | 'violet' | 'teal';
+}
+
+function FeatureCard({ icon, title, description, color }: FeatureCardProps) {
+  const colors = featureColorMap[color];
+
+  return (
+    <div className="group rounded-xl border border-slate-200 bg-white p-8 transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
+      <div
+        className={`mb-5 inline-flex h-14 w-14 items-center justify-center rounded-xl ${colors.bg} ${colors.text}`}
+      >
+        {icon}
+      </div>
+      <h3 className="mb-2 text-lg font-semibold text-slate-900">{title}</h3>
+      <p className="text-sm leading-relaxed text-slate-500">{description}</p>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Main page                                                          */
+/* ------------------------------------------------------------------ */
 
 export default function Home() {
   const { t } = useTranslation();
@@ -77,87 +117,45 @@ export default function Home() {
     window.location.href = '/';
   };
 
+  /* -------------------------------------------------------------- */
+  /*  Loading state                                                  */
+  /* -------------------------------------------------------------- */
+
   if (loading) {
     return (
-      <Center h="100vh">
-        <Loader size="xl" />
-      </Center>
+      <div className="flex h-screen items-center justify-center">
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600" />
+      </div>
     );
   }
 
-  return (
-    <Box>
-      {/* Hero Section */}
-      <Box
-        style={{
-          minHeight: '100vh',
-          background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 40%, #1e3a5f 70%, #1e40af 100%)',
-          display: 'flex',
-          alignItems: 'center',
-          position: 'relative',
-          overflow: 'hidden',
-        }}
-      >
-        {/* Decorative background elements */}
-        <Box
-          style={{
-            position: 'absolute',
-            top: '-20%',
-            right: '-10%',
-            width: 600,
-            height: 600,
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%)',
-            pointerEvents: 'none',
-          }}
-        />
-        <Box
-          style={{
-            position: 'absolute',
-            bottom: '-15%',
-            left: '-5%',
-            width: 400,
-            height: 400,
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 70%)',
-            pointerEvents: 'none',
-          }}
-        />
+  /* -------------------------------------------------------------- */
+  /*  Main render                                                    */
+  /* -------------------------------------------------------------- */
 
-        <Container size="lg" style={{ width: '100%', position: 'relative', zIndex: 1 }}>
-          <Stack align="center" gap={40} py={80}>
+  return (
+    <div>
+      {/* ============================================================ */}
+      {/* Hero Section                                                  */}
+      {/* ============================================================ */}
+      <section className="relative flex min-h-screen items-center overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 via-40% to-blue-700">
+        {/* Decorative background orbs */}
+        <div className="pointer-events-none absolute -right-[10%] -top-[20%] h-[600px] w-[600px] rounded-full bg-radial-[circle] from-blue-500/15 to-transparent" />
+        <div className="pointer-events-none absolute -bottom-[15%] -left-[5%] h-[400px] w-[400px] rounded-full bg-radial-[circle] from-indigo-500/10 to-transparent" />
+
+        <div className="relative z-10 mx-auto w-full max-w-7xl px-4 py-80 sm:px-6 lg:px-8">
+          <div className="flex flex-col items-center gap-10">
             {/* Tagline badge */}
-            <Badge
-              variant="light"
-              color="blue"
-              size="lg"
-              radius="xl"
-              tt="uppercase"
-              fw={600}
-              styles={{
-                root: {
-                  background: 'rgba(59,130,246,0.1)',
-                  border: '1px solid rgba(59,130,246,0.2)',
-                  color: '#93c5fd',
-                  padding: '8px 20px',
-                },
-              }}
-            >
-              <Group gap={6}>
-                <IconRocket size={14} />
-                {t('home.heroTagline')}
-              </Group>
-            </Badge>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-500/20 bg-blue-500/10 px-5 py-2 text-sm font-semibold uppercase tracking-wide text-blue-300">
+              <Rocket size={14} />
+              {t('home.heroTagline')}
+            </span>
 
             {/* Main title */}
-            <Title
-              order={1}
-              ta="center"
+            <h1
+              className="text-center font-extrabold leading-tight tracking-tight"
               style={{
                 fontSize: 'clamp(2.5rem, 5vw, 4rem)',
-                fontWeight: 800,
-                lineHeight: 1.1,
-                letterSpacing: '-0.02em',
                 background: 'linear-gradient(135deg, #ffffff 0%, #93c5fd 50%, #60a5fa 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
@@ -165,273 +163,158 @@ export default function Home() {
               }}
             >
               {t('app.title')}
-            </Title>
+            </h1>
 
             {/* Subtitle */}
-            <Text
-              ta="center"
-              size="xl"
-              maw={600}
-              style={{
-                color: '#94a3b8',
-                lineHeight: 1.7,
-                fontSize: 'clamp(1rem, 2vw, 1.25rem)',
-              }}
+            <p
+              className="mx-auto max-w-[600px] text-center text-xl leading-7 text-slate-400"
+              style={{ fontSize: 'clamp(1rem, 2vw, 1.25rem)' }}
             >
               {t('home.heroDescription')}
-            </Text>
+            </p>
 
             {/* CTA Buttons */}
-            <Group gap="md" mt="md">
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-4">
               {user ? (
                 <>
-                  <Button
-                    component="a"
+                  <a
                     href="/dashboard"
-                    size="lg"
-                    radius="md"
-                    leftSection={<IconSettings size={20} />}
-                    rightSection={<IconArrowRight size={18} />}
-                    styles={{
-                      root: {
-                        background: 'linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)',
-                        border: 'none',
-                        boxShadow: '0 4px 24px rgba(37,99,235,0.4)',
-                        fontWeight: 600,
-                        padding: '0 32px',
-                        height: 48,
-                      },
-                    }}
+                    className="inline-flex items-center gap-2.5 rounded-md border-none bg-gradient-to-br from-blue-600 to-blue-500 px-8 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/40 transition-all duration-200 hover:shadow-xl hover:shadow-blue-500/50"
                   >
+                    <Settings size={20} />
                     {t('home.dashboard')}
-                  </Button>
-                  <ActionIcon
-                    variant="subtle"
-                    color="gray"
-                    size={48}
-                    radius="md"
+                    <ArrowRight size={18} />
+                  </a>
+                  <button
                     onClick={handleLogout}
                     title={t('home.logout')}
-                    styles={{
-                      root: {
-                        color: '#94a3b8',
-                        border: '1px solid rgba(148,163,184,0.2)',
-                      },
-                    }}
+                    className="inline-flex h-12 w-12 items-center justify-center rounded-md border border-slate-400/20 text-slate-400 transition-colors hover:border-slate-400/40 hover:text-slate-300"
                   >
-                    <IconLogout size={20} />
-                  </ActionIcon>
+                    <LogOut size={20} />
+                  </button>
                 </>
               ) : (
-                <Button
-                  component="a"
+                <a
                   href="/api/auth/login"
-                  size="lg"
-                  radius="md"
-                  leftSection={<IconBrandGithub size={22} />}
-                  rightSection={<IconArrowRight size={18} />}
-                  styles={{
-                    root: {
-                      background: 'linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)',
-                      border: 'none',
-                      boxShadow: '0 4px 24px rgba(37,99,235,0.4)',
-                      fontWeight: 600,
-                      padding: '0 32px',
-                      height: 48,
-                    },
-                  }}
+                  className="inline-flex items-center gap-2.5 rounded-md border-none bg-gradient-to-br from-blue-600 to-blue-500 px-8 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-500/40 transition-all duration-200 hover:shadow-xl hover:shadow-blue-500/50"
                 >
+                  <GithubIcon size={22} />
                   {t('home.loginGithub')}
-                </Button>
+                  <ArrowRight size={18} />
+                </a>
               )}
-            </Group>
-          </Stack>
-        </Container>
-      </Box>
+            </div>
+          </div>
+        </div>
+      </section>
 
-      {/* Features Section */}
-      <Box
-        style={{
-          background: '#f8fafc',
-          padding: '80px 0',
-        }}
-      >
-        <Container size="lg">
-          <Stack align="center" gap={12} mb={60}>
-            <Title
-              order={2}
-              ta="center"
-              style={{
-                fontSize: 'clamp(1.75rem, 3vw, 2.5rem)',
-                fontWeight: 700,
-                color: '#0f172a',
-                letterSpacing: '-0.01em',
-              }}
+      {/* ============================================================ */}
+      {/* Features Section                                              */}
+      {/* ============================================================ */}
+      <section className="bg-slate-50 py-20">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="mb-16 flex flex-col items-center gap-3">
+            <h2
+              className="text-center font-bold tracking-tight text-slate-900"
+              style={{ fontSize: 'clamp(1.75rem, 3vw, 2.5rem)' }}
             >
               {t('home.featuresTitle')}
-            </Title>
-            <Text ta="center" size="lg" c="dimmed" maw={500}>
+            </h2>
+            <p className="text-center text-lg text-slate-500 max-w-[500px]">
               {t('home.featuresSubtitle')}
-            </Text>
-          </Stack>
+            </p>
+          </div>
 
-          <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="xl">
+          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-3">
             <FeatureCard
-              icon={<IconTerminal2 size={24} />}
+              icon={<Terminal size={24} />}
               title={t('home.featureCicdTitle')}
               description={t('home.featureCicdDesc')}
               color="blue"
             />
             <FeatureCard
-              icon={<IconFileReport size={24} />}
+              icon={<FileText size={24} />}
               title={t('home.featurePrTitle')}
               description={t('home.featurePrDesc')}
               color="violet"
             />
             <FeatureCard
-              icon={<IconLock size={24} />}
+              icon={<Lock size={24} />}
               title={t('home.featureWebhookTitle')}
               description={t('home.featureWebhookDesc')}
               color="teal"
             />
-          </SimpleGrid>
-        </Container>
-      </Box>
+          </div>
+        </div>
+      </section>
 
-      {/* User Section (logged in) */}
+      {/* ============================================================ */}
+      {/* User Profile Section (logged in only)                        */}
+      {/* ============================================================ */}
       {user && (
-        <Box style={{ background: '#ffffff', padding: '60px 0' }}>
-          <Container size="md">
-            <Card
-              radius="lg"
-              padding="xl"
-              withBorder
-              style={{
-                boxShadow: '0 1px 3px rgba(0,0,0,0.04), 0 8px 32px rgba(0,0,0,0.06)',
-              }}
-            >
-              <Group justify="space-between" wrap="wrap" gap="md">
-                <Group gap="md">
-                  <Avatar src={user.avatarUrl} size={56} radius="xl" />
-                  <Stack gap={4}>
-                    <Group gap="sm">
-                      <Text fw={600} size="lg">
+        <section className="bg-white py-16">
+          <div className="mx-auto max-w-2xl px-4">
+            <div className="rounded-xl border border-slate-200 p-8 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                {/* Left — avatar + info */}
+                <div className="flex items-center gap-4">
+                  <img
+                    src={user.avatarUrl}
+                    alt={user.githubLogin}
+                    className="h-14 w-14 rounded-full object-cover"
+                  />
+                  <div>
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-lg font-semibold text-slate-900">
                         {user.githubLogin}
-                      </Text>
-                      <Badge
-                        variant="light"
-                        color={user.isAdmin ? 'blue' : 'gray'}
-                        radius="sm"
-                        size="sm"
+                      </span>
+                      <span
+                        className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${
+                          user.isAdmin ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-600'
+                        }`}
                       >
                         {user.isAdmin ? t('home.roleAdmin') : t('home.roleUser')}
-                      </Badge>
-                    </Group>
-                    <Text c="dimmed" size="sm">
-                      {t('home.welcomeBack')}
-                    </Text>
-                  </Stack>
-                </Group>
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-sm text-slate-500">{t('home.welcomeBack')}</p>
+                  </div>
+                </div>
 
-                <Group gap="sm">
-                  <Button
-                    component="a"
+                {/* Right — action buttons */}
+                <div className="flex items-center gap-2.5">
+                  <a
                     href="/dashboard"
-                    leftSection={<IconSettings size={18} />}
-                    variant="filled"
-                    radius="md"
-                    styles={{
-                      root: {
-                        background: 'linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)',
-                        border: 'none',
-                        boxShadow: '0 2px 12px rgba(37,99,235,0.3)',
-                        fontWeight: 500,
-                      },
-                    }}
+                    className="inline-flex items-center gap-2 rounded-md bg-gradient-to-br from-blue-600 to-blue-500 px-5 py-2.5 text-sm font-medium text-white shadow-sm shadow-blue-500/30 transition-shadow hover:shadow-md"
                   >
+                    <Settings size={18} />
                     {t('home.dashboard')}
-                  </Button>
-                  <Button
+                  </a>
+                  <button
                     onClick={handleLogout}
-                    leftSection={<IconLogout size={18} />}
-                    variant="light"
-                    color="red"
-                    radius="md"
+                    className="inline-flex items-center gap-2 rounded-md bg-red-50 px-5 py-2.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-100"
                   >
+                    <LogOut size={18} />
                     {t('home.logout')}
-                  </Button>
-                </Group>
-              </Group>
-            </Card>
-          </Container>
-        </Box>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       )}
 
-      {/* Footer */}
-      <Box
-        style={{
-          background: '#0f172a',
-          padding: '40px 0',
-        }}
-      >
-        <Container size="lg">
-          <Divider mb="md" style={{ borderColor: 'rgba(148,163,184,0.15)' }} />
-          <Group justify="space-between" wrap="wrap" gap="md">
-            <Text size="sm" style={{ color: '#64748b' }}>
-              {t('app.title')}
-            </Text>
-            <Text size="sm" style={{ color: '#64748b' }}>
-              {t('app.description')}
-            </Text>
-          </Group>
-        </Container>
-      </Box>
-    </Box>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/*  FeatureCard — self-contained card component for the features grid  */
-/* ------------------------------------------------------------------ */
-
-interface FeatureCardProps {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  color: 'blue' | 'violet' | 'teal';
-}
-
-function FeatureCard({ icon, title, description, color }: FeatureCardProps) {
-  return (
-    <Paper
-      radius="lg"
-      p="xl"
-      withBorder
-      style={{
-        transition: 'transform 200ms ease, box-shadow 200ms ease',
-        cursor: 'default',
-        background: '#ffffff',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'translateY(-4px)';
-        e.currentTarget.style.boxShadow = '0 12px 40px rgba(0,0,0,0.08)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.boxShadow = 'none';
-      }}
-    >
-      <Stack gap="md">
-        <ThemeIcon size={56} radius="lg" variant="light" color={color}>
-          {icon}
-        </ThemeIcon>
-        <Title order={4} fw={600} style={{ color: '#0f172a' }}>
-          {title}
-        </Title>
-        <Text size="sm" c="dimmed" style={{ lineHeight: 1.7 }}>
-          {description}
-        </Text>
-      </Stack>
-    </Paper>
+      {/* ============================================================ */}
+      {/* Footer                                                        */}
+      {/* ============================================================ */}
+      <footer className="bg-slate-900 py-10">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <hr className="mb-6 border-slate-800" />
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <span className="text-sm text-slate-600">{t('app.title')}</span>
+            <span className="text-sm text-slate-600">{t('app.description')}</span>
+          </div>
+        </div>
+      </footer>
+    </div>
   );
 }

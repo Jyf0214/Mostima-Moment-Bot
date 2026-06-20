@@ -1,22 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import {
-  Box,
-  Container,
-  Paper,
-  Title,
-  Text,
-  Stack,
-  Badge,
-  Loader,
-  Center,
-  Group,
-  ThemeIcon,
-  Anchor,
-  Code,
-} from '@mantine/core';
-import { IconAlertTriangle, IconX, IconCheck } from '@tabler/icons-react';
+import { AlertTriangle, X, Check, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 interface EnvVar {
@@ -57,194 +42,141 @@ export default function EnvErrorPage() {
 
   if (loading) {
     return (
-      <Center h="100vh">
-        <Stack align="center" gap="md">
-          <Loader size="xl" color="red" />
-          <Text c="dimmed" size="sm">
-            Loading...
-          </Text>
-        </Stack>
-      </Center>
+      <div className="flex h-screen items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-red-400 border-t-transparent" />
+          <p className="text-sm text-gray-500">Loading...</p>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Box
-      style={{
-        minHeight: '100vh',
-        background: 'linear-gradient(135deg, #ff4b2b 0%, #ff416c 40%, #2d1b69 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '1rem',
-      }}
-    >
-      <Container size="sm" w="100%">
-        <Paper
-          shadow="xl"
-          p="xl"
-          radius="lg"
-          style={{
-            background: 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(10px)',
-          }}
-        >
-          <Stack gap="lg" align="center">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#ff4b2b] via-[#ff416c] to-[#2d1b69] p-4">
+      <div className="w-full max-w-md">
+        <div className="rounded-2xl bg-white/95 p-8 shadow-2xl backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-6">
             {/* Warning Icon */}
-            <ThemeIcon size={72} radius="xl" variant="light" color="red">
-              <IconAlertTriangle size={36} />
-            </ThemeIcon>
+            <div className="flex h-[72px] w-[72px] items-center justify-center rounded-full bg-red-100">
+              <AlertTriangle className="h-9 w-9 text-red-500" />
+            </div>
 
             {/* Title */}
-            <Title order={2} ta="center" c="dark">
-              {t('envError.title')}
-            </Title>
+            <h2 className="text-center text-2xl font-bold text-gray-900">{t('envError.title')}</h2>
 
             {/* Description */}
-            <Text c="dimmed" ta="center" size="sm" maw={400}>
+            <p className="max-w-[400px] text-center text-sm text-gray-500">
               {t('envError.description')}
-            </Text>
+            </p>
 
             {envStatus && (
-              <Stack gap="md" w="100%">
+              <div className="flex w-full flex-col gap-5">
                 {/* Missing Variables */}
                 {envStatus.missing.length > 0 && (
-                  <Paper p="md" radius="md" bg="red.0" withBorder>
-                    <Group gap="xs" mb="sm">
-                      <ThemeIcon size={20} radius="xl" variant="light" color="red">
-                        <IconX size={12} />
-                      </ThemeIcon>
-                      <Text fw={600} size="sm" c="red.7">
+                  <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+                    <div className="mb-3 flex items-center gap-2">
+                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-red-200">
+                        <X className="h-3 w-3 text-red-600" />
+                      </div>
+                      <span className="text-sm font-semibold text-red-700">
                         {t('envError.missingVars')}
-                      </Text>
-                      <Badge color="red" variant="filled" size="sm" circle>
+                      </span>
+                      <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-medium text-white">
                         {envStatus.missing.length}
-                      </Badge>
-                    </Group>
-                    <Stack gap="sm">
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-3">
                       {envStatus.missing.map((envVar) => (
-                        <Paper key={envVar.key} p="sm" radius="sm" bg="red.1" withBorder>
-                          <Group gap="sm" mb={4}>
-                            <Badge
-                              color="red"
-                              variant="light"
-                              leftSection={<IconX size={10} />}
-                              flex="0 0 auto"
-                            >
+                        <div
+                          key={envVar.key}
+                          className="rounded-lg border border-red-200 bg-red-100/60 p-3"
+                        >
+                          <div className="mb-1.5 flex items-center gap-2">
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700">
+                              <X className="h-3 w-3" />
                               {envVar.key}
-                            </Badge>
-                          </Group>
-                          <Text size="xs" c="dimmed" mb={4}>
-                            {envVar.description}
-                          </Text>
-                          <Group gap="xs" align="flex-start">
-                            <Text size="xs" fw={600} c="dark" flex="0 0 auto">
+                            </span>
+                          </div>
+                          <p className="mb-1.5 text-xs text-gray-500">{envVar.description}</p>
+                          <div className="flex items-start gap-2">
+                            <span className="shrink-0 text-xs font-semibold text-gray-900">
                               {t('envError.howToGet')}:
-                            </Text>
-                            <Code
-                              block
-                              p={6}
-                              fz="xs"
-                              style={{
-                                flex: 1,
-                                wordBreak: 'break-all',
-                                whiteSpace: 'pre-wrap',
-                              }}
-                            >
+                            </span>
+                            <code className="flex-1 break-all whitespace-pre-wrap rounded-md bg-gray-900 px-2.5 py-1.5 text-xs text-gray-100">
                               {envVar.generateHint}
-                            </Code>
-                          </Group>
-                        </Paper>
+                            </code>
+                          </div>
+                        </div>
                       ))}
-                    </Stack>
-                  </Paper>
+                    </div>
+                  </div>
                 )}
 
                 {/* Present Variables */}
                 {envStatus.present.length > 0 && (
-                  <Paper p="md" radius="md" bg="green.0" withBorder>
-                    <Group gap="xs" mb="sm">
-                      <ThemeIcon size={20} radius="xl" variant="light" color="green">
-                        <IconCheck size={12} />
-                      </ThemeIcon>
-                      <Text fw={600} size="sm" c="green.7">
+                  <div className="rounded-xl border border-green-200 bg-green-50 p-4">
+                    <div className="mb-3 flex items-center gap-2">
+                      <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-200">
+                        <Check className="h-3 w-3 text-green-600" />
+                      </div>
+                      <span className="text-sm font-semibold text-green-700">
                         {t('envError.presentVars')}
-                      </Text>
-                      <Badge color="green" variant="filled" size="sm" circle>
+                      </span>
+                      <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-green-500 px-1.5 text-xs font-medium text-white">
                         {envStatus.present.length}
-                      </Badge>
-                    </Group>
-                    <Stack gap="xs">
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-2">
                       {envStatus.present.map((envVar) => (
-                        <Group key={envVar.key} gap="sm" align="flex-start">
-                          <Badge
-                            color="green"
-                            variant="light"
-                            leftSection={<IconCheck size={10} />}
-                            flex="0 0 auto"
-                          >
+                        <div key={envVar.key} className="flex items-start gap-2">
+                          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">
+                            <Check className="h-3 w-3" />
                             {envVar.key}
-                          </Badge>
-                          <Text size="xs" c="dimmed">
-                            {envVar.description}
-                          </Text>
-                        </Group>
+                          </span>
+                          <span className="text-xs text-gray-500">{envVar.description}</span>
+                        </div>
                       ))}
-                    </Stack>
-                  </Paper>
+                    </div>
+                  </div>
                 )}
 
                 {/* Solution Steps */}
-                <Paper p="md" radius="md" bg="blue.0" withBorder>
-                  <Group gap="xs" mb="sm">
-                    <ThemeIcon size={20} radius="xl" variant="light" color="blue">
-                      <Text size="xs" fw={700}>
-                        ?
-                      </Text>
-                    </ThemeIcon>
-                    <Text fw={600} size="sm" c="blue.7">
+                <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+                  <div className="mb-3 flex items-center gap-2">
+                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-500">
+                      <span className="text-xs font-bold text-white">?</span>
+                    </div>
+                    <span className="text-sm font-semibold text-blue-700">
                       {t('envError.solution')}
-                    </Text>
-                  </Group>
-                  <Stack gap="sm">
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-3">
                     {STEPS_KEYS.map((key, index) => (
-                      <Group key={key} gap="sm" align="flex-start">
-                        <ThemeIcon
-                          size={24}
-                          radius="xl"
-                          variant="filled"
-                          color="blue"
-                          flex="0 0 auto"
-                        >
-                          <Text size="xs" fw={700}>
-                            {index + 1}
-                          </Text>
-                        </ThemeIcon>
-                        <Text size="sm">{t(key)}</Text>
-                      </Group>
+                      <div key={key} className="flex items-start gap-3">
+                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-500">
+                          <span className="text-xs font-bold text-white">{index + 1}</span>
+                        </div>
+                        <p className="text-sm text-gray-700">{t(key)}</p>
+                      </div>
                     ))}
-                    <Text size="xs" c="dimmed" ml="xl">
-                      {t('envError.step4')}
-                    </Text>
-                  </Stack>
-                </Paper>
+                    <p className="ml-9 text-xs text-gray-500">{t('envError.step4')}</p>
+                  </div>
+                </div>
 
-                {/* Retry Button */}
-                <Anchor
-                  component="button"
-                  size="xs"
-                  c="dimmed"
+                {/* Retry Link */}
+                <button
+                  type="button"
                   onClick={checkEnvStatus}
-                  underline="hover"
-                  style={{ cursor: 'pointer' }}
+                  className="flex items-center justify-center gap-1.5 self-center text-xs text-gray-500 transition-colors hover:text-gray-800"
                 >
+                  <RefreshCw className="h-3.5 w-3.5" />
                   {t('envError.retry')}
-                </Anchor>
-              </Stack>
+                </button>
+              </div>
             )}
-          </Stack>
-        </Paper>
-      </Container>
-    </Box>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
