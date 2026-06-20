@@ -14,6 +14,7 @@ import {
   Group,
   ThemeIcon,
   Button,
+  Code,
 } from '@mantine/core';
 import { IconAlertTriangle, IconX, IconCheck, IconRefresh } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
@@ -21,6 +22,7 @@ import { useTranslation } from 'react-i18next';
 interface EnvVar {
   key: string;
   description: string;
+  generateHint: string;
 }
 
 interface EnvStatus {
@@ -119,21 +121,40 @@ export default function EnvErrorPage() {
                         {envStatus.missing.length}
                       </Badge>
                     </Group>
-                    <Stack gap="xs">
+                    <Stack gap="sm">
                       {envStatus.missing.map((envVar) => (
-                        <Group key={envVar.key} gap="sm" align="flex-start">
-                          <Badge
-                            color="red"
-                            variant="light"
-                            leftSection={<IconX size={10} />}
-                            flex="0 0 auto"
-                          >
-                            {envVar.key}
-                          </Badge>
-                          <Text size="xs" c="dimmed">
+                        <Paper key={envVar.key} p="sm" radius="sm" bg="red.1" withBorder>
+                          <Group gap="sm" mb={4}>
+                            <Badge
+                              color="red"
+                              variant="light"
+                              leftSection={<IconX size={10} />}
+                              flex="0 0 auto"
+                            >
+                              {envVar.key}
+                            </Badge>
+                          </Group>
+                          <Text size="xs" c="dimmed" mb={4}>
                             {envVar.description}
                           </Text>
-                        </Group>
+                          <Group gap="xs" align="flex-start">
+                            <Text size="xs" fw={600} c="dark" flex="0 0 auto">
+                              {t('envError.howToGet')}:
+                            </Text>
+                            <Code
+                              block
+                              p={6}
+                              fz="xs"
+                              style={{
+                                flex: 1,
+                                wordBreak: 'break-all',
+                                whiteSpace: 'pre-wrap',
+                              }}
+                            >
+                              {envVar.generateHint}
+                            </Code>
+                          </Group>
+                        </Paper>
                       ))}
                     </Stack>
                   </Paper>

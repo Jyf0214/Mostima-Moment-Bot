@@ -88,7 +88,8 @@
     "step2": "添加缺失的环境变量配置",
     "step3": "重启应用",
     "step4": "参考 .env.example 文件了解完整的环境变量配置",
-    "retry": "重新检查环境变量"
+    "retry": "重新检查环境变量",
+    "howToGet": "获取方式"
   },
   "envVarDescriptions": {
     "githubClientId": "GitHub OAuth 应用的 Client ID，用于用户一键登录",
@@ -96,6 +97,13 @@
     "jwtSecret": "JWT 令牌签名密钥，用于用户认证会话管理",
     "encryptionKey": "数据加密密钥，用于加密存储私钥和 Webhook Secret",
     "databaseUrl": "PostgreSQL 数据库连接字符串，用于存储应用数据"
+  },
+  "envVarHints": {
+    "githubClientId": "GitHub → Settings → Developer settings → OAuth Apps → 创建新 App → 复制 Client ID",
+    "githubClientSecret": "GitHub → Settings → Developer settings → OAuth Apps → 创建新 App → 生成 Client Secret → 复制值（仅显示一次）",
+    "jwtSecret": "运行命令: openssl rand -hex 32",
+    "encryptionKey": "运行命令: openssl rand -hex 32",
+    "databaseUrl": "格式: postgresql://用户名:密码@主机:端口/数据库名\nDocker: docker run -d --name postgres -e POSTGRES_USER=user -e POSTGRES_PASSWORD=password -e POSTGRES_DB=manticore -p 5432:5432 postgres:16-alpine"
   },
   "api": {
     "methodNotAllowed": "Method not allowed",

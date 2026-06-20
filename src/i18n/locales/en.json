@@ -88,7 +88,8 @@
     "step2": "Add the missing environment variable configuration",
     "step3": "Restart the application",
     "step4": "Refer to .env.example file for complete configuration reference",
-    "retry": "Re-check Environment Variables"
+    "retry": "Re-check Environment Variables",
+    "howToGet": "How to get"
   },
   "envVarDescriptions": {
     "githubClientId": "GitHub OAuth App Client ID, used for one-click login",
@@ -96,6 +97,13 @@
     "jwtSecret": "JWT token signing secret, used for authentication session management",
     "encryptionKey": "Data encryption key, used to encrypt private keys and Webhook Secret",
     "databaseUrl": "PostgreSQL database connection string, used to store application data"
+  },
+  "envVarHints": {
+    "githubClientId": "GitHub → Settings → Developer settings → OAuth Apps → create new App → copy Client ID",
+    "githubClientSecret": "GitHub → Settings → Developer settings → OAuth Apps → create new App → generate client secret → copy value (shown only once)",
+    "jwtSecret": "Run: openssl rand -hex 32",
+    "encryptionKey": "Run: openssl rand -hex 32",
+    "databaseUrl": "Format: postgresql://user:password@host:port/dbname\nDocker: docker run -d --name postgres -e POSTGRES_USER=user -e POSTGRES_PASSWORD=password -e POSTGRES_DB=manticore -p 5432:5432 postgres:16-alpine"
   },
   "api": {
     "methodNotAllowed": "Method not allowed",
