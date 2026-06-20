@@ -13,10 +13,10 @@ import {
   Center,
   Group,
   ThemeIcon,
-  Button,
+  Anchor,
   Code,
 } from '@mantine/core';
-import { IconAlertTriangle, IconX, IconCheck, IconRefresh } from '@tabler/icons-react';
+import { IconAlertTriangle, IconX, IconCheck } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 
 interface EnvVar {
@@ -230,16 +230,16 @@ export default function EnvErrorPage() {
                 </Paper>
 
                 {/* Retry Button */}
-                <Button
-                  variant="light"
-                  color="red"
-                  leftSection={<IconRefresh size={16} />}
+                <Anchor
+                  component="button"
+                  size="xs"
+                  c="dimmed"
                   onClick={checkEnvStatus}
-                  fullWidth
-                  size="md"
+                  underline="hover"
+                  style={{ cursor: 'pointer' }}
                 >
                   {t('envError.retry')}
-                </Button>
+                </Anchor>
               </Stack>
             )}
           </Stack>
