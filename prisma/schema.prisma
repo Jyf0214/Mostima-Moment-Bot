@@ -1,0 +1,88 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 管理员表
+model Admin {
+  id          Int      @id @default(autoincrement())
+  githubId    Int      @unique
+  githubLogin String   @unique @map("github_login")
+  avatarUrl   String?  @map("avatar_url")
+  createdAt   DateTime @default(now()) @map("created_at")
+  lastLogin   DateTime @default(now()) @map("last_login")
+
+  builds Build[]
+
+  @@map("admins")
+}
+
+// 应用配置表
+model AppConfig {
+  id          Int      @id @default(autoincrement())
+  configKey   String   @unique @map("config_key")
+  configValue String   @map("config_value")
+  encrypted   Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("app_config")
+}
+
+// Webhook 配置表
+model WebhookConfig {
+  id                    Int      @id @default(autoincrement())
+  appId                 String   @map("app_id")
+  webhookSecretEncrypted String @map("webhook_secret_encrypted")
+  privateKeyEncrypted   String   @map("private_key_encrypted")
+  repoOwner             String   @map("repo_owner")
+  repoName              String   @map("repo_name")
+  isActive              Boolean  @default(true) @map("is_active")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@map("webhook_config")
+}
+
+// 构建记录表
+model Build {
+  id            Int       @id @default(autoincrement())
+  prNumber      Int       @map("pr_number")
+  branchName    String    @map("branch_name")
+  triggerUser   String    @map("trigger_user")
+  startedAt     DateTime  @map("started_at")
+  completedAt   DateTime? @map("completed_at")
+  status        String
+  totalDuration Int?      @map("total_duration")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  admin   Admin? @relation(fields: [triggerUser], references: [githubLogin])
+  steps   BuildStep[]
+
+  @@index([prNumber])
+  @@index([createdAt])
+  @@map("builds")
+}
+
+// 构建步骤表
+model BuildStep {
+  id        Int      @id @default(autoincrement())
+  buildId   Int      @map("build_id")
+  stepName  String   @map("step_name")
+  status    String
+  duration  Int?
+  exitCode  Int?     @map("exit_code")
+  output    String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  build Build @relation(fields: [buildId], references: [id])
+
+  @@map("build_steps")
+}

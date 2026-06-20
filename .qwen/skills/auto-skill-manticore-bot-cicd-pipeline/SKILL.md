@@ -242,6 +242,75 @@ COLLABORATORS=user1,user2
 **Problem**: Using `crypto-js` adds unnecessary dependency
 **Fix**: Use Node.js built-in `crypto` module for HMAC-SHA256.
 
+## Docker 自动构建工作流
+
+### GitHub Actions 配置
+```yaml
+# .github/workflows/docker-build.yml
+name: Docker 构建与推送
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+
+      - name: 登录 GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 提取元数据
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=sha
+
+      - name: 构建并推送
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          platforms: linux/amd64,linux/arm64
+```
+
+### 使用方式
+```bash
+# 拉取镜像
+docker pull ghcr.io/jyf0214/mostima-moment-bot:main
+
+# 运行容器
+docker run -d -p 3001:3001 \
+  -e GITHUB_APP_ID=xxx \
+  -e GITHUB_WEBHOOK_SECRET=xxx \
+  ghcr.io/jyf0214/mostima-moment-bot:main
+```
+
 ## Verification Checklist
 
 ### Signature Verification
