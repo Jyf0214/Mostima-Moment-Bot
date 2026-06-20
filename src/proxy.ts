@@ -12,11 +12,11 @@ const publicPaths = [
   '/favicon.ico',
 ];
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // 检查是否为公开路径
-  if (publicPaths.some(path => pathname.startsWith(path))) {
+  if (publicPaths.some((path) => pathname.startsWith(path))) {
     return NextResponse.next();
   }
 
