@@ -84,39 +84,6 @@ const ENV_VARS: EnvVarDef[] = [
     usageKey: 'envUsage.githubPrivateKeyPath',
     hintKey: 'envVarHints.githubPrivateKeyPath',
   },
-  // CI/CD
-  {
-    key: 'REPO_OWNER',
-    categoryKey: 'envCategory.cicd',
-    required: false,
-    descriptionKey: 'envVarDescriptions.repoOwner',
-    usageKey: 'envUsage.repoOwner',
-    hintKey: 'envVarHints.repoOwner',
-  },
-  {
-    key: 'REPO_NAME',
-    categoryKey: 'envCategory.cicd',
-    required: false,
-    descriptionKey: 'envVarDescriptions.repoName',
-    usageKey: 'envUsage.repoName',
-    hintKey: 'envVarHints.repoName',
-  },
-  {
-    key: 'COLLABORATORS',
-    categoryKey: 'envCategory.cicd',
-    required: false,
-    descriptionKey: 'envVarDescriptions.collaborators',
-    usageKey: 'envUsage.collaborators',
-    hintKey: 'envVarHints.collaborators',
-  },
-  {
-    key: 'WORKSPACE_DIR',
-    categoryKey: 'envCategory.cicd',
-    required: false,
-    descriptionKey: 'envVarDescriptions.workspaceDir',
-    usageKey: 'envUsage.workspaceDir',
-    hintKey: 'envVarHints.workspaceDir',
-  },
   // App
   {
     key: 'APP_URL',

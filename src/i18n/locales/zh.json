@@ -164,10 +164,6 @@
     "githubAppId": "GitHub App 的数字 ID，用于生成 App JWT 认证",
     "githubAppSlug": "GitHub App 的 URL 标识符，用于生成安装链接",
     "githubPrivateKeyPath": "GitHub App 私钥文件（.pem）的路径",
-    "repoOwner": "目标仓库所有者（GitHub 用户名或组织名）",
-    "repoName": "目标仓库名称",
-    "collaborators": "允许手动触发 CI 重试的用户列表（逗号分隔）",
-    "workspaceDir": "Git 工作区目录路径，用于 CI 检查时的代码检出",
     "appUrl": "应用的公开访问地址"
   },
   "envUsage": {
@@ -179,10 +175,6 @@
     "githubAppId": "与 GITHUB_PRIVATE_KEY_PATH 配合，生成 RS256 签名的 JWT，获取 Installation Access Token",
     "githubAppSlug": "仪表盘「安装 GitHub App」按钮使用此变量生成安装链接",
     "githubPrivateKeyPath": "用于生成 GitHub App JWT（RS256 签名），获取 Installation Access Token",
-    "repoOwner": "CI 管线执行时，用于从 GitHub API 获取 PR 信息并在 PR 上发布构建报告",
-    "repoName": "与 REPO_OWNER 配合，定位 CI/CD 操作的目标仓库",
-    "collaborators": "当用户在 PR 评论中输入 /rebuild 或 /retry 时，验证评论者是否在此列表中",
-    "workspaceDir": "CI 管线执行时，git fetch/checkout/merge 操作的目标目录，默认为当前目录",
     "appUrl": "用于生成 OAuth 回调 URL 和其他需要完整地址的场景"
   },
   "envCategory": {
@@ -194,8 +186,6 @@
     "databaseDesc": "PostgreSQL 数据库连接配置",
     "githubApp": "GitHub App",
     "githubAppDesc": "GitHub App 安装和 API 调用所需的配置",
-    "cicd": "CI/CD",
-    "cicdDesc": "CI/CD 自动化流水线的可选配置",
     "app": "应用",
     "appDesc": "应用程序运行时的可选配置"
   },
@@ -208,10 +198,6 @@
     "githubAppId": "步骤：\n1. 打开 https://github.com/settings/apps\n2. 点击你创建的 App 名称\n3. 页面顶部「About」区域显示的「GitHub App ID」即为所需值\n4. 或在 URL 格式中查看：https://github.com/settings/apps/{slug}",
     "githubAppSlug": "步骤：\n1. 打开 https://github.com/settings/apps\n2. 点击你创建的 App 名称\n3. 页面 URL 中的名称即为 slug\n4. 或在 App 设置页「GitHub App name」下方可见\n5. 安装链接格式：https://github.com/apps/{slug}/installations/new",
     "githubPrivateKeyPath": "步骤：\n1. 在 GitHub App 设置页底部「Private keys」区域\n2. 点击「Generate a private key」\n3. 下载 .pem 文件\n4. 将文件放到服务器上，如：/app/private-key.pem\n5. 填写文件的绝对路径或相对于项目根目录的路径",
-    "repoOwner": "填写你的 GitHub 用户名或组织名。\n\n示例：\n- 个人仓库：Jyf0214\n- 组织仓库：my-org-name\n\n可在 GitHub 仓库页面 URL 中查看：https://github.com/{REPO_OWNER}/{REPO_NAME}",
-    "repoName": "填写目标仓库名称。\n\n示例：Mostima-Moment-Bot\n\n可在 GitHub 仓库页面 URL 中查看：https://github.com/{owner}/{REPO_NAME}",
-    "collaborators": "允许通过 PR 评论触发 CI 重试的用户列表，逗号分隔。\n\n示例：user1,user2,bot-account\n\n这些用户可以在 PR 评论中输入 /rebuild 或 /retry 来手动触发 CI 检查。\n\n留空则无人可以手动触发。",
-    "workspaceDir": "CI 检查时的 Git 工作区目录。\n\n默认值：当前目录（即项目根目录）\n\n在 Docker 部署中，可通过 docker-compose.yml 的 volumes 挂载一个专用目录，如：./workspace",
     "appUrl": "应用的公开访问地址，用于生成 OAuth 回调 URL。\n\n示例：\n- 本地开发：http://localhost:3001\n- 生产环境：https://manticore-bot.example.com\n\n注意：不要以 / 结尾"
   },
   "api": {
