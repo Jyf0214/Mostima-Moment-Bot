@@ -28,12 +28,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       isNew: adminCount === 0,
       message: i18n.t('api.dbInitComplete'),
     });
-  } catch (error: any) {
+  } catch (error) {
     const elapsed = Date.now() - startTime;
-    console.error(`[DB Init] Failed after ${elapsed}ms:`, error.message);
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[DB Init] Failed after ${elapsed}ms:`, message);
     return res.status(500).json({
       error: i18n.t('api.dbInitFailed'),
-      message: error.message,
+      message,
     });
   }
 }

@@ -89,7 +89,8 @@
     "step3": "Restart the application",
     "step4": "Refer to .env.example file for complete configuration reference",
     "retry": "Re-check Environment Variables",
-    "howToGet": "How to get"
+    "howToGet": "How to get",
+    "loading": "Loading..."
   },
   "envVarDescriptions": {
     "githubClientId": "GitHub OAuth App Client ID, used for one-click login",

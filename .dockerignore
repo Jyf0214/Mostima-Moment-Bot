@@ -1,0 +1,53 @@
+# 依赖
+node_modules/
+
+# Git
+.git/
+.gitignore
+
+# 环境文件
+.env
+.env.*
+!.env.example
+
+# Docker 相关
+docker-compose.yml
+docker/Dockerfile
+
+# 构建输出
+.next/
+out/
+coverage/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 测试
+__tests__/
+
+# 文档
+*.md
+LICENSE
+QWEN.md
+wtosetup.md
+
+# 配置文件（不需要打包的）
+.prettierrc
+.prettierignore
+eslint.config.mjs
+vitest.config.mts
+tsconfig.json
+postcss.config.mjs
+prisma.config.ts
+.lsp.json
+.dev.nix
+idx/
+
+# GitHub
+.github/
+
+# Husky
+.husky/

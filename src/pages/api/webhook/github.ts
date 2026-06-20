@@ -1,6 +1,13 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { verifyWebhookSignature } from '@/lib/github/webhook';
-import { handlePullRequest, handleIssueComment, handleWorkflowRun } from '@/lib/ci/runner';
+import {
+  handlePullRequest,
+  handleIssueComment,
+  handleWorkflowRun,
+  type PRPayload,
+  type CommentPayload,
+  type WorkflowPayload,
+} from '@/lib/ci/runner';
 
 export const config = {
   api: {
@@ -40,11 +47,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // 2. 解析事件
   const event = req.headers['x-github-event'] as string;
-  let payload: any;
+  let payload: Record<string, unknown>;
 
   try {
     payload = JSON.parse(rawBody.toString());
-  } catch (error) {
+  } catch {
     return res.status(400).json({ error: 'Invalid JSON payload' });
   }
 
@@ -54,20 +61,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     switch (event) {
       case 'pull_request':
-        await handlePullRequest(payload);
+        await handlePullRequest(payload as unknown as PRPayload);
         break;
       case 'issue_comment':
-        await handleIssueComment(payload);
+        await handleIssueComment(payload as unknown as CommentPayload);
         break;
       case 'workflow_run':
-        await handleWorkflowRun(payload);
+        await handleWorkflowRun(payload as unknown as WorkflowPayload);
         break;
       default:
         console.log(`Unhandled event: ${event}`);
     }
 
     return res.status(200).json({ received: true });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Webhook error:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }

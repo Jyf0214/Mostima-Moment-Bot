@@ -1,8 +1,20 @@
-import { execSync } from 'child_process';
 import { checkoutPRBranch } from '../git/workspace';
 import { generatePRReport } from './reporter';
 import { postPRComment } from '../github/api';
 import { executeCheckStep, createSkipResult } from './checks';
+
+export interface PRPayload {
+  pull_request: { number: number };
+}
+
+export interface CommentPayload {
+  comment: { body: string; user: { login: string } };
+  issue: { number: number };
+}
+
+export interface WorkflowPayload {
+  workflow_run: { name: string; conclusion: string };
+}
 
 export interface CheckResult {
   step: string;
@@ -46,7 +58,7 @@ export async function runCIChecks(): Promise<CheckResult[]> {
 /**
  * 处理 pull_request 事件
  */
-export async function handlePullRequest(payload: any): Promise<void> {
+export async function handlePullRequest(payload: PRPayload): Promise<void> {
   const prNumber = payload.pull_request.number;
   console.log(`Triggering CI checks for PR #${prNumber}`);
 
@@ -64,17 +76,20 @@ export async function handlePullRequest(payload: any): Promise<void> {
     await postPRComment(prNumber, report);
 
     console.log(`CI checks completed for PR #${prNumber}`);
-  } catch (error: any) {
-    console.error(`CI failed for PR #${prNumber}:`, error.message);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`CI failed for PR #${prNumber}:`, message);
 
     // 发送失败报告
-    const failReport = generatePRReport(prNumber, [{
-      step: 'CI Pipeline',
-      status: 'FAIL',
-      duration: 0,
-      output: error.message,
-      exitCode: 1,
-    }]);
+    const failReport = generatePRReport(prNumber, [
+      {
+        step: 'CI Pipeline',
+        status: 'FAIL',
+        duration: 0,
+        output: message,
+        exitCode: 1,
+      },
+    ]);
     await postPRComment(prNumber, failReport);
   }
 }
@@ -82,7 +97,7 @@ export async function handlePullRequest(payload: any): Promise<void> {
 /**
  * 处理 issue_comment 事件（手动重试）
  */
-export async function handleIssueComment(payload: any): Promise<void> {
+export async function handleIssueComment(payload: CommentPayload): Promise<void> {
   const comment = payload.comment.body;
   const issueNumber = payload.issue.number;
   const commenter = payload.comment.user.login;
@@ -104,7 +119,7 @@ export async function handleIssueComment(payload: any): Promise<void> {
 /**
  * 处理 workflow_run 事件
  */
-export async function handleWorkflowRun(payload: any): Promise<void> {
+export async function handleWorkflowRun(payload: WorkflowPayload): Promise<void> {
   const workflowName = payload.workflow_run.name;
   const conclusion = payload.workflow_run.conclusion;
   console.log(`Workflow ${workflowName} completed with conclusion: ${conclusion}`);

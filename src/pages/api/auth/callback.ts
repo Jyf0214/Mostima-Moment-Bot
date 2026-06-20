@@ -11,7 +11,19 @@ import {
 
 const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
-const JWT_SECRET = process.env.JWT_SECRET || 'default-secret-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET;
+
+interface GitHubTokenResponse {
+  access_token?: string;
+  error?: string;
+  error_description?: string;
+}
+
+interface GitHubUser {
+  id?: number;
+  login?: string;
+  avatar_url?: string;
+}
 
 /**
  * GitHub OAuth 回调
@@ -31,7 +43,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   // 清除 state cookie
-  res.setHeader('Set-Cookie', 'oauth_state=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0');
+  res.setHeader('Set-Cookie', 'oauth_state=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0; Secure');
 
   if (!code) {
     return res.status(400).json({ error: 'Authorization code not provided' });
@@ -52,7 +64,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }),
     });
 
-    const tokenData = await tokenResponse.json();
+    const tokenData: GitHubTokenResponse = await tokenResponse.json();
 
     if (tokenData.error) {
       return res.status(400).json({ error: tokenData.error_description });
@@ -66,9 +78,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       },
     });
 
-    const userData = await userResponse.json();
+    const userData: GitHubUser = await userResponse.json();
 
-    if (!userData.id) {
+    if (!userData.id || !userData.login || !userData.avatar_url) {
       return res.status(400).json({ error: 'Failed to fetch user data' });
     }
 
@@ -92,6 +104,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // 生成 JWT
+    if (!JWT_SECRET) {
+      return res.status(500).json({ error: 'Server configuration error' });
+    }
     const token = jwt.sign(
       {
         githubId: userData.id,
@@ -106,12 +121,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // 设置 JWT cookie
     res.setHeader(
       'Set-Cookie',
-      `auth_token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}`
+      `auth_token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}; Secure`
     );
 
     // 重定向到首页
     return res.redirect('/');
-  } catch (error: any) {
+  } catch (error) {
     console.error('GitHub OAuth callback failed:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }

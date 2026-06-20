@@ -4,11 +4,7 @@ import { execSync } from 'child_process';
 /**
  * 执行单个 CI 检查步骤
  */
-export function executeCheckStep(
-  name: string,
-  command: string,
-  workspaceDir: string
-): CheckResult {
+export function executeCheckStep(name: string, command: string, workspaceDir: string): CheckResult {
   const startTime = Date.now();
 
   try {
@@ -23,13 +19,14 @@ export function executeCheckStep(
       duration: Date.now() - startTime,
       exitCode: 0,
     };
-  } catch (error: any) {
+  } catch (error) {
+    const err = error as NodeJS.ErrnoException & { stderr?: Buffer; status?: number };
     return {
       step: name,
       status: 'FAIL',
       duration: Date.now() - startTime,
-      output: error.stderr?.toString() || error.message,
-      exitCode: error.status || 1,
+      output: err.stderr?.toString() || err.message,
+      exitCode: err.status || 1,
     };
   }
 }

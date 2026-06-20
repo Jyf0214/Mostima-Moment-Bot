@@ -1,7 +1,10 @@
 import { PrismaClient } from '@prisma/client';
 import { encrypt, decrypt } from './crypto';
 
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default-key-change-in-production';
+if (!process.env.ENCRYPTION_KEY) {
+  throw new Error('ENCRYPTION_KEY environment variable is not configured');
+}
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
 
 // 需要加密的字段配置
 const ENCRYPTED_FIELDS: Record<string, string[]> = {

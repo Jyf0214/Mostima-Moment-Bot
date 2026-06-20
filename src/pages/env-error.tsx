@@ -49,7 +49,7 @@ export default function EnvErrorPage() {
       <div className="flex h-screen items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-red-400 border-t-transparent" />
-          <p className="text-sm text-gray-500">Loading...</p>
+          <p className="text-sm text-gray-500">{t('envError.loading')}</p>
         </div>
       </div>
     );

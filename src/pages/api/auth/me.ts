@@ -1,7 +1,14 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'default-secret-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET;
+
+interface JwtPayload {
+  githubId: number;
+  githubLogin: string;
+  avatarUrl: string;
+  isAdmin: boolean;
+}
 
 /**
  * 获取当前用户信息
@@ -12,6 +19,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  if (!JWT_SECRET) {
+    return res.status(500).json({ error: 'Server configuration error' });
+  }
+
   const token = req.cookies.auth_token;
 
   if (!token) {
@@ -19,14 +30,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
     return res.status(200).json({
       githubId: decoded.githubId,
       githubLogin: decoded.githubLogin,
       avatarUrl: decoded.avatarUrl,
       isAdmin: decoded.isAdmin,
     });
-  } catch (error: any) {
+  } catch {
     return res.status(401).json({ error: 'Invalid token' });
   }
 }

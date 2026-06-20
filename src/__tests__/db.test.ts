@@ -3,7 +3,6 @@ import { isNewApplication, getAdmin, createAdmin, updateAdminLogin } from '@/lib
 
 const { mockPrisma } = vi.hoisted(() => ({
   mockPrisma: {
-    $queryRaw: vi.fn().mockResolvedValue([{ exists: true }]),
     admin: {
       count: vi.fn(),
       findUnique: vi.fn(),

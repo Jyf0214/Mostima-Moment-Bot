@@ -34,7 +34,7 @@ async function getAccessToken(): Promise<string> {
     throw new Error(`Failed to get installations: ${installationsResponse.statusText}`);
   }
 
-  const installations = (await installationsResponse.json()) as any[];
+  const installations = (await installationsResponse.json()) as Array<{ id: number }>;
   if (installations.length === 0) {
     throw new Error('No installations found for this GitHub App');
   }
@@ -56,7 +56,11 @@ async function getAccessToken(): Promise<string> {
     throw new Error(`Failed to get access token: ${tokenResponse.statusText}`);
   }
 
-  const tokenData = (await tokenResponse.json()) as any;
+  interface TokenData {
+    token: string;
+    expires_at?: string;
+  }
+  const tokenData = (await tokenResponse.json()) as TokenData;
   accessToken = tokenData.token;
   tokenExpiry =
     Date.now() +
@@ -95,10 +99,14 @@ export async function postPRComment(prNumber: number, body: string): Promise<voi
   }
 }
 
+interface PRInfo {
+  head: { ref: string };
+}
+
 /**
  * 获取 PR 信息
  */
-export async function getPRInfo(prNumber: number): Promise<any> {
+export async function getPRInfo(prNumber: number): Promise<PRInfo> {
   const token = await getAccessToken();
   const owner = process.env.REPO_OWNER;
   const repo = process.env.REPO_NAME;

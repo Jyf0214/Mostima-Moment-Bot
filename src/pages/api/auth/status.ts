@@ -13,8 +13,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const isNew = await isNewApplication();
     return res.status(200).json({ isNew });
-  } catch (error: any) {
-    console.error('[Auth Status] Failed:', error.message);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('[Auth Status] Failed:', message);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

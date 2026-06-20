@@ -8,6 +8,10 @@ const eslintConfig = {
   extends: ["next/core-web-vitals"],
   rules: {
     "@next/next/no-img-element": "warn",
+    "@typescript-eslint/no-explicit-any": "warn",
+    "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
+    "no-console": ["warn", { allow: ["error", "warn"] }],
+    "prefer-const": "warn",
   },
 };
 

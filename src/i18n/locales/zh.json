@@ -89,7 +89,8 @@
     "step3": "重启应用",
     "step4": "参考 .env.example 文件了解完整的环境变量配置",
     "retry": "重新检查环境变量",
-    "howToGet": "获取方式"
+    "howToGet": "获取方式",
+    "loading": "加载中..."
   },
   "envVarDescriptions": {
     "githubClientId": "GitHub OAuth 应用的 Client ID，用于用户一键登录",
