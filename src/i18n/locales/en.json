@@ -130,6 +130,7 @@
   "sidebar": {
     "overview": "Overview",
     "repos": "Repositories",
+    "logs": "Workflow Logs",
     "envVars": "Environment Variables",
     "settings": "Settings",
     "collapse": "Collapse"

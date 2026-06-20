@@ -130,6 +130,7 @@
   "sidebar": {
     "overview": "概览",
     "repos": "仓库",
+    "logs": "工作流日志",
     "envVars": "环境变量",
     "settings": "设置",
     "collapse": "收起"

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { ProCard } from '@/components/ui/ProCard';
 import Sidebar, { type SidebarPage } from '@/components/dashboard/Sidebar';
 import EnvVarsPage from '@/components/dashboard/EnvVarsPage';
+import WorkflowLogsPage from '@/components/dashboard/WorkflowLogsPage';
 import {
   LogOut,
   Plug,
@@ -180,6 +181,7 @@ export default function DashboardPage() {
                 <h1 className="text-xl font-bold text-white">
                   {activePage === 'overview' && t('home.dashboard')}
                   {activePage === 'repos' && t('sidebar.repos')}
+                  {activePage === 'logs' && t('sidebar.logs')}
                   {activePage === 'env' && t('sidebar.envVars')}
                   {activePage === 'settings' && t('sidebar.settings')}
                 </h1>
@@ -227,6 +229,7 @@ export default function DashboardPage() {
             />
           )}
           {activePage === 'repos' && <ReposPage repos={repos} reposLoading={reposLoading} />}
+          {activePage === 'logs' && <WorkflowLogsPage />}
           {activePage === 'env' && <EnvVarsPage />}
           {activePage === 'settings' && <SettingsPage />}
         </div>

@@ -11,9 +11,10 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  ScrollText,
 } from 'lucide-react';
 
-export type SidebarPage = 'overview' | 'repos' | 'env' | 'settings';
+export type SidebarPage = 'overview' | 'repos' | 'logs' | 'env' | 'settings';
 
 interface SidebarProps {
   activePage: SidebarPage;
@@ -27,6 +28,7 @@ interface SidebarProps {
 const NAV_ITEMS: { id: SidebarPage; icon: React.ElementType; labelKey: string }[] = [
   { id: 'overview', icon: LayoutDashboard, labelKey: 'sidebar.overview' },
   { id: 'repos', icon: Plug, labelKey: 'sidebar.repos' },
+  { id: 'logs', icon: ScrollText, labelKey: 'sidebar.logs' },
   { id: 'env', icon: Shield, labelKey: 'sidebar.envVars' },
   { id: 'settings', icon: Settings, labelKey: 'sidebar.settings' },
 ];
