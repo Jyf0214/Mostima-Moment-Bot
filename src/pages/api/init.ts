@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma';
  * Database initialization API
  * POST /api/init
  *
- * Tables are created by prisma db push at startup (scripts/ensure-tables.mjs).
+ * Tables are created by prisma db push at startup (package.json scripts).
  * This endpoint only checks connection and admin count.
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {

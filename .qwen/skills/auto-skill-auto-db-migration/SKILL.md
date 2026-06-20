@@ -1,6 +1,6 @@
 ---
 name: auto-db-migration
-description: Auto-create database tables on first query via ensureTables() in db.ts — works on any deployment platform without pre-start scripts
+description: Auto-sync database schema via prisma db push at startup — in package.json scripts and Dockerfile CMD
 source: auto-skill
 extracted_at: '2026-06-20T07:07:07.306Z'
 ---
