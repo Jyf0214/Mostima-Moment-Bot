@@ -16,7 +16,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const authHeader = req.headers.authorization;
   const scanToken = process.env.SCAN_TRIGGER_TOKEN;
 
-  if (scanToken && authHeader !== `Bearer ${scanToken}`) {
+  if (!scanToken) {
+    return res
+      .status(500)
+      .json({ error: 'Server configuration error: SCAN_TRIGGER_TOKEN not set' });
+  }
+
+  if (authHeader !== `Bearer ${scanToken}`) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 

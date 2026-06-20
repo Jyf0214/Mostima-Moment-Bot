@@ -110,7 +110,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     switch (event) {
       case 'pull_request': {
         const prPayload = payload as unknown as PREventPayload;
-        await handlePullRequest(prPayload as unknown as PRPayload);
+
+        // fire-and-forget：不阻塞 webhook 响应，避免 GitHub 10s 超时重发
+        handlePullRequest(prPayload as unknown as PRPayload).catch((err) => {
+          console.error(
+            `[Webhook] CI pipeline failed for PR #${prPayload.pull_request.number}:`,
+            err
+          );
+        });
 
         // PR 安全审计（opened / synchronize）
         if (prPayload.action === 'opened' || prPayload.action === 'synchronize') {

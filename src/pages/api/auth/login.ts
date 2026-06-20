@@ -1,4 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
+import crypto from 'crypto';
 import { setCookie } from '@/lib/cookie';
 
 /**
@@ -17,13 +18,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: 'GitHub Client ID not configured' });
   }
 
-  // 生成 state 参数防止 CSRF
-  const state = Buffer.from(
-    JSON.stringify({
-      timestamp: Date.now(),
-      nonce: Math.random().toString(36).substring(2),
-    })
-  ).toString('base64');
+  // 生成加密安全的 state 参数防止 CSRF
+  const state = crypto.randomUUID();
 
   // 存储 state 到 cookie，根据协议自动决定 Secure 标志
   res.setHeader('Set-Cookie', setCookie('oauth_state', state));

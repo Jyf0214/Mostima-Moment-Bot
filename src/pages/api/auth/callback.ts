@@ -106,7 +106,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.log(`New admin created: ${userData.login}`);
     } else if (!admin) {
       // 非管理员，丢弃数据
-      await discardNonAdminData(userData.id);
+      await discardNonAdminData(userData.id, userData.login);
       return res.status(403).json({ error: i18n.t('api.unauthorized') });
     } else {
       // 已有管理员，更新登录时间

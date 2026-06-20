@@ -1,4 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
+import { clearCookie } from '@/lib/cookie';
 
 /**
  * 登出
@@ -9,8 +10,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // 清除 JWT cookie
-  res.setHeader('Set-Cookie', 'auth_token=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0; Secure');
+  // 清除 JWT cookie，使用 clearCookie 根据协议自适应 Secure 标志
+  res.setHeader('Set-Cookie', clearCookie('auth_token'));
 
   return res.status(200).json({ success: true });
 }

@@ -177,21 +177,22 @@ export async function createBuildStep(
 
 /**
  * 删除非管理员用户数据
+ * @param githubLogin - 非管理员的 GitHub 用户名（与 Build.triggerUser 类型匹配）
  */
-export async function discardNonAdminData(githubId: number) {
+export async function discardNonAdminData(githubId: number, githubLogin: string) {
   const admin = await getAdmin(githubId);
   if (!admin) {
     // 非管理员，删除相关构建数据
     await prisma.buildStep.deleteMany({
       where: {
         build: {
-          triggerUser: githubId.toString(),
+          triggerUser: githubLogin,
         },
       },
     });
     await prisma.build.deleteMany({
       where: {
-        triggerUser: githubId.toString(),
+        triggerUser: githubLogin,
       },
     });
   }
