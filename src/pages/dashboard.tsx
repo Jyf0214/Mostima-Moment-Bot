@@ -3,18 +3,21 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
-import { PageContainer } from '@/components/ui/PageContainer';
 import { ProCard } from '@/components/ui/ProCard';
+import Sidebar, { type SidebarPage } from '@/components/dashboard/Sidebar';
+import EnvVarsPage from '@/components/dashboard/EnvVarsPage';
 import {
   LogOut,
   Plug,
   FolderGit2,
-  Lock,
-  Globe,
   CheckCircle2,
   AlertTriangle,
   ExternalLink,
   RefreshCw,
+  Lock,
+  Globe,
+  BarChart3,
+  Settings,
 } from 'lucide-react';
 
 interface User {
@@ -53,6 +56,8 @@ export default function DashboardPage() {
   const { t } = useTranslation();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activePage, setActivePage] = useState<SidebarPage>('overview');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [repos, setRepos] = useState<ReposData | null>(null);
   const [reposLoading, setReposLoading] = useState(false);
   const [appConfigured, setAppConfigured] = useState<boolean | null>(null);
@@ -64,18 +69,15 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    // 检查 URL 参数中的安装结果
     const params = new URLSearchParams(window.location.search);
     const install = params.get('install');
     if (install === 'success') {
       setInstallMsg(t('home.installSuccess'));
       setInstallMsgType('success');
-      loadRepos();
     } else if (install === 'error') {
       setInstallMsg(t('home.installError'));
       setInstallMsgType('error');
     }
-    // 清除 URL 参数
     if (install) {
       window.history.replaceState({}, '', '/dashboard');
     }
@@ -104,12 +106,7 @@ export default function DashboardPage() {
   const checkAppConfig = async () => {
     try {
       const res = await fetch('/api/github/install');
-      // 如果返回 500 且包含 not configured，说明未配置
-      if (res.status === 500) {
-        setAppConfigured(false);
-      } else {
-        setAppConfigured(true);
-      }
+      setAppConfigured(res.status !== 500);
     } catch {
       setAppConfigured(false);
     }
@@ -120,8 +117,7 @@ export default function DashboardPage() {
     try {
       const res = await fetch('/api/github/repos');
       if (res.ok) {
-        const data = await res.json();
-        setRepos(data);
+        setRepos(await res.json());
       }
     } catch {
       // 静默处理
@@ -142,10 +138,6 @@ export default function DashboardPage() {
     window.location.href = '/';
   };
 
-  const handleInstall = () => {
-    window.location.href = '/api/github/install';
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
@@ -154,40 +146,51 @@ export default function DashboardPage() {
     );
   }
 
-  const hasInstallations = repos && repos.installations.length > 0;
-  const totalRepos = repos ? repos.personal.length + repos.organization.length : 0;
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      <PageContainer maxWidth="6xl" padding="default">
-        <div className="py-8 sm:py-12">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex">
+      <Sidebar
+        activePage={activePage}
+        onNavigate={setActivePage}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+        userLogin={user?.githubLogin || ''}
+        onLogout={handleLogout}
+      />
+
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-6 sm:p-8 max-w-5xl">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
               {user?.avatarUrl && (
                 <img
                   src={user.avatarUrl}
                   alt=""
-                  className="h-12 w-12 rounded-full ring-2 ring-white/10"
+                  className="h-10 w-10 rounded-full ring-2 ring-white/10"
                 />
               )}
               <div>
-                <h1 className="text-2xl font-bold text-white">{t('home.dashboard')}</h1>
-                <p className="text-white/50 text-sm">@{user?.githubLogin}</p>
+                <h1 className="text-xl font-bold text-white">
+                  {activePage === 'overview' && t('home.dashboard')}
+                  {activePage === 'repos' && t('sidebar.repos')}
+                  {activePage === 'env' && t('sidebar.envVars')}
+                  {activePage === 'settings' && t('sidebar.settings')}
+                </h1>
+                <p className="text-white/40 text-xs">@{user?.githubLogin}</p>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              icon={<LogOut className="h-4 w-4" />}
-              onClick={handleLogout}
-              className="text-white/60 hover:text-white"
-            >
-              {t('home.logout')}
-            </Button>
+            {activePage === 'repos' && (
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<RefreshCw className={`h-3.5 w-3.5 ${reposLoading ? 'animate-spin' : ''}`} />}
+                onClick={loadRepos}
+                className="text-white/50 hover:text-white"
+              >
+                {t('dashboard.refresh')}
+              </Button>
+            )}
           </div>
 
-          {/* 安装结果提示 */}
           {installMsg && (
             <div
               className={`mb-6 flex items-center gap-3 rounded-xl border px-4 py-3 text-sm ${
@@ -205,151 +208,194 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* GitHub App 安装区域 */}
-          {appConfigured === false ? (
-            <ProCard className="bg-white/5 backdrop-blur-xl border-white/10 mb-6" padding="p-6">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-xl bg-yellow-500/10 flex items-center justify-center">
-                  <AlertTriangle className="h-6 w-6 text-yellow-400" />
-                </div>
-                <div>
-                  <h3 className="text-white font-semibold">{t('home.appNotConfigured')}</h3>
-                  <p className="text-white/40 text-sm">{t('home.appNotConfiguredDesc')}</p>
-                </div>
-              </div>
-            </ProCard>
-          ) : !hasInstallations ? (
-            <ProCard
-              className="bg-white/5 backdrop-blur-xl border-white/10 border-dashed mb-6"
-              padding="p-8"
-            >
-              <div className="text-center">
-                <div className="h-14 w-14 rounded-2xl bg-purple-500/10 flex items-center justify-center mx-auto mb-4">
-                  <Plug className="h-7 w-7 text-purple-400" />
-                </div>
-                <h3 className="text-lg font-semibold text-white mb-2">
-                  {t('home.noInstallations')}
-                </h3>
-                <p className="text-white/40 text-sm mb-6 max-w-md mx-auto">
-                  {t('home.noInstallationsDesc')}
-                </p>
-                <Button
-                  variant="primary"
-                  size="lg"
-                  icon={<Plug className="h-4 w-4" />}
-                  onClick={handleInstall}
-                >
-                  {t('home.installAppButton')}
-                </Button>
-              </div>
-            </ProCard>
-          ) : (
-            <>
-              {/* 已安装账户信息 */}
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                  <CheckCircle2 className="h-5 w-5 text-emerald-400" />
-                  {t('home.installApp')}
-                </h2>
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    icon={
-                      <RefreshCw className={`h-3.5 w-3.5 ${reposLoading ? 'animate-spin' : ''}`} />
-                    }
-                    onClick={loadRepos}
-                    className="text-white/50 hover:text-white"
-                  >
-                    {t('dashboard.refresh')}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    icon={<Plug className="h-3.5 w-3.5" />}
-                    onClick={handleInstall}
-                    className="text-white/50 hover:text-white"
-                  >
-                    {t('home.installApp')}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
-                {repos.installations.map((inst) => (
-                  <ProCard
-                    key={inst.installationId}
-                    className="bg-white/5 backdrop-blur-xl border-white/10"
-                    padding="p-4"
-                  >
-                    <div className="flex items-center gap-3">
-                      {inst.avatarUrl ? (
-                        <img src={inst.avatarUrl} alt="" className="h-10 w-10 rounded-lg" />
-                      ) : (
-                        <div className="h-10 w-10 rounded-lg bg-white/10 flex items-center justify-center">
-                          <Plug className="h-5 w-5 text-white/50" />
-                        </div>
-                      )}
-                      <div className="min-w-0">
-                        <p className="text-white font-medium text-sm truncate">
-                          {inst.accountLogin}
-                        </p>
-                        <p className="text-white/40 text-xs">{inst.accountType}</p>
-                      </div>
-                    </div>
-                  </ProCard>
-                ))}
-              </div>
-
-              {/* 仓库列表 */}
-              {reposLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="h-8 w-8 animate-spin rounded-full border-3 border-white/20 border-t-purple-500" />
-                </div>
-              ) : totalRepos === 0 ? (
-                <ProCard className="bg-white/5 backdrop-blur-xl border-white/10" padding="p-8">
-                  <div className="text-center">
-                    <FolderGit2 className="h-10 w-10 text-white/20 mx-auto mb-3" />
-                    <p className="text-white/40 text-sm">{t('home.noRepos')}</p>
-                  </div>
-                </ProCard>
-              ) : (
-                <div className="space-y-6">
-                  {/* 个人仓库 */}
-                  {repos.personal.length > 0 && (
-                    <RepoSection
-                      title={t('home.personalRepos')}
-                      repos={repos.personal}
-                      count={repos.personal.length}
-                    />
-                  )}
-                  {/* 组织仓库 */}
-                  {repos.organization.length > 0 && (
-                    <RepoSection
-                      title={t('home.orgRepos')}
-                      repos={repos.organization}
-                      count={repos.organization.length}
-                    />
-                  )}
-                </div>
-              )}
-            </>
+          {activePage === 'overview' && (
+            <OverviewPage
+              repos={repos}
+              reposLoading={reposLoading}
+              appConfigured={appConfigured}
+              onInstall={() => (window.location.href = '/api/github/install')}
+              onNavigateToRepos={() => setActivePage('repos')}
+              onNavigateToEnv={() => setActivePage('env')}
+            />
           )}
+          {activePage === 'repos' && <ReposPage repos={repos} reposLoading={reposLoading} />}
+          {activePage === 'env' && <EnvVarsPage />}
+          {activePage === 'settings' && <SettingsPage />}
         </div>
-      </PageContainer>
+      </div>
     </div>
   );
 }
 
-function RepoSection({ title, repos, count }: { title: string; repos: Repo[]; count: number }) {
+function OverviewPage({
+  repos,
+  reposLoading,
+  appConfigured,
+  onInstall,
+  onNavigateToRepos,
+  onNavigateToEnv,
+}: {
+  repos: ReposData | null;
+  reposLoading: boolean;
+  appConfigured: boolean | null;
+  onInstall: () => void;
+  onNavigateToRepos: () => void;
+  onNavigateToEnv: () => void;
+}) {
   const { t } = useTranslation();
+  const hasInstallations = repos && repos.installations.length > 0;
+  const totalRepos = repos ? repos.personal.length + repos.organization.length : 0;
 
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <ProCard className="bg-white/5 backdrop-blur-xl border-white/10" padding="p-4">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-lg bg-purple-500/10 flex items-center justify-center">
+              <Plug className="h-4 w-4 text-purple-400" />
+            </div>
+            <div>
+              <p className="text-white/40 text-xs">{t('dashboard.activeInstallations')}</p>
+              <p className="text-xl font-bold text-white">
+                {reposLoading ? '...' : repos?.installations.length || 0}
+              </p>
+            </div>
+          </div>
+        </ProCard>
+        <ProCard className="bg-white/5 backdrop-blur-xl border-white/10" padding="p-4">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-lg bg-blue-500/10 flex items-center justify-center">
+              <FolderGit2 className="h-4 w-4 text-blue-400" />
+            </div>
+            <div>
+              <p className="text-white/40 text-xs">{t('dashboard.totalRepos')}</p>
+              <p className="text-xl font-bold text-white">{reposLoading ? '...' : totalRepos}</p>
+            </div>
+          </div>
+        </ProCard>
+        <ProCard className="bg-white/5 backdrop-blur-xl border-white/10" padding="p-4">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+              <BarChart3 className="h-4 w-4 text-emerald-400" />
+            </div>
+            <div>
+              <p className="text-white/40 text-xs">{t('envPage.configured')}</p>
+              <p className="text-xl font-bold text-white">
+                {appConfigured === null ? '...' : appConfigured ? '✓' : '—'}
+              </p>
+            </div>
+          </div>
+        </ProCard>
+      </div>
+
+      <ProCard className="bg-white/5 backdrop-blur-xl border-white/10" padding="p-5">
+        <h3 className="text-sm font-medium text-white/60 mb-4">{t('dashboard.quickActions')}</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {!hasInstallations && appConfigured !== false ? (
+            <button
+              onClick={onInstall}
+              className="flex items-center gap-3 p-4 rounded-xl bg-purple-500/10 border border-purple-500/20 hover:border-purple-500/40 transition-all text-left"
+            >
+              <Plug className="h-5 w-5 text-purple-400 shrink-0" />
+              <div>
+                <p className="text-white text-sm font-medium">{t('home.installApp')}</p>
+                <p className="text-white/40 text-xs">{t('home.installAppDesc')}</p>
+              </div>
+            </button>
+          ) : (
+            <button
+              onClick={onNavigateToRepos}
+              className="flex items-center gap-3 p-4 rounded-xl bg-white/5 border border-white/10 hover:border-white/20 transition-all text-left"
+            >
+              <FolderGit2 className="h-5 w-5 text-blue-400 shrink-0" />
+              <div>
+                <p className="text-white text-sm font-medium">{t('home.repositories')}</p>
+                <p className="text-white/40 text-xs">
+                  {totalRepos} {t('home.repositories')}
+                </p>
+              </div>
+            </button>
+          )}
+          <button
+            onClick={onNavigateToEnv}
+            className="flex items-center gap-3 p-4 rounded-xl bg-white/5 border border-white/10 hover:border-white/20 transition-all text-left"
+          >
+            <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
+            <div>
+              <p className="text-white text-sm font-medium">{t('sidebar.envVars')}</p>
+              <p className="text-white/40 text-xs">{t('envPage.subtitle')}</p>
+            </div>
+          </button>
+        </div>
+      </ProCard>
+    </div>
+  );
+}
+
+function ReposPage({ repos, reposLoading }: { repos: ReposData | null; reposLoading: boolean }) {
+  const { t } = useTranslation();
+  const hasInstallations = repos && repos.installations.length > 0;
+
+  if (reposLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="h-8 w-8 animate-spin rounded-full border-3 border-white/20 border-t-purple-500" />
+      </div>
+    );
+  }
+
+  if (!hasInstallations) {
+    return (
+      <ProCard className="bg-white/5 backdrop-blur-xl border-white/10 border-dashed" padding="p-8">
+        <div className="text-center">
+          <Plug className="h-10 w-10 text-white/20 mx-auto mb-3" />
+          <p className="text-white/40 text-sm mb-4">{t('home.noInstallations')}</p>
+          <Button
+            variant="primary"
+            size="md"
+            icon={<Plug className="h-4 w-4" />}
+            onClick={() => (window.location.href = '/api/github/install')}
+          >
+            {t('home.installAppButton')}
+          </Button>
+        </div>
+      </ProCard>
+    );
+  }
+
+  const totalRepos = (repos?.personal.length || 0) + (repos?.organization.length || 0);
+
+  if (totalRepos === 0) {
+    return (
+      <ProCard className="bg-white/5 backdrop-blur-xl border-white/10" padding="p-8">
+        <div className="text-center">
+          <FolderGit2 className="h-10 w-10 text-white/20 mx-auto mb-3" />
+          <p className="text-white/40 text-sm">{t('home.noRepos')}</p>
+        </div>
+      </ProCard>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {repos!.personal.length > 0 && (
+        <RepoSection title={t('home.personalRepos')} repos={repos!.personal} />
+      )}
+      {repos!.organization.length > 0 && (
+        <RepoSection title={t('home.orgRepos')} repos={repos!.organization} />
+      )}
+    </div>
+  );
+}
+
+function RepoSection({ title, repos }: { title: string; repos: Repo[] }) {
+  const { t } = useTranslation();
   return (
     <div>
       <h3 className="text-sm font-medium text-white/60 mb-3 flex items-center gap-2">
         <FolderGit2 className="h-4 w-4" />
         {title}
-        <span className="text-white/30">({count})</span>
+        <span className="text-white/30">({repos.length})</span>
       </h3>
       <div className="space-y-2">
         {repos.map((repo) => (
@@ -404,5 +450,17 @@ function RepoSection({ title, repos, count }: { title: string; repos: Repo[]; co
         ))}
       </div>
     </div>
+  );
+}
+
+function SettingsPage() {
+  const { t } = useTranslation();
+  return (
+    <ProCard className="bg-white/5 backdrop-blur-xl border-white/10" padding="p-8">
+      <div className="text-center">
+        <Settings className="h-10 w-10 text-white/20 mx-auto mb-3" />
+        <p className="text-white/40 text-sm">{t('sidebar.settings')}</p>
+      </div>
+    </ProCard>
   );
 }

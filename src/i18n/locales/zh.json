@@ -119,7 +119,27 @@
   "dashboard": {
     "refresh": "刷新",
     "totalRepos": "仓库总数",
-    "activeInstallations": "活跃安装"
+    "activeInstallations": "活跃安装",
+    "quickActions": "快捷操作"
+  },
+  "sidebar": {
+    "overview": "概览",
+    "repos": "仓库",
+    "envVars": "环境变量",
+    "settings": "设置",
+    "collapse": "收起"
+  },
+  "envPage": {
+    "title": "环境变量配置",
+    "subtitle": "查看项目所有环境变量的配置状态和用途说明",
+    "totalVars": "总变量数",
+    "configured": "已配置",
+    "missing": "未配置",
+    "required": "必要",
+    "optional": "可选",
+    "configuredLabel": "已配置",
+    "missingLabel": "未配置",
+    "search": "搜索变量名或用途..."
   },
   "envError": {
     "title": "环境变量配置缺失",
@@ -136,11 +156,50 @@
     "loading": "加载中..."
   },
   "envVarDescriptions": {
-    "githubClientId": "GitHub OAuth 应用的 Client ID，用于用户一键登录",
-    "githubClientSecret": "GitHub OAuth 应用的 Client Secret，用于验证用户身份",
-    "jwtSecret": "JWT 令牌签名密钥，用于用户认证会话管理",
-    "encryptionKey": "数据加密密钥，用于加密存储私钥和 Webhook Secret",
-    "databaseUrl": "PostgreSQL 数据库连接字符串，用于存储应用数据"
+    "githubClientId": "GitHub OAuth App 的 Client ID，用于用户登录认证",
+    "githubClientSecret": "GitHub OAuth App 的 Client Secret，用于交换访问令牌",
+    "jwtSecret": "JWT 签名密钥，用于生成和验证用户会话令牌",
+    "encryptionKey": "AES-256-GCM 数据加密密钥，用于加密存储敏感信息",
+    "databaseUrl": "PostgreSQL 数据库连接字符串",
+    "githubAppId": "GitHub App 的数字 ID，用于生成 App JWT 认证",
+    "githubAppSlug": "GitHub App 的 URL 标识符，用于生成安装链接",
+    "githubPrivateKeyPath": "GitHub App 私钥文件（.pem）的路径",
+    "webhookSecret": "Webhook 签名验证密钥，用于验证 GitHub 发送的 Webhook 请求",
+    "repoOwner": "目标仓库所有者（GitHub 用户名或组织名）",
+    "repoName": "目标仓库名称",
+    "collaborators": "允许手动触发 CI 重试的用户列表（逗号分隔）",
+    "workspaceDir": "Git 工作区目录路径，用于 CI 检查时的代码检出",
+    "appUrl": "应用的公开访问地址"
+  },
+  "envUsage": {
+    "githubClientId": "用户点击「登录 GitHub」时，重定向到 GitHub 授权页面，用户授权后获取访问令牌完成登录",
+    "githubClientSecret": "在 /api/auth/callback 中与 authorization code 交换 access_token，获取用户信息并签发 JWT",
+    "jwtSecret": "签发 auth_token cookie（HttpOnly，7天有效期），所有需要身份验证的 API 请求都通过此 token 验证身份",
+    "encryptionKey": "通过 Prisma 加密中间件自动加密/解密数据库中的敏感字段（Webhook Secret、私钥等）",
+    "databaseUrl": "Prisma Client 连接数据库，存储管理员账户、GitHub App 安装记录、CI 构建历史等数据",
+    "githubAppId": "与 GITHUB_PRIVATE_KEY_PATH 配合，生成 RS256 签名的 JWT，获取 Installation Access Token",
+    "githubAppSlug": "仪表盘「安装 GitHub App」按钮使用此变量生成安装链接",
+    "githubPrivateKeyPath": "用于生成 GitHub App JWT（RS256 签名），获取 Installation Access Token",
+    "webhookSecret": "在 /api/webhook/github 中使用 HMAC-SHA256 验证 x-hub-signature-256 头，防止伪造 Webhook 请求",
+    "repoOwner": "CI 管线执行时，用于从 GitHub API 获取 PR 信息并在 PR 上发布构建报告",
+    "repoName": "与 REPO_OWNER 配合，定位 CI/CD 操作的目标仓库",
+    "collaborators": "当用户在 PR 评论中输入 /rebuild 或 /retry 时，验证评论者是否在此列表中",
+    "workspaceDir": "CI 管线执行时，git fetch/checkout/merge 操作的目标目录，默认为当前目录",
+    "appUrl": "用于生成 OAuth 回调 URL 和其他需要完整地址的场景"
+  },
+  "envCategory": {
+    "oauth": "GitHub OAuth",
+    "oauthDesc": "用户登录认证所需的 GitHub OAuth App 配置",
+    "security": "安全",
+    "securityDesc": "JWT 签名和数据加密所需的安全密钥",
+    "database": "数据库",
+    "databaseDesc": "PostgreSQL 数据库连接配置",
+    "githubApp": "GitHub App",
+    "githubAppDesc": "GitHub App 安装和 API 调用所需的配置",
+    "cicd": "CI/CD",
+    "cicdDesc": "CI/CD 自动化流水线的可选配置",
+    "app": "应用",
+    "appDesc": "应用程序运行时的可选配置"
   },
   "envVarHints": {
     "githubClientId": "1. 打开 https://github.com/settings/developers\n2. 点击 \"New OAuth App\"\n3. 填写: Application name = Manticore Bot, Homepage URL = 你的域名, Callback URL = 你的域名/api/auth/callback\n4. 点击 \"Register application\"\n5. 复制页面上的 Client ID",
