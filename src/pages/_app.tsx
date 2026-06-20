@@ -20,8 +20,13 @@ export default function App({ Component, pageProps }: AppProps) {
           return;
         }
 
+        // 环境变量已配置，先初始化数据库（建表），再渲染页面
         if (data.isConfigured) {
-          fetch('/api/init', { method: 'POST' }).catch(() => {});
+          try {
+            await fetch('/api/init', { method: 'POST' });
+          } catch {
+            // 初始化失败不阻断页面渲染
+          }
         }
       } catch (err) {
         console.error('Failed to check environment variables:', err);
