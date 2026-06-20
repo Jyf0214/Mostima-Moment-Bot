@@ -1,0 +1,10 @@
+{
+  "app": {
+    "title": "Mostima Moment Bot",
+    "description": "Time tracking and analysis tool"
+  },
+  "home": {
+    "welcome": "Welcome",
+    "subtitle": "Time tracking and analysis tool"
+  }
+}

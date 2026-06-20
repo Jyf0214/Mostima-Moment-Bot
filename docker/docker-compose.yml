@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  manticore-bot:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - GITHUB_APP_ID=${GITHUB_APP_ID}
+      - GITHUB_PRIVATE_KEY_PATH=/app/private-key.pem
+      - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
+      - REPO_OWNER=${REPO_OWNER}
+      - REPO_NAME=${REPO_NAME}
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+      - PUBLIC_URL=${PUBLIC_URL}
+      - COLLABORATORS=${COLLABORATORS}
+    volumes:
+      - ./workspace:/app/workspace
+      - ./private-key.pem:/app/private-key.pem:ro
+    restart: unless-stopped

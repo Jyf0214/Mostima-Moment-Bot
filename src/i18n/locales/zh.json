@@ -1,0 +1,10 @@
+{
+  "app": {
+    "title": "Mostima 时刻机器人",
+    "description": "时间追踪与分析工具"
+  },
+  "home": {
+    "welcome": "欢迎",
+    "subtitle": "时间追踪与分析工具"
+  }
+}
