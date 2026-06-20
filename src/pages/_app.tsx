@@ -33,7 +33,7 @@ export default function App({ Component, pageProps }: AppProps) {
           });
         }
       } catch (err) {
-        console.error('检查环境变量失败:', err);
+        console.error('Failed to check environment variables:', err);
       } finally {
         setChecking(false);
       }

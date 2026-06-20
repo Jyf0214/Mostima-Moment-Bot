@@ -1,10 +1,71 @@
 {
   "app": {
     "title": "Mostima Moment Bot",
-    "description": "Time tracking and analysis tool"
+    "description": "CI/CD automation bot"
   },
   "home": {
     "welcome": "Welcome",
-    "subtitle": "Time tracking and analysis tool"
+    "subtitle": "CI/CD automation bot",
+    "admin": "Admin",
+    "user": "User",
+    "dashboard": "Dashboard",
+    "logout": "Logout",
+    "loginGithub": "Login with GitHub",
+    "checkStatusFailed": "Failed to check status"
+  },
+  "setup": {
+    "title": "Initial Setup",
+    "subtitle": "Please complete the following configuration",
+    "welcomeBack": "Welcome Back",
+    "welcomeBackSubtitle": "Please login with GitHub",
+    "complete": "Setup Complete",
+    "completeSubtitle": "Application configured successfully, please login to continue",
+    "privateKey": "GitHub App Private Key",
+    "appId": "GitHub App ID",
+    "appIdPlaceholder": "Enter App ID",
+    "webhookSecret": "Webhook Secret",
+    "webhookSecretPlaceholder": "Enter Webhook Secret",
+    "repoOwner": "Repository Owner",
+    "repoOwnerPlaceholder": "e.g. username",
+    "repoName": "Repository Name",
+    "repoNamePlaceholder": "e.g. Mostima-Moment-Bot",
+    "saveConfig": "Save Configuration",
+    "skipLogin": "Skip, login directly",
+    "loginGithub": "Login with GitHub",
+    "checkStatusFailed": "Failed to check application status",
+    "fillAllFields": "Please fill in all required fields",
+    "setupFailed": "Setup failed"
+  },
+  "envError": {
+    "title": "Environment Variables Missing",
+    "description": "Application cannot run normally because necessary environment variables are missing.",
+    "missingVars": "Missing environment variables:",
+    "presentVars": "Configured environment variables:",
+    "solution": "Solution:",
+    "step1": "1. Create .env.local file in project root",
+    "step2": "2. Add missing environment variable configuration",
+    "step3": "3. Restart the application",
+    "step4": "Refer to .env.example file for complete configuration"
+  },
+  "api": {
+    "methodNotAllowed": "Method not allowed",
+    "serverError": "Internal server error",
+    "configError": "Server configuration error",
+    "invalidSignature": "Invalid signature",
+    "invalidPayload": "Invalid JSON payload",
+    "unauthorized": "Only administrators can access this application",
+    "missingFields": "Missing required fields",
+    "uploadPrivateKey": "Please upload private key file",
+    "invalidPath": "Private key file path is invalid",
+    "invalidFormat": "Private key file format is invalid",
+    "setupFailed": "Setup failed",
+    "dbInitFailed": "Database initialization failed",
+    "envCheckFailed": "Failed to check environment variables",
+    "envConfigured": "All environment variables are configured",
+    "envMissing": "{{count}} environment variables are missing",
+    "dbInitComplete": "Database initialization complete",
+    "dbNotInitialized": "Database tables not found, initializing...",
+    "adminCreated": "New admin created: {{login}}",
+    "oauthFailed": "GitHub OAuth callback failed"
   }
 }

@@ -1,10 +1,71 @@
 {
   "app": {
     "title": "Mostima 时刻机器人",
-    "description": "时间追踪与分析工具"
+    "description": "CI/CD 自动化机器人"
   },
   "home": {
     "welcome": "欢迎",
-    "subtitle": "时间追踪与分析工具"
+    "subtitle": "CI/CD 自动化机器人",
+    "admin": "管理员",
+    "user": "用户",
+    "dashboard": "控制面板",
+    "logout": "登出",
+    "loginGithub": "使用 GitHub 登录",
+    "checkStatusFailed": "检查状态失败"
+  },
+  "setup": {
+    "title": "初始设置",
+    "subtitle": "首次使用，请完成以下配置",
+    "welcomeBack": "欢迎回来",
+    "welcomeBackSubtitle": "请使用 GitHub 登录",
+    "complete": "设置完成",
+    "completeSubtitle": "应用已配置成功，请登录以继续",
+    "privateKey": "GitHub App 私钥文件",
+    "appId": "GitHub App ID",
+    "appIdPlaceholder": "输入 App ID",
+    "webhookSecret": "Webhook Secret",
+    "webhookSecretPlaceholder": "输入 Webhook Secret",
+    "repoOwner": "仓库所有者",
+    "repoOwnerPlaceholder": "例如: username",
+    "repoName": "仓库名称",
+    "repoNamePlaceholder": "例如: Mostima-Moment-Bot",
+    "saveConfig": "保存配置",
+    "skipLogin": "跳过，直接登录",
+    "loginGithub": "使用 GitHub 登录",
+    "checkStatusFailed": "检查应用状态失败",
+    "fillAllFields": "请填写所有必填字段",
+    "setupFailed": "设置失败"
+  },
+  "envError": {
+    "title": "环境变量配置缺失",
+    "description": "应用无法正常运行，因为缺少必要的环境变量配置。",
+    "missingVars": "缺失的环境变量：",
+    "presentVars": "已配置的环境变量：",
+    "solution": "解决方法：",
+    "step1": "1. 在项目根目录创建 .env.local 文件",
+    "step2": "2. 添加缺失的环境变量配置",
+    "step3": "3. 重启应用",
+    "step4": "参考 .env.example 文件了解完整的环境变量配置"
+  },
+  "api": {
+    "methodNotAllowed": "Method not allowed",
+    "serverError": "Internal server error",
+    "configError": "Server configuration error",
+    "invalidSignature": "Invalid signature",
+    "invalidPayload": "Invalid JSON payload",
+    "unauthorized": "只有管理员可以访问此应用",
+    "missingFields": "缺少必填字段",
+    "uploadPrivateKey": "请上传私钥文件",
+    "invalidPath": "私钥文件路径无效",
+    "invalidFormat": "私钥文件格式无效",
+    "setupFailed": "设置失败",
+    "dbInitFailed": "数据库初始化失败",
+    "envCheckFailed": "检查环境变量失败",
+    "envConfigured": "所有环境变量已配置",
+    "envMissing": "缺少 {{count}} 个必要的环境变量",
+    "dbInitComplete": "数据库初始化完成",
+    "dbNotInitialized": "数据库表不存在，正在初始化...",
+    "adminCreated": "新管理员已创建: {{login}}",
+    "oauthFailed": "GitHub OAuth 回调失败"
   }
 }

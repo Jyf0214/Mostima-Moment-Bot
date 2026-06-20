@@ -1,4 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
+import i18n from '@/i18n';
 
 // 必要的环境变量列表
 const REQUIRED_ENV_VARS = [
@@ -35,6 +36,8 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     isConfigured,
     missing,
     present,
-    message: isConfigured ? '所有环境变量已配置' : `缺少 ${missing.length} 个必要的环境变量`,
+    message: isConfigured
+      ? i18n.t('api.envConfigured')
+      : i18n.t('api.envMissing', { count: missing.length }),
   });
 }

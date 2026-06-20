@@ -40,7 +40,7 @@ export default function SetupPage() {
       const data = await response.json();
       setIsNew(data.isNew);
     } catch (err) {
-      setError('检查应用状态失败');
+      setError(t('setup.checkStatusFailed'));
     } finally {
       setLoading(false);
     }
@@ -48,7 +48,7 @@ export default function SetupPage() {
 
   const handleSubmit = async () => {
     if (!privateKey || !appId || !webhookSecret || !repoOwner || !repoName) {
-      setError('请填写所有必填字段');
+      setError(t('setup.fillAllFields'));
       return;
     }
 
@@ -70,7 +70,7 @@ export default function SetupPage() {
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || '设置失败');
+        throw new Error(data.error || t('setup.setupFailed'));
       }
 
       setSuccess(true);
@@ -95,15 +95,15 @@ export default function SetupPage() {
         <Paper shadow="md" p="xl" radius="md">
           <Stack align="center" gap="md">
             <IconCheck size={48} color="var(--mantine-color-green-6)" />
-            <Title order={2}>设置完成</Title>
-            <Text c="dimmed">应用已配置成功，请登录以继续</Text>
+            <Title order={2}>{t('setup.complete')}</Title>
+            <Text c="dimmed">{t('setup.completeSubtitle')}</Text>
             <Button
               component="a"
               href="/api/auth/login"
               leftSection={<IconBrandGithub size={20} />}
               size="lg"
             >
-              使用 GitHub 登录
+              {t('setup.loginGithub')}
             </Button>
           </Stack>
         </Paper>
@@ -116,15 +116,15 @@ export default function SetupPage() {
       <Container size="sm" py="xl">
         <Paper shadow="md" p="xl" radius="md">
           <Stack align="center" gap="md">
-            <Title order={2}>欢迎回来</Title>
-            <Text c="dimmed">请使用 GitHub 登录</Text>
+            <Title order={2}>{t('setup.welcomeBack')}</Title>
+            <Text c="dimmed">{t('setup.welcomeBackSubtitle')}</Text>
             <Button
               component="a"
               href="/api/auth/login"
               leftSection={<IconBrandGithub size={20} />}
               size="lg"
             >
-              使用 GitHub 登录
+              {t('setup.loginGithub')}
             </Button>
           </Stack>
         </Paper>
@@ -136,8 +136,8 @@ export default function SetupPage() {
     <Container size="sm" py="xl">
       <Paper shadow="md" p="xl" radius="md">
         <Stack gap="md">
-          <Title order={2}>初始设置</Title>
-          <Text c="dimmed">首次使用，请完成以下配置</Text>
+          <Title order={2}>{t('setup.title')}</Title>
+          <Text c="dimmed">{t('setup.subtitle')}</Text>
 
           {error && (
             <Alert color="red" icon={<IconAlertCircle size={16} />}>
@@ -146,7 +146,7 @@ export default function SetupPage() {
           )}
 
           <FileInput
-            label="GitHub App 私钥文件"
+            label={t('setup.privateKey')}
             accept=".pem"
             value={privateKey}
             onChange={setPrivateKey}
@@ -154,32 +154,32 @@ export default function SetupPage() {
           />
 
           <TextInput
-            label="GitHub App ID"
-            placeholder="输入 App ID"
+            label={t('setup.appId')}
+            placeholder={t('setup.appIdPlaceholder')}
             value={appId}
             onChange={(e) => setAppId(e.currentTarget.value)}
             required
           />
 
           <TextInput
-            label="Webhook Secret"
-            placeholder="输入 Webhook Secret"
+            label={t('setup.webhookSecret')}
+            placeholder={t('setup.webhookSecretPlaceholder')}
             value={webhookSecret}
             onChange={(e) => setWebhookSecret(e.currentTarget.value)}
             required
           />
 
           <TextInput
-            label="仓库所有者"
-            placeholder="例如: username"
+            label={t('setup.repoOwner')}
+            placeholder={t('setup.repoOwnerPlaceholder')}
             value={repoOwner}
             onChange={(e) => setRepoOwner(e.currentTarget.value)}
             required
           />
 
           <TextInput
-            label="仓库名称"
-            placeholder="例如: Mostima-Moment-Bot"
+            label={t('setup.repoName')}
+            placeholder={t('setup.repoNamePlaceholder')}
             value={repoName}
             onChange={(e) => setRepoName(e.currentTarget.value)}
             required
@@ -191,7 +191,7 @@ export default function SetupPage() {
             leftSection={<IconUpload size={20} />}
             size="lg"
           >
-            保存配置
+            {t('setup.saveConfig')}
           </Button>
 
           <Button
@@ -200,7 +200,7 @@ export default function SetupPage() {
             variant="subtle"
             leftSection={<IconBrandGithub size={20} />}
           >
-            跳过，直接登录
+            {t('setup.skipLogin')}
           </Button>
         </Stack>
       </Paper>

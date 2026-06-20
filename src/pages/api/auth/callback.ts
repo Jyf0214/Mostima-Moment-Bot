@@ -1,6 +1,13 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import jwt from 'jsonwebtoken';
-import { isNewApplication, getAdmin, createAdmin, updateAdminLogin, discardNonAdminData } from '@/lib/db';
+import i18n from '@/i18n';
+import {
+  isNewApplication,
+  getAdmin,
+  createAdmin,
+  updateAdminLogin,
+  discardNonAdminData,
+} from '@/lib/db';
 
 const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
@@ -36,7 +43,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
+        Accept: 'application/json',
       },
       body: JSON.stringify({
         client_id: GITHUB_CLIENT_ID,
@@ -54,8 +61,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // 获取用户信息
     const userResponse = await fetch('https://api.github.com/user', {
       headers: {
-        'Authorization': `Bearer ${tokenData.access_token}`,
-        'Accept': 'application/json',
+        Authorization: `Bearer ${tokenData.access_token}`,
+        Accept: 'application/json',
       },
     });
 
@@ -74,11 +81,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (isNew && !admin) {
       // 全新应用，第一个用户自动成为管理员
       admin = await createAdmin(userData.id, userData.login, userData.avatar_url);
-      console.log(`新管理员已创建: ${userData.login}`);
+      console.log(`New admin created: ${userData.login}`);
     } else if (!admin) {
       // 非管理员，丢弃数据
       await discardNonAdminData(userData.id);
-      return res.status(403).json({ error: '只有管理员可以访问此应用' });
+      return res.status(403).json({ error: i18n.t('api.unauthorized') });
     } else {
       // 已有管理员，更新登录时间
       await updateAdminLogin(userData.id);
@@ -97,12 +104,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     );
 
     // 设置 JWT cookie
-    res.setHeader('Set-Cookie', `auth_token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}`);
+    res.setHeader(
+      'Set-Cookie',
+      `auth_token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}`
+    );
 
     // 重定向到首页
     return res.redirect('/');
   } catch (error: any) {
-    console.error('GitHub OAuth 回调失败:', error);
+    console.error('GitHub OAuth callback failed:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

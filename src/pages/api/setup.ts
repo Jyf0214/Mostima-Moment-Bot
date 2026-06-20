@@ -1,4 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
+import i18n from '@/i18n';
 import { setWebhookConfig } from '@/lib/db';
 import { IncomingForm, File } from 'formidable';
 import fs from 'fs';
@@ -42,34 +43,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const privateKeyFile = files.privateKey?.[0];
 
     if (!appId || !webhookSecret || !repoOwner || !repoName) {
-      return res.status(400).json({ error: '缺少必填字段' });
+      return res.status(400).json({ error: i18n.t('api.missingFields') });
     }
 
     if (!privateKeyFile) {
-      return res.status(400).json({ error: '请上传私钥文件' });
+      return res.status(400).json({ error: i18n.t('api.uploadPrivateKey') });
     }
 
     // 读取私钥文件
     const privateKeyPath = privateKeyFile.filepath || privateKeyFile.path;
     if (!privateKeyPath) {
-      return res.status(400).json({ error: '私钥文件路径无效' });
+      return res.status(400).json({ error: i18n.t('api.invalidPath') });
     }
 
     const privateKey = fs.readFileSync(privateKeyPath, 'utf8');
 
     // 验证私钥格式
     if (!privateKey.includes('-----BEGIN') || !privateKey.includes('PRIVATE KEY-----')) {
-      return res.status(400).json({ error: '私钥文件格式无效' });
+      return res.status(400).json({ error: i18n.t('api.invalidFormat') });
     }
 
     // 保存配置到数据库（私钥会被加密）
-    await setWebhookConfig(
-      appId,
-      webhookSecret,
-      privateKey,
-      repoOwner,
-      repoName
-    );
+    await setWebhookConfig(appId, webhookSecret, privateKey, repoOwner, repoName);
 
     // 清理临时文件
     try {
@@ -80,7 +75,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     return res.status(200).json({ success: true });
   } catch (error: any) {
-    console.error('设置失败:', error);
+    console.error('Setup failed:', error);
     return res.status(500).json({ error: error.message || 'Internal server error' });
   }
 }

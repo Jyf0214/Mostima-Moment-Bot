@@ -14,7 +14,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const isNew = await isNewApplication();
     return res.status(200).json({ isNew });
   } catch (error: any) {
-    console.error('检查应用状态失败:', error);
+    console.error('Failed to check application status:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

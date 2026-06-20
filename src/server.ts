@@ -34,27 +34,27 @@ const server = app.listen(PORT, '0.0.0.0', () => {
 // 处理服务器错误
 server.on('error', (err: NodeJS.ErrnoException) => {
   if (err.code === 'EADDRINUSE') {
-    console.error(`❌ 端口 ${PORT} 已被占用`);
+    console.error(`Port ${PORT} is already in use`);
     process.exit(1);
   } else {
-    console.error('❌ 服务器启动失败:', err);
+    console.error('Server startup failed:', err);
     process.exit(1);
   }
 });
 
 // 处理进程退出
 process.on('SIGTERM', () => {
-  console.log('收到 SIGTERM 信号，正在关闭服务器...');
+  console.log('Received SIGTERM signal, shutting down server...');
   server.close(() => {
-    console.log('服务器已关闭');
+    console.log('Server closed');
     process.exit(0);
   });
 });
 
 process.on('SIGINT', () => {
-  console.log('收到 SIGINT 信号，正在关闭服务器...');
+  console.log('Received SIGINT signal, shutting down server...');
   server.close(() => {
-    console.log('服务器已关闭');
+    console.log('Server closed');
     process.exit(0);
   });
 });

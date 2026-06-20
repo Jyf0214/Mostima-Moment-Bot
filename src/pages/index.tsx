@@ -53,7 +53,7 @@ export default function Home() {
         setUser(userData);
       }
     } catch (err) {
-      console.error('检查状态失败:', err);
+      console.error('Failed to check status:', err);
     } finally {
       setLoading(false);
     }
@@ -89,7 +89,7 @@ export default function Home() {
                 <Stack gap={0}>
                   <Text fw={500}>{user.githubLogin}</Text>
                   <Text c="dimmed" size="sm">
-                    {user.isAdmin ? '管理员' : '用户'}
+                    {user.isAdmin ? t('home.admin') : t('home.user')}
                   </Text>
                 </Stack>
               </Group>
@@ -101,7 +101,7 @@ export default function Home() {
                   leftSection={<IconSettings size={20} />}
                   variant="light"
                 >
-                  控制面板
+                  {t('home.dashboard')}
                 </Button>
                 <Button
                   onClick={handleLogout}
@@ -109,7 +109,7 @@ export default function Home() {
                   variant="subtle"
                   color="red"
                 >
-                  登出
+                  {t('home.logout')}
                 </Button>
               </Group>
             </>
@@ -120,7 +120,7 @@ export default function Home() {
               leftSection={<IconBrandGithub size={20} />}
               size="lg"
             >
-              使用 GitHub 登录
+              {t('home.loginGithub')}
             </Button>
           )}
         </Stack>

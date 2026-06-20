@@ -1,4 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
+import i18n from '@/i18n';
 import { prisma } from '@/lib/prisma';
 
 /**
@@ -27,7 +28,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (!tableExists) {
       // 使用 Prisma migrate 创建表
-      console.log('数据库表不存在，正在初始化...');
+      console.log('Database tables not found, initializing...');
       // 注意：在生产环境中，应该使用 prisma migrate deploy
       // 这里我们只检查表是否存在
     }
@@ -38,12 +39,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json({
       success: true,
       isNew: adminCount === 0,
-      message: '数据库初始化完成',
+      message: i18n.t('api.dbInitComplete'),
     });
   } catch (error: any) {
-    console.error('数据库初始化失败:', error);
+    console.error('Database initialization failed:', error);
     return res.status(500).json({
-      error: '数据库初始化失败',
+      error: i18n.t('api.dbInitFailed'),
       message: error.message,
     });
   }
