@@ -47,6 +47,18 @@ interface InstallationPayload {
   };
 }
 
+interface PushPayload {
+  ref: string;
+  head_commit: { id: string; message: string } | null;
+  repository: { full_name: string };
+}
+
+interface WorkflowJobPayload {
+  action: string;
+  workflow_job: { id: number; name: string; status: string; conclusion: string | null };
+  repository: { full_name: string };
+}
+
 /**
  * GitHub Webhook 接收端
  * POST /api/webhook/github
@@ -135,6 +147,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       case 'workflow_run':
         await handleWorkflowRun(payload as unknown as WorkflowPayload);
         break;
+
+      case 'push': {
+        const pushPayload = payload as unknown as PushPayload;
+        const commitMsg = pushPayload.head_commit?.message?.slice(0, 80) || 'no message';
+        console.log(
+          `[Webhook] Push to ${pushPayload.ref}: ${pushPayload.head_commit?.id?.slice(0, 7) || 'unknown'} — ${commitMsg}`
+        );
+        break;
+      }
+
+      case 'workflow_job': {
+        const jobPayload = payload as unknown as WorkflowJobPayload;
+        const job = jobPayload.workflow_job;
+        console.log(
+          `[Webhook] Workflow job ${jobPayload.action}: ${job.name} — status=${job.status}, conclusion=${job.conclusion || 'pending'}`
+        );
+        break;
+      }
 
       case 'installation': {
         const installPayload = payload as unknown as InstallationPayload;
