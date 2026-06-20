@@ -18,7 +18,12 @@ import {
   MessageCircle,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { ProCard } from '@/components/ui/ProCard';
+import { PageContainer } from '@/components/ui/PageContainer';
 
+/* ---------- Inline GitHub SVG icon ---------- */
 function GithubIcon({ size = 24, className }: { size?: number; className?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
@@ -27,12 +32,16 @@ function GithubIcon({ size = 24, className }: { size?: number; className?: strin
   );
 }
 
+/* ---------- Constants ---------- */
 const featureIcons = [Rocket, Webhook, BarChart3, MessageCircle, Settings];
 
 const gradientBg = 'bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e]';
-const glassPanel = 'bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl';
-const inputBase =
-  'w-full rounded-lg border border-white/15 bg-white/5 px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-colors';
+
+/** Dark glass panel override for ProCard on dark gradient backgrounds */
+const glassCard = 'bg-white/5 backdrop-blur-xl border-white/10 rounded-2xl shadow-2xl';
+
+/** Shared label style for fields on dark glass panels */
+const fieldLabel = 'block text-sm font-medium mb-2 text-white/80';
 
 export default function SetupPage() {
   const { t } = useTranslation();
@@ -123,10 +132,12 @@ export default function SetupPage() {
     setPrivateKey(file);
   };
 
-  /* ---------- Loading state ---------- */
+  /* ================================================================
+     Loading state
+     ================================================================ */
   if (loading) {
     return (
-      <div className={`${gradientBg} min-h-screen flex items-center justify-center`}>
+      <div className={`${gradientBg} min-h-screen dark flex items-center justify-center`}>
         <div className="flex flex-col items-center gap-4">
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-white/20 border-t-blue-500" />
           <p className="text-sm text-white/50">{t('setup.title')}</p>
@@ -135,59 +146,79 @@ export default function SetupPage() {
     );
   }
 
-  /* ---------- Success state ---------- */
+  /* ================================================================
+     Success state
+     ================================================================ */
   if (success) {
     return (
-      <div className={`${gradientBg} min-h-screen flex items-center justify-center p-6`}>
-        <div className={`${glassPanel} max-w-md w-full p-12 flex flex-col items-center gap-8`}>
-          <div className="h-24 w-24 rounded-full bg-gradient-to-br from-teal-500 to-green-500 flex items-center justify-center shadow-lg shadow-green-500/20">
-            <Check className="h-12 w-12 text-white" />
-          </div>
+      <div className={`${gradientBg} min-h-screen dark flex items-center justify-center p-6`}>
+        <ProCard className={`${glassCard} max-w-md w-full`} padding="p-12">
+          <div className="flex flex-col items-center gap-8">
+            <div className="h-24 w-24 rounded-full bg-gradient-to-br from-teal-500 to-green-500 flex items-center justify-center shadow-lg shadow-green-500/20">
+              <Check className="h-12 w-12 text-white" />
+            </div>
 
-          <div className="text-center">
-            <h2 className="text-2xl font-bold text-white">{t('setup.complete')}</h2>
-            <p className="mt-2 text-white/60">{t('setup.completeSubtitle')}</p>
-          </div>
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-white">{t('setup.complete')}</h2>
+              <p className="mt-2 text-white/60">{t('setup.completeSubtitle')}</p>
+            </div>
 
-          <a
-            href="/api/auth/login"
-            className="flex items-center justify-center gap-2 w-full rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-6 py-3 text-lg font-semibold text-white shadow-lg shadow-blue-500/25 transition-all hover:from-blue-500 hover:to-cyan-400 hover:shadow-blue-500/40"
-          >
-            <GithubIcon className="h-5 w-5" />
-            {t('setup.loginGithub')}
-          </a>
-        </div>
+            <Button
+              variant="default"
+              size="lg"
+              block
+              rounded="lg"
+              autoLoading={false}
+              icon={<GithubIcon className="h-5 w-5" />}
+              className="bg-gradient-to-r from-blue-600 to-cyan-500 border-0 text-white hover:from-blue-500 hover:to-cyan-400 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40"
+              onClick={() => (window.location.href = '/api/auth/login')}
+            >
+              {t('setup.loginGithub')}
+            </Button>
+          </div>
+        </ProCard>
       </div>
     );
   }
 
-  /* ---------- Welcome-back state ---------- */
+  /* ================================================================
+     Welcome-back state
+     ================================================================ */
   if (!isNew) {
     return (
-      <div className={`${gradientBg} min-h-screen flex items-center justify-center p-6`}>
-        <div className={`${glassPanel} max-w-md w-full p-12 flex flex-col items-center gap-8`}>
-          <div className="h-18 w-18 rounded-full bg-gradient-to-br from-blue-600 to-violet-500 flex items-center justify-center shadow-lg shadow-violet-500/20">
-            <GithubIcon className="h-9 w-9 text-white" />
-          </div>
+      <div className={`${gradientBg} min-h-screen dark flex items-center justify-center p-6`}>
+        <ProCard className={`${glassCard} max-w-md w-full`} padding="p-12">
+          <div className="flex flex-col items-center gap-8">
+            <div className="h-18 w-18 rounded-full bg-gradient-to-br from-blue-600 to-violet-500 flex items-center justify-center shadow-lg shadow-violet-500/20">
+              <GithubIcon className="h-9 w-9 text-white" />
+            </div>
 
-          <div className="text-center">
-            <h2 className="text-2xl font-bold text-white">{t('setup.welcomeBack')}</h2>
-            <p className="mt-2 text-white/60">{t('setup.welcomeBackSubtitle')}</p>
-          </div>
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-white">{t('setup.welcomeBack')}</h2>
+              <p className="mt-2 text-white/60">{t('setup.welcomeBackSubtitle')}</p>
+            </div>
 
-          <a
-            href="/api/auth/login"
-            className="flex items-center justify-center gap-2 w-full rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-6 py-3 text-lg font-semibold text-white shadow-lg shadow-blue-500/25 transition-all hover:from-blue-500 hover:to-cyan-400 hover:shadow-blue-500/40"
-          >
-            <GithubIcon className="h-5 w-5" />
-            {t('setup.loginGithub')}
-          </a>
-        </div>
+            <Button
+              variant="default"
+              size="lg"
+              block
+              rounded="lg"
+              autoLoading={false}
+              icon={<GithubIcon className="h-5 w-5" />}
+              className="bg-gradient-to-r from-blue-600 to-cyan-500 border-0 text-white hover:from-blue-500 hover:to-cyan-400 shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40"
+              onClick={() => (window.location.href = '/api/auth/login')}
+            >
+              {t('setup.loginGithub')}
+            </Button>
+          </div>
+        </ProCard>
       </div>
     );
   }
 
-  /* ---------- Main setup wizard ---------- */
+  /* ================================================================
+     Main setup wizard
+     ================================================================ */
   const steps = [
     { label: t('setup.stepCredentials'), desc: t('setup.stepCredentialsDesc'), icon: Key },
     { label: t('setup.stepRepository'), desc: t('setup.stepRepositoryDesc'), icon: GitBranch },
@@ -195,16 +226,16 @@ export default function SetupPage() {
   ];
 
   return (
-    <div className={`${gradientBg} min-h-screen`}>
-      <div className="mx-auto max-w-screen-xl px-6 py-12">
+    <div className={`${gradientBg} min-h-screen dark`}>
+      <PageContainer maxWidth="7xl" padding="wide">
         {/* Header */}
         <div className="text-center mb-10">
           <h1 className="text-3xl font-bold text-white">{t('setup.title')}</h1>
           <p className="mt-2 text-lg text-white/60">{t('setup.subtitle')}</p>
         </div>
 
-        {/* Stepper */}
-        <div className={`${glassPanel} p-6 mb-8`}>
+        {/* Custom step indicator */}
+        <ProCard className={`${glassCard} mb-8`} padding="p-6">
           <div className="flex items-center justify-between">
             {steps.map((step, idx) => {
               const StepIcon = step.icon;
@@ -217,7 +248,7 @@ export default function SetupPage() {
                   onClick={() => setActiveStep(idx)}
                   className="flex flex-1 items-center gap-3 group cursor-pointer"
                 >
-                  {/* Circle */}
+                  {/* Step circle */}
                   <div
                     className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold transition-all ${
                       isComplete
@@ -229,7 +260,7 @@ export default function SetupPage() {
                   >
                     {isComplete ? <Check className="h-5 w-5" /> : <StepIcon className="h-5 w-5" />}
                   </div>
-                  {/* Label */}
+                  {/* Step label */}
                   <div className="hidden sm:block text-left">
                     <p
                       className={`text-sm font-semibold ${
@@ -240,7 +271,7 @@ export default function SetupPage() {
                     </p>
                     <p className="text-xs text-white/40">{step.desc}</p>
                   </div>
-                  {/* Connector */}
+                  {/* Connector line */}
                   {idx < steps.length - 1 && (
                     <div
                       className={`mx-3 hidden sm:block h-px flex-1 ${
@@ -252,9 +283,9 @@ export default function SetupPage() {
               );
             })}
           </div>
-        </div>
+        </ProCard>
 
-        {/* Error */}
+        {/* Error banner */}
         {error && (
           <div className="mb-6 flex items-start gap-3 rounded-lg border border-red-400/30 bg-red-500/10 px-4 py-3 text-red-300">
             <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
@@ -265,7 +296,7 @@ export default function SetupPage() {
         {/* Two-column layout */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left panel - Features */}
-          <div className={`${glassPanel} p-8`}>
+          <ProCard className={glassCard} padding="p-8">
             <div className="flex items-center gap-4 mb-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-violet-500 shadow-lg shadow-violet-500/20">
                 <Settings className="h-6 w-6 text-white" />
@@ -294,11 +325,11 @@ export default function SetupPage() {
                 );
               })}
             </div>
-          </div>
+          </ProCard>
 
           {/* Right panel - Form */}
-          <div className={`${glassPanel} p-8`}>
-            {/* Step 0: Credentials */}
+          <ProCard className={glassCard} padding="p-8">
+            {/* ---- Step 0: Credentials ---- */}
             {activeStep === 0 && (
               <div className="flex flex-col gap-6">
                 <div className="flex items-center gap-4">
@@ -315,15 +346,13 @@ export default function SetupPage() {
 
                 <div className="rounded-xl border border-white/8 bg-white/[0.03] p-6">
                   <div className="flex flex-col gap-5">
-                    {/* File upload */}
+                    {/* File upload (hidden input + styled trigger) */}
                     <div>
-                      <label className="mb-1.5 block text-sm font-medium text-white/80">
-                        {t('setup.privateKey')}
-                      </label>
+                      <label className={fieldLabel}>{t('setup.privateKey')}</label>
                       <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
-                        className="flex w-full items-center gap-3 rounded-lg border border-dashed border-white/20 bg-white/5 px-4 py-3.5 text-left transition-colors hover:border-blue-500/40 hover:bg-white/[0.07]"
+                        className="flex w-full items-center gap-3 rounded-xl border border-white/20 bg-zinc-800 px-4 py-3 text-left transition-colors hover:border-blue-500/40 hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                       >
                         <Upload className="h-4 w-4 shrink-0 text-white/40" />
                         <span
@@ -348,50 +377,48 @@ export default function SetupPage() {
 
                     {/* App ID */}
                     <div>
-                      <label className="mb-1.5 block text-sm font-medium text-white/80">
-                        {t('setup.appId')}
-                      </label>
-                      <input
+                      <label className={fieldLabel}>{t('setup.appId')}</label>
+                      <Input
                         type="text"
                         value={appId}
                         onChange={(e) => setAppId(e.target.value)}
                         placeholder={t('setup.appIdPlaceholder')}
                         required
-                        className={inputBase}
+                        size="lg"
                       />
                     </div>
 
                     {/* Webhook Secret */}
                     <div>
-                      <label className="mb-1.5 block text-sm font-medium text-white/80">
-                        {t('setup.webhookSecret')}
-                      </label>
-                      <input
+                      <label className={fieldLabel}>{t('setup.webhookSecret')}</label>
+                      <Input
                         type="text"
                         value={webhookSecret}
                         onChange={(e) => setWebhookSecret(e.target.value)}
                         placeholder={t('setup.webhookSecretPlaceholder')}
                         required
-                        className={inputBase}
+                        size="lg"
                       />
                     </div>
                   </div>
                 </div>
 
                 <div className="flex justify-end mt-2">
-                  <button
-                    type="button"
+                  <Button
+                    variant="primary"
+                    size="md"
+                    rounded="lg"
+                    autoLoading={false}
+                    icon={<ArrowRight className="h-4 w-4" />}
                     onClick={handleNext}
-                    className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition-all hover:from-blue-500 hover:to-cyan-400 hover:shadow-blue-500/40"
                   >
                     {t('setup.next')}
-                    <ArrowRight className="h-4 w-4" />
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
 
-            {/* Step 1: Repository */}
+            {/* ---- Step 1: Repository ---- */}
             {activeStep === 1 && (
               <div className="flex flex-col gap-6">
                 <div className="flex items-center gap-4">
@@ -408,38 +435,36 @@ export default function SetupPage() {
 
                 <div className="rounded-xl border border-white/8 bg-white/[0.03] p-6">
                   <div className="flex flex-col gap-5">
-                    {/* Repo Owner */}
+                    {/* Repo Owner (with GitHub icon) */}
                     <div>
-                      <label className="mb-1.5 block text-sm font-medium text-white/80">
-                        {t('setup.repoOwner')}
-                      </label>
+                      <label className={fieldLabel}>{t('setup.repoOwner')}</label>
                       <div className="relative">
-                        <GithubIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
-                        <input
+                        <GithubIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40 z-10 pointer-events-none" />
+                        <Input
                           type="text"
                           value={repoOwner}
                           onChange={(e) => setRepoOwner(e.target.value)}
                           placeholder={t('setup.repoOwnerPlaceholder')}
                           required
-                          className={`${inputBase} pl-10`}
+                          size="lg"
+                          className="pl-10"
                         />
                       </div>
                     </div>
 
-                    {/* Repo Name */}
+                    {/* Repo Name (with file icon) */}
                     <div>
-                      <label className="mb-1.5 block text-sm font-medium text-white/80">
-                        {t('setup.repoName')}
-                      </label>
+                      <label className={fieldLabel}>{t('setup.repoName')}</label>
                       <div className="relative">
-                        <FileCode className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40" />
-                        <input
+                        <FileCode className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40 z-10 pointer-events-none" />
+                        <Input
                           type="text"
                           value={repoName}
                           onChange={(e) => setRepoName(e.target.value)}
                           placeholder={t('setup.repoNamePlaceholder')}
                           required
-                          className={`${inputBase} pl-10`}
+                          size="lg"
+                          className="pl-10"
                         />
                       </div>
                     </div>
@@ -447,27 +472,31 @@ export default function SetupPage() {
                 </div>
 
                 <div className="flex justify-between mt-2">
-                  <button
-                    type="button"
+                  <Button
+                    variant="ghost"
+                    size="md"
+                    rounded="lg"
+                    autoLoading={false}
+                    icon={<ArrowLeft className="h-4 w-4" />}
                     onClick={handlePrevious}
-                    className="flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white/60 transition-colors hover:bg-white/5 hover:text-white/80"
                   >
-                    <ArrowLeft className="h-4 w-4" />
                     {t('setup.previous')}
-                  </button>
-                  <button
-                    type="button"
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="md"
+                    rounded="lg"
+                    autoLoading={false}
+                    icon={<ArrowRight className="h-4 w-4" />}
                     onClick={handleNext}
-                    className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition-all hover:from-blue-500 hover:to-cyan-400 hover:shadow-blue-500/40"
                   >
                     {t('setup.next')}
-                    <ArrowRight className="h-4 w-4" />
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
 
-            {/* Step 2: Review */}
+            {/* ---- Step 2: Review ---- */}
             {activeStep === 2 && (
               <div className="flex flex-col gap-6">
                 <div className="flex items-center gap-4">
@@ -482,7 +511,7 @@ export default function SetupPage() {
 
                 <hr className="border-white/10" />
 
-                {/* App Info Card */}
+                {/* App info summary */}
                 <div className="rounded-xl border border-white/8 bg-white/[0.03] p-6">
                   <div className="flex flex-col gap-4">
                     <div className="flex items-center gap-2">
@@ -531,7 +560,7 @@ export default function SetupPage() {
                   </div>
                 </div>
 
-                {/* Repo Info Card */}
+                {/* Repo info summary */}
                 <div className="rounded-xl border border-white/8 bg-white/[0.03] p-6">
                   <div className="flex flex-col gap-4">
                     <div className="flex items-center gap-2">
@@ -570,49 +599,47 @@ export default function SetupPage() {
                 </div>
 
                 <div className="flex justify-between mt-2">
-                  <button
-                    type="button"
+                  <Button
+                    variant="ghost"
+                    size="md"
+                    rounded="lg"
+                    autoLoading={false}
+                    icon={<ArrowLeft className="h-4 w-4" />}
                     onClick={handlePrevious}
-                    className="flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white/60 transition-colors hover:bg-white/5 hover:text-white/80"
                   >
-                    <ArrowLeft className="h-4 w-4" />
                     {t('setup.previous')}
-                  </button>
-                  <button
-                    type="button"
+                  </Button>
+                  <Button
+                    variant="success"
+                    size="md"
+                    rounded="lg"
+                    loading={submitting}
+                    autoLoading={false}
+                    icon={submitting ? undefined : <Upload className="h-4 w-4" />}
                     onClick={handleSubmit}
-                    disabled={submitting}
-                    className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-green-600 to-teal-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-teal-500/25 transition-all hover:from-green-500 hover:to-teal-400 hover:shadow-teal-500/40 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {submitting ? (
-                      <>
-                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white" />
-                        {t('setup.saveConfig')}
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="h-4 w-4" />
-                        {t('setup.saveConfig')}
-                      </>
-                    )}
-                  </button>
+                    {t('setup.saveConfig')}
+                  </Button>
                 </div>
               </div>
             )}
-          </div>
+          </ProCard>
         </div>
 
         {/* Footer - Skip Login */}
         <div className="flex justify-center mt-10">
-          <a
-            href="/api/auth/login"
-            className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-white/50 transition-colors hover:bg-white/5 hover:text-white/70 rounded-lg"
+          <Button
+            variant="ghost"
+            size="md"
+            rounded="lg"
+            autoLoading={false}
+            icon={<GithubIcon className="h-4 w-4" />}
+            onClick={() => (window.location.href = '/api/auth/login')}
           >
-            <GithubIcon className="h-4 w-4" />
             {t('setup.skipLogin')}
-          </a>
+          </Button>
         </div>
-      </div>
+      </PageContainer>
     </div>
   );
 }
