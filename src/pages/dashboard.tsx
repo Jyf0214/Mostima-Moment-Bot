@@ -57,7 +57,7 @@ export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [activePage, setActivePage] = useState<SidebarPage>('overview');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [repos, setRepos] = useState<ReposData | null>(null);
   const [reposLoading, setReposLoading] = useState(false);
   const [appConfigured, setAppConfigured] = useState<boolean | null>(null);
@@ -147,7 +147,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex">
       <Sidebar
         activePage={activePage}
         onNavigate={setActivePage}
