@@ -332,6 +332,16 @@ function OverviewPage({
               <p className="text-white/40 text-xs">{t('envPage.subtitle')}</p>
             </div>
           </button>
+          <button
+            onClick={() => (window.location.href = '/github-test')}
+            className="flex items-center gap-3 p-4 rounded-xl bg-white/5 border border-white/10 hover:border-white/20 transition-all text-left"
+          >
+            <BarChart3 className="h-5 w-5 text-amber-400 shrink-0" />
+            <div>
+              <p className="text-white text-sm font-medium">{t('dashboard.testConnection')}</p>
+              <p className="text-white/40 text-xs">{t('dashboard.testConnectionDesc')}</p>
+            </div>
+          </button>
         </div>
       </ProCard>
     </div>
