@@ -84,14 +84,6 @@ const ENV_VARS: EnvVarDef[] = [
     usageKey: 'envUsage.githubPrivateKeyPath',
     hintKey: 'envVarHints.githubPrivateKeyPath',
   },
-  {
-    key: 'WEBHOOK_SECRET',
-    categoryKey: 'envCategory.githubApp',
-    required: false,
-    descriptionKey: 'envVarDescriptions.webhookSecret',
-    usageKey: 'envUsage.webhookSecret',
-    hintKey: 'envVarHints.webhookSecret',
-  },
   // CI/CD
   {
     key: 'REPO_OWNER',
