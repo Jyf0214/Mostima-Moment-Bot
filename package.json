@@ -9,9 +9,9 @@
     "lint": "next lint",
     "lint:fix": "next lint --fix",
     "typecheck": "tsc --noEmit",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
@@ -56,18 +56,17 @@
   },
   "devDependencies": {
     "@types/formidable": "^3.5.1",
-    "@types/jest": "^30.0.0",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.0.0",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^4.7.0",
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.2.9",
     "husky": "^9.1.7",
-    "jest": "^30.4.2",
     "lint-staged": "^16.4.0",
     "prettier": "^3.8.4",
-    "ts-jest": "^29.4.11",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.9"
   }
 }

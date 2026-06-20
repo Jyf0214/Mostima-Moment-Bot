@@ -1,11 +1,10 @@
 /**
- * Pre-start script: sync database schema before Next.js server starts.
- * Uses `prisma db push` to create/update tables from schema.prisma.
+ * Pre-start script: sync database schema using prisma db push.
  */
 import { execSync } from 'child_process';
 
 const start = Date.now();
-console.log('[ensure-tables] Starting prisma db push...');
+console.log('[ensure-tables] Running prisma db push...');
 
 if (!process.env.DATABASE_URL) {
   console.log('[ensure-tables] No DATABASE_URL, skipping');
@@ -15,7 +14,7 @@ if (!process.env.DATABASE_URL) {
 try {
   execSync('npx prisma db push --skip-generate', { stdio: 'inherit' });
   console.log(`[ensure-tables] Done in ${Date.now() - start}ms`);
-} catch (e) {
-  console.error('[ensure-tables] Failed:', e.message);
+} catch {
+  console.error('[ensure-tables] prisma db push failed');
   process.exit(1);
 }

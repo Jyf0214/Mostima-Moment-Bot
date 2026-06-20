@@ -163,6 +163,7 @@ npx jest --forceExit
 4. **antd transpilePackages**: Must add `['antd', '@ant-design/icons']` to `next.config.js` for tree-shaking.
 5. **Pre-commit hooks**: Build + tests run on commit. Ensure everything passes before committing.
 6. **Background agents**: Page rewrites can be parallelized safely since they write to different files.
+7. **CRITICAL — Actually use the components**: After copying `components/ui/`, pages MUST import from `@/components/ui` (Button, ProCard, HeroBanner, etc.). Do NOT rewrite pages with raw Tailwind classes — that defeats the entire purpose. Verify with: `grep -c "@/components/ui" src/pages/*.tsx` — every page should show ≥1.
 
 ## Files Changed (Typical Migration)
 
