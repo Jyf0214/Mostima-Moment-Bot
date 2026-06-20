@@ -1,23 +1,14 @@
-# 依赖
-node_modules/
-
 # Git
 .git/
 .gitignore
 
-# 环境文件
+# 环境文件（构建时不需要）
 .env
 .env.*
 !.env.example
 
-# Docker 相关
+# Docker 自身（避免递归）
 docker-compose.yml
-docker/Dockerfile
-
-# 构建输出
-.next/
-out/
-coverage/
 
 # IDE
 .vscode/
@@ -25,29 +16,25 @@ coverage/
 *.swp
 *.swo
 
-# 测试
+# 测试（构建时不需要）
 __tests__/
 
-# 文档
+# 文档（构建时不需要）
 *.md
 LICENSE
-QWEN.md
-wtosetup.md
 
-# 配置文件（不需要打包的）
+# 工具配置（构建时不需要）
 .prettierrc
 .prettierignore
-eslint.config.mjs
-vitest.config.mts
-tsconfig.json
-postcss.config.mjs
-prisma.config.ts
 .lsp.json
 .dev.nix
-idx/
+.idx/
 
-# GitHub
-.github/
+# Qwen 工具目录
+.qwen/
 
-# Husky
+# Husky（构建时不需要）
 .husky/
+
+# coverage
+coverage/
