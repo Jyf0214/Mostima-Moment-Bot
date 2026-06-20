@@ -10,13 +10,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const clientId = process.env.GITHUB_CLIENT_ID;
-
-  // 优先使用显式配置，否则从请求头推断域名
-  const redirectUri =
-    process.env.GITHUB_REDIRECT_URI ||
-    (process.env.NEXT_PUBLIC_APP_URL
-      ? `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback`
-      : `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}/api/auth/callback`);
+  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback`;
 
   if (!clientId) {
     return res.status(500).json({ error: 'GitHub Client ID not configured' });
