@@ -20,7 +20,16 @@ const CHINESE_REGEX = /[\u4e00-\u9fff\u3400-\u4dbf]/;
 const SRC_DIR = path.resolve(__dirname, '..');
 
 // 排除的目录
-const EXCLUDED_DIRS = ['node_modules', '.next', 'dist', 'coverage', '__tests__', 'i18n/locales'];
+const EXCLUDED_DIRS = [
+  'node_modules',
+  '.next',
+  'dist',
+  'coverage',
+  '__tests__',
+  'i18n/locales',
+  'lib/qwen',
+  'qwen',
+];
 
 // 排除的文件
 const EXCLUDED_FILES = ['jest.config.ts', 'jest.setup.ts', 'prisma.config.ts'];

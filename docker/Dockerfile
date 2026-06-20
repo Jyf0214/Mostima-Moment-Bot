@@ -10,6 +10,9 @@ RUN npm ci
 COPY prisma/ ./prisma/
 RUN npx prisma generate
 
+# Install TypeScript LSP and Qwen Code CLI
+RUN npm install -g typescript-language-server typescript @qwen-code/qwen-code@latest
+
 # Copy source code
 COPY . .
 
