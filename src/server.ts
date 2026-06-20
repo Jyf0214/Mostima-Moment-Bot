@@ -4,7 +4,7 @@ import { webhookRouter } from './routes/webhook';
 
 const app = express();
 // 支持 PORT 和 BOT_PORT，优先使用 BOT_PORT
-const PORT = parseInt(process.env.BOT_PORT || process.env.PORT || '3001', 10);
+const PORT = parseInt(process.env.PORT || '3001', 10);
 
 // 启用 gzip 压缩
 app.use(compression());
