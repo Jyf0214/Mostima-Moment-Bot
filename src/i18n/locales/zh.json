@@ -129,6 +129,16 @@
     "settings": "设置",
     "collapse": "收起"
   },
+  "repoDetail": {
+    "back": "返回",
+    "cicdConfig": "CI/CD 配置",
+    "cicdConfigDesc": "配置此仓库的 CI/CD 自动化流水线",
+    "triggerRules": "触发规则",
+    "triggerRulesDesc": "配置何时触发 CI/CD 检查（分支、PR 等）",
+    "webhookConfig": "Webhook 设置",
+    "webhookConfigDesc": "配置 Webhook 事件过滤和通知",
+    "todo": "功能开发中，敬请期待"
+  },
   "envPage": {
     "title": "环境变量配置",
     "subtitle": "查看项目所有环境变量的配置状态和用途说明",

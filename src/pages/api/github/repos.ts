@@ -9,6 +9,11 @@ interface JwtPayload {
   githubId: number;
 }
 
+interface RepoConfig {
+  repoId: number;
+  enabled: boolean;
+}
+
 /**
  * 列出当前管理员关联的 GitHub App 安装授权仓库
  * GET /api/github/repos
@@ -18,7 +23,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // 验证身份
   if (!JWT_SECRET) {
     return res.status(500).json({ error: 'Server configuration error' });
   }
@@ -36,17 +40,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'Invalid token' });
   }
 
-  // 查找管理员的安装记录
   const admin = await prisma.admin.findUnique({
     where: { githubId: adminGithubId },
-    include: { installations: { where: { isActive: true } } },
+    include: {
+      installations: { where: { isActive: true } },
+      repoConfigs: true,
+    },
   });
 
   if (!admin || admin.installations.length === 0) {
     return res.status(200).json({ personal: [], organization: [], installations: [] });
   }
 
-  // 聚合所有安装的仓库
+  // 构建 repoId -> enabled 映射
+  const configMap = new Map<number, boolean>();
+  for (const cfg of admin.repoConfigs) {
+    configMap.set(cfg.repoId, cfg.enabled);
+  }
+
   const allPersonal: unknown[] = [];
   const allOrganization: unknown[] = [];
 
@@ -54,11 +65,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       const accessToken = await getInstallationAccessToken(installation.installationId);
       const repos = await listInstallationRepos(accessToken);
-      allPersonal.push(...repos.personal);
-      allOrganization.push(...repos.organization);
+
+      // 附加 config 状态
+      allPersonal.push(
+        ...repos.personal.map((r) => ({
+          ...r,
+          enabled: configMap.get(r.id) ?? false,
+        }))
+      );
+      allOrganization.push(
+        ...repos.organization.map((r) => ({
+          ...r,
+          enabled: configMap.get(r.id) ?? false,
+        }))
+      );
     } catch (error) {
       console.error(`Failed to list repos for installation ${installation.installationId}:`, error);
-      // 继续处理其他安装
     }
   }
 

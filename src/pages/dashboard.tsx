@@ -44,6 +44,12 @@ interface Repo {
   description: string | null;
   language: string | null;
   updated_at: string;
+  enabled: boolean;
+  owner: {
+    login: string;
+    type: string;
+    avatar_url: string;
+  };
 }
 
 interface ReposData {
@@ -390,6 +396,46 @@ function ReposPage({ repos, reposLoading }: { repos: ReposData | null; reposLoad
 
 function RepoSection({ title, repos }: { title: string; repos: Repo[] }) {
   const { t } = useTranslation();
+  const [toggleStates, setToggleStates] = useState<Record<number, boolean>>({});
+
+  // 初始化开关状态
+  useEffect(() => {
+    const states: Record<number, boolean> = {};
+    repos.forEach((r) => {
+      states[r.id] = r.enabled;
+    });
+    setToggleStates(states);
+  }, [repos]);
+
+  const handleToggle = async (repo: Repo) => {
+    const newState = !toggleStates[repo.id];
+    // 乐观更新
+    setToggleStates((prev) => ({ ...prev, [repo.id]: newState }));
+
+    try {
+      const res = await fetch('/api/github/repos/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          repoId: repo.id,
+          repoFullName: repo.full_name,
+          repoOwner: repo.owner.login,
+          repoName: repo.name,
+        }),
+      });
+      if (!res.ok) {
+        // 回滚
+        setToggleStates((prev) => ({ ...prev, [repo.id]: !newState }));
+      }
+    } catch {
+      setToggleStates((prev) => ({ ...prev, [repo.id]: !newState }));
+    }
+  };
+
+  const handleDetail = (repo: Repo) => {
+    window.location.href = `/dashboard/repo?repoId=${repo.id}&name=${encodeURIComponent(repo.full_name)}`;
+  };
+
   return (
     <div>
       <h3 className="text-sm font-medium text-white/60 mb-3 flex items-center gap-2">
@@ -407,14 +453,12 @@ function RepoSection({ title, repos }: { title: string; repos: Repo[] }) {
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <a
-                    href={repo.html_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-white font-medium text-sm hover:text-purple-400 transition-colors truncate"
+                  <button
+                    onClick={() => handleDetail(repo)}
+                    className="text-white font-medium text-sm hover:text-purple-400 transition-colors truncate text-left"
                   >
                     {repo.name}
-                  </a>
+                  </button>
                   <span
                     className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
                       repo.private
@@ -444,6 +488,21 @@ function RepoSection({ title, repos }: { title: string; repos: Repo[] }) {
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
                 </a>
+                {/* Toggle switch */}
+                <button
+                  role="switch"
+                  aria-checked={toggleStates[repo.id] ?? false}
+                  onClick={() => handleToggle(repo)}
+                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 ${
+                    toggleStates[repo.id] ? 'bg-purple-500' : 'bg-white/20'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                      toggleStates[repo.id] ? 'translate-x-4' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
               </div>
             </div>
           </ProCard>

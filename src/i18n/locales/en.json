@@ -129,6 +129,16 @@
     "settings": "Settings",
     "collapse": "Collapse"
   },
+  "repoDetail": {
+    "back": "Back",
+    "cicdConfig": "CI/CD Configuration",
+    "cicdConfigDesc": "Configure CI/CD automation pipeline for this repository",
+    "triggerRules": "Trigger Rules",
+    "triggerRulesDesc": "Configure when to trigger CI/CD checks (branches, PRs, etc.)",
+    "webhookConfig": "Webhook Settings",
+    "webhookConfigDesc": "Configure Webhook event filtering and notifications",
+    "todo": "Under development, coming soon"
+  },
   "envPage": {
     "title": "Environment Variables",
     "subtitle": "View configuration status and usage of all environment variables",

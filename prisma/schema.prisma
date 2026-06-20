@@ -21,6 +21,7 @@ model Admin {
 
   builds       Build[]
   installations GitHubInstallation[]
+  repoConfigs  RepoConfig[]
 
   @@map("admins")
 }
@@ -104,4 +105,22 @@ model GitHubInstallation {
   admin Admin @relation(fields: [adminId], references: [id])
 
   @@map("github_installations")
+}
+
+// 仓库 CI/CD 配置表
+model RepoConfig {
+  id            Int      @id @default(autoincrement())
+  repoId        Int      @map("repo_id")
+  repoFullName  String   @map("repo_full_name")
+  repoOwner     String   @map("repo_owner")
+  repoName      String   @map("repo_name")
+  enabled       Boolean  @default(false)
+  adminId       Int      @map("admin_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  admin Admin @relation(fields: [adminId], references: [id])
+
+  @@unique([repoId, adminId])
+  @@map("repo_configs")
 }
