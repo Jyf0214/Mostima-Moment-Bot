@@ -33,11 +33,31 @@ interface TriggerRule {
   checks: Array<{ name: string; type: string; command?: string }>;
 }
 
+interface CiRun {
+  id: number;
+  event: string;
+  action?: string | null;
+  branch?: string | null;
+  commitSha?: string | null;
+  prNumber?: number | null;
+  status: string;
+  conclusion?: string | null;
+  triggeredBy?: string | null;
+  ruleId?: string | null;
+  checksRan: string[];
+  startedAt?: string | null;
+  completedAt?: string | null;
+  duration?: number | null;
+  createdAt: string;
+}
+
 export default function RepoDetailPage() {
   const { t } = useTranslation();
   const [repoName, setRepoName] = useState('');
   const [repoId, setRepoId] = useState('');
   const [rules, setRules] = useState<TriggerRule[]>([]);
+  const [runs, setRuns] = useState<CiRun[]>([]);
+  const [runsTotal, setRunsTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
@@ -64,9 +84,24 @@ export default function RepoDetailPage() {
     }
   }, [repoName]);
 
+  const loadRuns = useCallback(async () => {
+    if (!repoName) return;
+    try {
+      const res = await fetch(`/api/ci/runs?repo=${encodeURIComponent(repoName)}&limit=30`);
+      if (res.ok) {
+        const data = await res.json();
+        setRuns(data.runs || []);
+        setRunsTotal(data.total || 0);
+      }
+    } catch {
+      // 静默失败
+    }
+  }, [repoName]);
+
   useEffect(() => {
     loadRules();
-  }, [loadRules]);
+    loadRuns();
+  }, [loadRules, loadRuns]);
 
   const toggleRule = (ruleId: string) => {
     setRules((prev) => prev.map((r) => (r.id === ruleId ? { ...r, enabled: !r.enabled } : r)));
@@ -347,6 +382,108 @@ export default function RepoDetailPage() {
                     </div>
                   </div>
                 </div>
+              </ProCard>
+
+              {/* 运行日志 */}
+              <ProCard className="bg-white/5 backdrop-blur-xl border-white/10 mb-6" padding="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-cyan-400" />
+                    <h3 className="text-white font-semibold">{t('repoDetail.runLogs')}</h3>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-white/30 text-xs">
+                      {runsTotal} {t('repoDetail.totalRuns')}
+                    </span>
+                    <button
+                      onClick={loadRuns}
+                      className="text-white/30 hover:text-white/60 transition-colors"
+                    >
+                      <RefreshCw className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {runs.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Clock className="h-8 w-8 text-white/10 mx-auto mb-2" />
+                    <p className="text-white/30 text-sm">{t('repoDetail.noRuns')}</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {runs.map((run) => {
+                      const statusIcon =
+                        run.status === 'success' || run.conclusion === 'success' ? (
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                        ) : run.status === 'failure' || run.conclusion === 'failure' ? (
+                          <XCircle className="h-3.5 w-3.5 text-red-400" />
+                        ) : run.status === 'cancelled' || run.conclusion === 'cancelled' ? (
+                          <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
+                        ) : run.status === 'running' ? (
+                          <div className="h-3.5 w-3.5 rounded-full border-2 border-cyan-400 border-t-transparent animate-spin" />
+                        ) : (
+                          <Clock className="h-3.5 w-3.5 text-white/20" />
+                        );
+
+                      const eventLabel =
+                        run.event === 'pull_request'
+                          ? `PR ${run.action || ''}`
+                          : run.event === 'workflow_job'
+                            ? `Job ${run.action || ''}`
+                            : run.event;
+
+                      const timeAgo = (() => {
+                        const diff = Date.now() - new Date(run.createdAt).getTime();
+                        if (diff < 60000) return `${Math.floor(diff / 1000)}s`;
+                        if (diff < 3600000) return `${Math.floor(diff / 60000)}m`;
+                        if (diff < 86400000) return `${Math.floor(diff / 3600000)}h`;
+                        return `${Math.floor(diff / 86400000)}d`;
+                      })();
+
+                      return (
+                        <div
+                          key={run.id}
+                          className="flex items-center gap-3 rounded-lg border border-white/5 bg-white/[0.02] p-3 hover:bg-white/[0.04] transition-colors"
+                        >
+                          {statusIcon}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-white text-sm font-medium">{eventLabel}</span>
+                              {run.branch && (
+                                <span className="text-[10px] text-purple-300 bg-purple-500/10 rounded px-1.5 py-0.5 font-mono">
+                                  {run.branch}
+                                </span>
+                              )}
+                              {run.prNumber && (
+                                <span className="text-[10px] text-blue-300 bg-blue-500/10 rounded px-1.5 py-0.5">
+                                  #{run.prNumber}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3 mt-0.5">
+                              {run.commitSha && (
+                                <span className="text-[10px] text-white/20 font-mono">
+                                  {run.commitSha.slice(0, 7)}
+                                </span>
+                              )}
+                              {run.triggeredBy && (
+                                <span className="text-[10px] text-white/30">
+                                  @{run.triggeredBy}
+                                </span>
+                              )}
+                              {run.duration && (
+                                <span className="text-[10px] text-white/20">
+                                  {(run.duration / 1000).toFixed(1)}s
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <span className="text-[10px] text-white/20 shrink-0">{timeAgo}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </ProCard>
 
               {/* 操作栏 */}

@@ -150,7 +150,10 @@
     "resetDefaults": "Reset Defaults",
     "saveSuccess": "Configuration saved successfully",
     "saveFailed": "Save failed",
-    "resetSuccess": "Reset to defaults"
+    "resetSuccess": "Reset to defaults",
+    "runLogs": "Run Logs",
+    "totalRuns": "runs",
+    "noRuns": "No run logs yet"
   },
   "envPage": {
     "title": "Environment Variables",

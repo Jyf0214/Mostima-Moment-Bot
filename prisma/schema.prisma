@@ -53,6 +53,32 @@ model WebhookConfig {
   @@map("webhook_config")
 }
 
+// CI 运行日志表
+model CiRun {
+  id            Int       @id @default(autoincrement())
+  repoFullName  String    @map("repo_full_name")
+  event         String
+  action        String?
+  branch        String?
+  commitSha     String?   @map("commit_sha")
+  prNumber      Int?      @map("pr_number")
+  status        String    @default("pending") // pending | running | success | failure | cancelled
+  conclusion    String?                       // success | failure | cancelled | skipped
+  triggeredBy   String?   @map("triggered_by")
+  ruleId        String?   @map("rule_id")
+  checksRan     String[]  @default([]) @map("checks_ran")
+  logs          String?
+  startedAt     DateTime? @map("started_at")
+  completedAt   DateTime? @map("completed_at")
+  duration      Int?                            // 毫秒
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@index([repoFullName])
+  @@index([createdAt])
+  @@index([status])
+  @@map("ci_runs")
+}
+
 // 构建记录表
 model Build {
   id            Int       @id @default(autoincrement())
