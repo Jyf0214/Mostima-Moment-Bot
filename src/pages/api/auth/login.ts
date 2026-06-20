@@ -10,7 +10,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const clientId = process.env.GITHUB_CLIENT_ID;
-  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback`;
+  const redirectUri = `${process.env.APP_URL}/api/auth/callback`;
 
   if (!clientId) {
     return res.status(500).json({ error: 'GitHub Client ID not configured' });

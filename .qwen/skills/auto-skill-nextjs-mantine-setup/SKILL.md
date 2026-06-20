@@ -1,27 +1,27 @@
 ---
 name: nextjs-mantine-setup
-description: Next.js 16 with Mantine v9 project setup including common pitfalls and fixes
+description: Next.js 16 project setup with Tailwind CSS v4 + custom UI components, i18next, and Prisma
 source: auto-skill
-extracted_at: '2026-06-20T04:00:00.000Z'
+extracted_at: '2026-06-20T06:18:09.260Z'
 ---
 
-# Next.js 16 + Mantine v9 Project Setup
+# Next.js 16 Project Setup (Tailwind CSS + Custom UI)
 
 ## Overview
 
-Setting up a Next.js 16 application with Mantine UI v9, i18next, and Chart.js.
+Setting up a Next.js 16 application with Tailwind CSS v4, custom UI components, i18next, and Prisma.
 
 ## Key Dependencies
 
-- `@mantine/core`, `@mantine/hooks` (all `^9.3.2`)
-- `@tabler/icons-react` (`^3.44.0`)
 - `next` (`^16.2.9`), `react` (`^19.2.7`)
+- `tailwindcss` (`^4.2.2`), `@tailwindcss/postcss`, `autoprefixer`
+- `clsx`, `tailwind-merge` — `cn()` utility
+- `lucide-react` — icon library
+- `antd`, `@ant-design/icons` — complex form controls only
 - `i18next` (`^26.3.1`), `react-i18next` (`^17.0.8`)
-- `chart.js`, `react-chartjs-2`, `chartjs-adapter-moment`
-- `moment`, `moment-precise-range-plugin`
 - `prisma`, `@prisma/client` (`^6.19.3`)
 
-## Version Changes (v14 → v16, v7 → v9)
+## Version Changes (v14 → v16)
 
 ### Next.js 16 Changes
 
@@ -31,28 +31,9 @@ Setting up a Next.js 16 application with Mantine UI v9, i18next, and Chart.js.
 4. **Standalone output**: `output: 'standalone'` for Docker deployment
 5. **TypeScript target**: Must be ES2017+ (not ES5) for Unicode regex support
 
-### Mantine 9 Changes
-
-1. **React 19**: Required peer dependency
-2. **Removed @mantine/ds**: No longer compatible with v9
-3. **Props renamed**: `spacing` → `gap` on layout components
-4. **FileInput**: `placeholder` prop removed
-
 ## Common Pitfalls and Fixes
 
-### 1. Mantine v9: `spacing` → `gap` on Stack
-
-Mantine v7+ renamed the `spacing` prop to `gap` on layout components like `Stack`, `Group`, `SimpleGrid`.
-
-```tsx
-// ❌ Mantine v6
-<Stack spacing="md">
-
-// ✅ Mantine v9
-<Stack gap="md">
-```
-
-### 2. `_document.tsx` Head Import
+### 1. `_document.tsx` Head Import
 
 Use `Head` from `next/document`, not `next/head` in `_document.tsx`.
 
@@ -64,25 +45,31 @@ import Head from 'next/head';
 import { Html, Head, Main, NextScript } from 'next/document';
 ```
 
-### 3. Don't Reference Unlisted Packages
+### 2. Don't Reference Unlisted Packages
 
-Ensure all imported packages are in `package.json` dependencies. Common mistake: importing `@mantine/notifications` without installing it.
+Ensure all imported packages are in `package.json` dependencies.
 
-### 4. Mantine CSS Import Pattern
+### 3. Tailwind CSS v4: No config file needed
 
-```tsx
-// In _app.tsx
-import '@mantine/core/styles.css';
+Tailwind v4 uses CSS-first configuration in `globals.css`. No `tailwind.config.js` file required.
+
+```css
+/* src/app/globals.css */
+@import 'tailwindcss';
+@custom-variant dark (&:where(.dark, .dark *));
 ```
 
-### 5. Client-Side Only Provider
+### 4. antd transpilePackages
 
-MantineProvider must be in a `'use client'` component:
+Must add to `next.config.js` for tree-shaking:
 
-```tsx
-'use client';
-import { MantineProvider } from '@mantine/core';
+```js
+transpilePackages: ['antd', '@ant-design/icons'],
 ```
+
+### 5. lucide-react missing Github icon
+
+lucide-react does NOT export `Github`. Use custom SVG component or `@ant-design/icons`.
 
 ### 6. Next.js 16 middleware → proxy
 
@@ -110,20 +97,11 @@ const eslintConfig = {
 export default eslintConfig;
 ```
 
-### 8. FileInput placeholder prop removed
+### 7. FileInput placeholder prop removed (Mantine legacy)
 
-**Problem**: Mantine v9 FileInput no longer has `placeholder` prop
-**Fix**: Remove `placeholder` prop
+If still using Mantine's FileInput, the `placeholder` prop was removed in v9. Use a label or separate text instead.
 
-```tsx
-// ❌ Mantine v7
-<FileInput placeholder="Select file" />
-
-// ✅ Mantine v9
-<FileInput />
-```
-
-### 9. TypeScript target must be ES2017+
+### 8. TypeScript target must be ES2017+
 
 **Problem**: `u` regex flag requires ES6+ target
 **Fix**: Set target to ES2017 in tsconfig.json
@@ -146,27 +124,32 @@ export default eslintConfig;
 ```
 src/
 ├── pages/
-│   ├── _app.tsx      # MantineProvider + i18n
+│   ├── _app.tsx      # globals.css import + env check
 │   ├── _document.tsx # HTML document
-│   ├── index.tsx
-│   ├── setup.tsx     # Initial setup page
-│   └── env-error.tsx # Environment variable error page
+│   ├── index.tsx     # Landing page (Tailwind)
+│   ├── setup.tsx     # Initial setup wizard (Tailwind)
+│   └── env-error.tsx # Environment variable error page (Tailwind)
+├── components/ui/    # Custom UI components (Button, Input, etc.)
+│   ├── Button/       # Button with variants, loading, icon support
+│   ├── index.ts      # Barrel exports
+│   └── *.tsx         # Input, Textarea, Select, StatusCard, etc.
+├── lib/
+│   ├── ui.ts         # cn() utility (clsx + tailwind-merge)
+│   ├── crypto.ts     # AES-256-GCM encryption
+│   ├── db.ts         # Database operations (Prisma)
+│   └── prisma.ts     # Prisma client
 ├── i18n/
 │   ├── index.ts
 │   └── locales/
 │       ├── en.json
 │       └── zh.json
-├── lib/
-│   ├── crypto.ts     # AES-256-GCM encryption
-│   ├── db.ts         # Database operations (Prisma)
-│   └── prisma.ts     # Prisma client
+├── app/globals.css   # Tailwind v4 base styles
 ├── pages/api/
 │   ├── auth/         # GitHub OAuth
 │   ├── init.ts       # Database initialization
 │   ├── setup.ts      # Setup API
 │   ├── env-check.ts  # Environment variable check
 │   └── health.ts     # Health check
-├── theme.ts
 └── proxy.ts          # Next.js 16 proxy (middleware)
 ```
 
@@ -176,15 +159,15 @@ src/
 # Required (app won't start without these)
 GITHUB_CLIENT_ID=your_client_id
 GITHUB_CLIENT_SECRET=your_client_secret
-JWT_SECRET=your_jwt_secret
-ENCRYPTION_KEY=your_encryption_key
+JWT_SECRET=your_jwt_secret          # Generate: openssl rand -hex 32
+ENCRYPTION_KEY=your_encryption_key  # Generate: openssl rand -hex 32
 DATABASE_URL=postgresql://user:pass@localhost:5432/manticore
+NEXT_PUBLIC_APP_URL=https://your-domain.com  # Used for OAuth redirect_uri
 
-# Optional
+# Optional (CI/CD features)
 PORT=3001
 GITHUB_APP_ID=your_app_id
 GITHUB_WEBHOOK_SECRET=your_webhook_secret
 REPO_OWNER=your_username
 REPO_NAME=your_repo
-PUBLIC_URL=https://your-domain.com
 ```
