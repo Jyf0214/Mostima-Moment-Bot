@@ -2,14 +2,17 @@ import express from 'express';
 import { webhookRouter } from './routes/webhook';
 
 const app = express();
-const PORT = process.env.BOT_PORT || 3001;
+// 支持 PORT 和 BOT_PORT，优先使用 BOT_PORT
+const PORT = process.env.BOT_PORT || process.env.PORT || 3001;
 
 // 中间件：解析 JSON 并保留原始 Body 用于签名验证
-app.use(express.json({
-  verify: (req: any, res, buf) => {
-    req.rawBody = buf;
-  }
-}));
+app.use(
+  express.json({
+    verify: (req: any, res, buf) => {
+      req.rawBody = buf;
+    },
+  })
+);
 
 // 路由
 app.use('/api/webhook', webhookRouter);

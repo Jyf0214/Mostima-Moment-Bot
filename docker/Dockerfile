@@ -27,7 +27,8 @@ RUN mkdir -p /app/workspace
 
 # 默认端口
 ENV BOT_PORT=3001
+ENV PORT=3001
 
-EXPOSE ${BOT_PORT}
+EXPOSE ${PORT}
 
 CMD ["sh", "-c", "node dist/server.js"]
