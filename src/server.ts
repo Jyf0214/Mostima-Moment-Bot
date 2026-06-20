@@ -4,7 +4,7 @@ import { webhookRouter } from './routes/webhook';
 
 const app = express();
 // 支持 PORT 和 BOT_PORT，优先使用 BOT_PORT
-const PORT = process.env.BOT_PORT || process.env.PORT || 3001;
+const PORT = parseInt(process.env.BOT_PORT || process.env.PORT || '3001', 10);
 
 // 启用 gzip 压缩
 app.use(compression());
@@ -27,6 +27,35 @@ app.get('/health', (req, res) => {
 });
 
 // 启动服务器
-app.listen(PORT, () => {
-  console.log(`Manticore Bot running on port ${PORT}`);
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ Manticore Bot running on http://0.0.0.0:${PORT}`);
+  console.log(`📊 Health check: http://localhost:${PORT}/health`);
+});
+
+// 处理服务器错误
+server.on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`❌ 端口 ${PORT} 已被占用`);
+    process.exit(1);
+  } else {
+    console.error('❌ 服务器启动失败:', err);
+    process.exit(1);
+  }
+});
+
+// 处理进程退出
+process.on('SIGTERM', () => {
+  console.log('收到 SIGTERM 信号，正在关闭服务器...');
+  server.close(() => {
+    console.log('服务器已关闭');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('收到 SIGINT 信号，正在关闭服务器...');
+  server.close(() => {
+    console.log('服务器已关闭');
+    process.exit(0);
+  });
 });

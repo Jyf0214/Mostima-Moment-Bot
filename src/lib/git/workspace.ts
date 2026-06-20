@@ -1,11 +1,10 @@
 import { execSync } from 'child_process';
-import { getOctokit } from '../github/api';
+import { getPRInfo } from '../github/api';
 
 /**
  * 切换到 PR 对应的分支
  */
 export async function checkoutPRBranch(prNumber: number): Promise<void> {
-  const octokit = await getOctokit();
   const owner = process.env.REPO_OWNER;
   const repo = process.env.REPO_NAME;
   const workspaceDir = process.env.WORKSPACE_DIR || '.';
@@ -15,12 +14,8 @@ export async function checkoutPRBranch(prNumber: number): Promise<void> {
   }
 
   // 1. 反查 PR 源头分支
-  const pr = await octokit.rest.pulls.get({
-    owner,
-    repo,
-    pull_number: prNumber,
-  });
-  const branchName = pr.data.head.ref;
+  const pr = await getPRInfo(prNumber);
+  const branchName = pr.head.ref;
 
   console.log(`Checking out branch: ${branchName}`);
 
