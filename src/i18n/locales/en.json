@@ -122,7 +122,10 @@
     "activeInstallations": "Active Installations",
     "quickActions": "Quick Actions",
     "testConnection": "Connectivity Test",
-    "testConnectionDesc": "Check GitHub App configuration and communication status"
+    "testConnectionDesc": "Check GitHub App configuration and communication status",
+    "searchRepos": "Search repos by name or description...",
+    "searchResults": "Found {{count}} repos",
+    "noResults": "No matching repos found"
   },
   "sidebar": {
     "overview": "Overview",

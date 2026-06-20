@@ -18,6 +18,8 @@ import {
   Globe,
   BarChart3,
   Settings,
+  Search,
+  X,
 } from 'lucide-react';
 
 interface User {
@@ -350,6 +352,7 @@ function OverviewPage({
 
 function ReposPage({ repos, reposLoading }: { repos: ReposData | null; reposLoading: boolean }) {
   const { t } = useTranslation();
+  const [searchQuery, setSearchQuery] = useState('');
   const hasInstallations = repos && repos.installations.length > 0;
 
   if (reposLoading) {
@@ -392,14 +395,68 @@ function ReposPage({ repos, reposLoading }: { repos: ReposData | null; reposLoad
     );
   }
 
+  // 过滤仓库
+  const query = searchQuery.toLowerCase().trim();
+  const filterRepos = (list: Repo[]) =>
+    query
+      ? list.filter(
+          (r) =>
+            r.name.toLowerCase().includes(query) ||
+            r.full_name.toLowerCase().includes(query) ||
+            (r.description && r.description.toLowerCase().includes(query))
+        )
+      : list;
+
+  const filteredPersonal = filterRepos(repos!.personal);
+  const filteredOrg = filterRepos(repos!.organization);
+  const filteredTotal = filteredPersonal.length + filteredOrg.length;
+
   return (
-    <div className="space-y-6">
-      {repos!.personal.length > 0 && (
-        <RepoSection title={t('home.personalRepos')} repos={repos!.personal} />
+    <div className="space-y-4">
+      {/* 搜索框 */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder={t('dashboard.searchRepos')}
+          className="w-full h-10 pl-10 pr-10 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder:text-white/30 outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 transition-colors"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+
+      {/* 搜索结果统计 */}
+      {query && (
+        <p className="text-white/40 text-xs">
+          {filteredTotal === 0
+            ? t('dashboard.noResults')
+            : t('dashboard.searchResults', { count: String(filteredTotal) })}
+        </p>
       )}
-      {repos!.organization.length > 0 && (
-        <RepoSection title={t('home.orgRepos')} repos={repos!.organization} />
-      )}
+
+      {/* 仓库列表 */}
+      <div className="space-y-6">
+        {filteredPersonal.length > 0 && (
+          <RepoSection title={t('home.personalRepos')} repos={filteredPersonal} />
+        )}
+        {filteredOrg.length > 0 && <RepoSection title={t('home.orgRepos')} repos={filteredOrg} />}
+        {query && filteredTotal === 0 && (
+          <ProCard className="bg-white/5 backdrop-blur-xl border-white/10" padding="p-8">
+            <div className="text-center">
+              <Search className="h-10 w-10 text-white/20 mx-auto mb-3" />
+              <p className="text-white/40 text-sm">{t('dashboard.noResults')}</p>
+            </div>
+          </ProCard>
+        )}
+      </div>
     </div>
   );
 }

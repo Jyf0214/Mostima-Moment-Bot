@@ -122,7 +122,10 @@
     "activeInstallations": "活跃安装",
     "quickActions": "快捷操作",
     "testConnection": "连通性测试",
-    "testConnectionDesc": "检查 GitHub App 配置与通信状态"
+    "testConnectionDesc": "检查 GitHub App 配置与通信状态",
+    "searchRepos": "搜索仓库名称或描述...",
+    "searchResults": "找到 {{count}} 个仓库",
+    "noResults": "没有找到匹配的仓库"
   },
   "sidebar": {
     "overview": "概览",
