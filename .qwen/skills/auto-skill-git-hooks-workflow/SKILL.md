@@ -2,7 +2,7 @@
 name: git-hooks-workflow-configuration
 description: Git hooks setup with husky, lint-staged, pre-commit/pre-push configuration, and GitHub Actions workflow optimization
 source: auto-skill
-extracted_at: '2026-06-20T04:00:00.000Z'
+extracted_at: '2026-06-20T04:12:34.951Z'
 ---
 
 # Git Hooks and Workflow Configuration
@@ -160,29 +160,31 @@ jobs:
 
 ```dockerfile
 FROM node:20-alpine
-
 WORKDIR /app
 
-# Install dependencies
 COPY package*.json ./
 RUN npm ci --ignore-scripts
 
-# Copy Prisma schema and generate client
 COPY prisma/ ./prisma/
 RUN npx prisma generate
 
-# Copy source and build
 COPY . .
 RUN npm run build
 
-# Remove dev dependencies
+# Copy static files to standalone
+RUN cp -r .next/static .next/standalone/.next/static
+RUN if [ -d "public" ]; then cp -r public .next/standalone/public; fi
+
 RUN npm prune --omit=dev
 
 ENV PORT=3001
+ENV HOSTNAME="0.0.0.0"
 EXPOSE ${PORT}
 
-CMD ["sh", "-c", "npm start -- -p $PORT"]
+CMD ["sh", "-c", "node .next/standalone/server.js"]
 ```
+
+**Key**: Use `node .next/standalone/server.js` instead of `npm start` for standalone mode. `npm start` doesn't support `-p` flag with standalone output.
 
 ## Common Issues and Fixes
 
@@ -224,11 +226,22 @@ RUN npm prune --omit=dev
 
 **Problem**: Application ignores PORT environment variable
 
-**Fix**: Next.js respects PORT env var. Use `npm start -- -p $PORT` in Docker:
+**Fix**: Next.js respects PORT env var. Use `node .next/standalone/server.js` in Docker:
 
 ```dockerfile
 ENV PORT=3001
-CMD ["sh", "-c", "npm start -- -p $PORT"]
+ENV HOSTNAME="0.0.0.0"
+CMD ["sh", "-c", "node .next/standalone/server.js"]
+```
+
+### 5. public directory not found
+
+**Problem**: `cp -r public .next/standalone/public` fails
+
+**Fix**: Check if directory exists before copying:
+
+```dockerfile
+RUN if [ -d "public" ]; then cp -r public .next/standalone/public; fi
 ```
 
 ## Verification Commands
