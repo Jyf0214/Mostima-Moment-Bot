@@ -10,17 +10,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const clientId = process.env.GITHUB_CLIENT_ID;
-  const redirectUri = process.env.GITHUB_REDIRECT_URI || `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback`;
+
+  // 优先使用显式配置，否则从请求头推断域名
+  const redirectUri =
+    process.env.GITHUB_REDIRECT_URI ||
+    (process.env.NEXT_PUBLIC_APP_URL
+      ? `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback`
+      : `${req.headers['x-forwarded-proto'] || 'https'}://${req.headers.host}/api/auth/callback`);
 
   if (!clientId) {
     return res.status(500).json({ error: 'GitHub Client ID not configured' });
   }
 
   // 生成 state 参数防止 CSRF
-  const state = Buffer.from(JSON.stringify({
-    timestamp: Date.now(),
-    nonce: Math.random().toString(36).substring(2)
-  })).toString('base64');
+  const state = Buffer.from(
+    JSON.stringify({
+      timestamp: Date.now(),
+      nonce: Math.random().toString(36).substring(2),
+    })
+  ).toString('base64');
 
   // 存储 state 到 cookie
   res.setHeader('Set-Cookie', `oauth_state=${state}; Path=/; HttpOnly; SameSite=Lax; Max-Age=600`);
