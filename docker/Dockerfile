@@ -21,8 +21,8 @@ RUN npm run build
 # 复制静态文件到 standalone 目录
 RUN cp -r .next/static .next/standalone/.next/static
 
-# 复制 public 目录到 standalone 目录
-RUN cp -r public .next/standalone/public
+# 复制 public 目录到 standalone 目录（如果存在）
+RUN if [ -d "public" ]; then cp -r public .next/standalone/public; fi
 
 # 删除 dev 依赖，只保留生产依赖
 RUN npm prune --omit=dev
