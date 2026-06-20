@@ -90,6 +90,13 @@
     "step4": "Refer to .env.example file for complete configuration reference",
     "retry": "Re-check Environment Variables"
   },
+  "envVarDescriptions": {
+    "githubClientId": "GitHub OAuth App Client ID, used for one-click login",
+    "githubClientSecret": "GitHub OAuth App Client Secret, used to verify user identity",
+    "jwtSecret": "JWT token signing secret, used for authentication session management",
+    "encryptionKey": "Data encryption key, used to encrypt private keys and Webhook Secret",
+    "databaseUrl": "PostgreSQL database connection string, used to store application data"
+  },
   "api": {
     "methodNotAllowed": "Method not allowed",
     "serverError": "Internal server error",

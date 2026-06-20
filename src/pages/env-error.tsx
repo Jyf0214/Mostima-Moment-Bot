@@ -18,10 +18,15 @@ import {
 import { IconAlertTriangle, IconX, IconCheck, IconRefresh } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 
+interface EnvVar {
+  key: string;
+  description: string;
+}
+
 interface EnvStatus {
   isConfigured: boolean;
-  missing: string[];
-  present: string[];
+  missing: EnvVar[];
+  present: EnvVar[];
   message: string;
 }
 
@@ -114,18 +119,23 @@ export default function EnvErrorPage() {
                         {envStatus.missing.length}
                       </Badge>
                     </Group>
-                    <Group gap="xs">
+                    <Stack gap="xs">
                       {envStatus.missing.map((envVar) => (
-                        <Badge
-                          key={envVar}
-                          color="red"
-                          variant="light"
-                          leftSection={<IconX size={10} />}
-                        >
-                          {envVar}
-                        </Badge>
+                        <Group key={envVar.key} gap="sm" align="flex-start">
+                          <Badge
+                            color="red"
+                            variant="light"
+                            leftSection={<IconX size={10} />}
+                            flex="0 0 auto"
+                          >
+                            {envVar.key}
+                          </Badge>
+                          <Text size="xs" c="dimmed">
+                            {envVar.description}
+                          </Text>
+                        </Group>
                       ))}
-                    </Group>
+                    </Stack>
                   </Paper>
                 )}
 
@@ -143,18 +153,23 @@ export default function EnvErrorPage() {
                         {envStatus.present.length}
                       </Badge>
                     </Group>
-                    <Group gap="xs">
+                    <Stack gap="xs">
                       {envStatus.present.map((envVar) => (
-                        <Badge
-                          key={envVar}
-                          color="green"
-                          variant="light"
-                          leftSection={<IconCheck size={10} />}
-                        >
-                          {envVar}
-                        </Badge>
+                        <Group key={envVar.key} gap="sm" align="flex-start">
+                          <Badge
+                            color="green"
+                            variant="light"
+                            leftSection={<IconCheck size={10} />}
+                            flex="0 0 auto"
+                          >
+                            {envVar.key}
+                          </Badge>
+                          <Text size="xs" c="dimmed">
+                            {envVar.description}
+                          </Text>
+                        </Group>
                       ))}
-                    </Group>
+                    </Stack>
                   </Paper>
                 )}
 

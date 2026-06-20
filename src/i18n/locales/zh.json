@@ -90,6 +90,13 @@
     "step4": "参考 .env.example 文件了解完整的环境变量配置",
     "retry": "重新检查环境变量"
   },
+  "envVarDescriptions": {
+    "githubClientId": "GitHub OAuth 应用的 Client ID，用于用户一键登录",
+    "githubClientSecret": "GitHub OAuth 应用的 Client Secret，用于验证用户身份",
+    "jwtSecret": "JWT 令牌签名密钥，用于用户认证会话管理",
+    "encryptionKey": "数据加密密钥，用于加密存储私钥和 Webhook Secret",
+    "databaseUrl": "PostgreSQL 数据库连接字符串，用于存储应用数据"
+  },
   "api": {
     "methodNotAllowed": "Method not allowed",
     "serverError": "Internal server error",
