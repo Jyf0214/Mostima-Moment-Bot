@@ -6,6 +6,9 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev --ignore-scripts
 
+# 复制 Prisma schema
+COPY prisma/ ./prisma/
+
 # 生成 Prisma Client
 RUN npx prisma generate
 
