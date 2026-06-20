@@ -51,11 +51,13 @@ export default function HomePage() {
   const checkStatus = async () => {
     try {
       const response = await fetch('/api/auth/me');
-      const data = await response.json();
-      if (data.user) {
-        setUser(data.user);
-        window.location.href = '/dashboard';
-        return;
+      if (response.ok) {
+        const data = await response.json();
+        if (data.githubId) {
+          setUser(data);
+          window.location.href = '/dashboard';
+          return;
+        }
       }
     } catch (err) {
       console.error('Failed to check status:', err);

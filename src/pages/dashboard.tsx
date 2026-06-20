@@ -25,12 +25,16 @@ export default function DashboardPage() {
   const checkAuth = async () => {
     try {
       const response = await fetch('/api/auth/me');
-      const data = await response.json();
-      if (!data.user) {
+      if (!response.ok) {
         window.location.href = '/';
         return;
       }
-      setUser(data.user);
+      const data = await response.json();
+      if (!data.githubId) {
+        window.location.href = '/';
+        return;
+      }
+      setUser(data);
     } catch {
       window.location.href = '/';
     } finally {
