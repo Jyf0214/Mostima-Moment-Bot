@@ -35,7 +35,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { code, state } = req.query;
+  const { code, state, installation_id, setup_action } = req.query;
+
+  // 检测是否为 GitHub App 安装回调被误导向到了 OAuth 回调
+  // 当 GitHub App 的 Callback URL 被错误设置为 /api/auth/callback 时会出现这种情况
+  if (installation_id && setup_action === 'install') {
+    const params = new URLSearchParams();
+    params.set('installation_id', String(installation_id));
+    if (state) params.set('state', String(state));
+    return res.redirect(`/api/github/callback?${params.toString()}`);
+  }
 
   // 验证 state 参数
   const cookieState = req.cookies.oauth_state;
