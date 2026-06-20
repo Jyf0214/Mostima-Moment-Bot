@@ -133,56 +133,75 @@ cp .env.example .env.local
 
 ### 3.2 编辑 `.env.local`
 
-```env
-# ===========================================
-# 必要环境变量（缺失将导致应用无法访问）
-# ===========================================
+按照下方说明逐项填写，**网页端不支持自动生成这些值，必须通过命令或 GitHub 后台手动获取**。
 
-# GitHub OAuth 配置（用于一键登录）
+#### 必要环境变量（缺失将导致应用无法访问）
+
+```env
+# ---- GitHub OAuth 配置 ----
+# 在 GitHub → Settings → Developer settings → OAuth Apps 页面获取
 GITHUB_CLIENT_ID=your_client_id
 GITHUB_CLIENT_SECRET=your_client_secret
 
-# JWT 密钥（用于用户认证）
+# ---- JWT 密钥 ----
+# 用下方命令生成，用于用户认证会话签名
 JWT_SECRET=your_jwt_secret
 
-# 加密密钥（用于加密存储敏感数据）
+# ---- 加密密钥 ----
+# 用下方命令生成，用于加密存储私钥和 Webhook Secret
 ENCRYPTION_KEY=your_encryption_key
 
-# 数据库连接字符串
+# ---- 数据库连接 ----
+# 格式：postgresql://用户名:密码@主机:端口/数据库名
 DATABASE_URL=postgresql://user:password@localhost:5432/manticore
+```
 
-# ===========================================
-# 可选环境变量
-# ===========================================
+#### 可选环境变量（CI/CD 功能需要）
 
-# GitHub App 配置
+```env
+# ---- GitHub App 配置 ----
+# 在 GitHub → Settings → Developer settings → GitHub Apps 页面获取
 GITHUB_APP_ID=123456
 GITHUB_PRIVATE_KEY_PATH=./private-key.pem
+
+# ---- Webhook Secret ----
+# 由你自行设定，同时填入 GitHub App 的 Webhook secret 字段
+# 用下方命令生成，不要使用明文
 GITHUB_WEBHOOK_SECRET=your_webhook_secret
 
-# 仓库配置
+# ---- 仓库配置 ----
 REPO_OWNER=your_username
 REPO_NAME=your_repo
 
-# Webhook 密钥（用于签名验证，与 GitHub App 的 Webhook secret 一致）
+# ---- Webhook 签名验证密钥 ----
+# 与 GITHUB_WEBHOOK_SECRET 保持一致
 WEBHOOK_SECRET=your_webhook_secret
 
-# 服务器配置
+# ---- 服务器配置 ----
 PORT=3001
 
-# 合作者列表（逗号分隔，用于手动重试鉴权）
+# ---- 合作者列表（逗号分隔） ----
 COLLABORATORS=user1,user2
 ```
 
 ### 3.3 生成密钥
 
+网页端无法自动生成以下值，请使用终端命令：
+
 ```bash
-# 生成 JWT_SECRET
+# 生成 JWT_SECRET（32 字节随机十六进制字符串）
 openssl rand -hex 32
 
-# 生成 ENCRYPTION_KEY
+# 生成 ENCRYPTION_KEY（32 字节随机十六进制字符串）
 openssl rand -hex 32
+
+# 生成 GITHUB_WEBHOOK_SECRET / WEBHOOK_SECRET（推荐用 base64 格式）
+openssl rand -base64 32
 ```
+
+将输出的值复制到 `.env.local` 对应字段中。
+
+> **注意**：`GITHUB_WEBHOOK_SECRET` 和 `WEBHOOK_SECRET` 必须保持一致，且需同时填入 GitHub App 设置中的 Webhook secret 字段。
 
 ---
 

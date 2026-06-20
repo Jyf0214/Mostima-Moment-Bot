@@ -189,6 +189,74 @@ Three types of comments are stripped:
 
 Use simple CJK range `[\u4e00-\u9fff\u3400-\u4dbf]` without the `u` flag to avoid TypeScript ES2015+ target requirements. This covers 99.9% of Chinese characters.
 
+## Serving User-Facing Text from API Routes
+
+When an API route returns user-facing text (error messages, descriptions, labels), the strings **must** go through `i18n.t()` — never hardcoded. The i18n compliance test scans all `.ts`/`.tsx` files (excluding tests and locale files) for Chinese characters, so hardcoded strings will cause test failures.
+
+### Correct Pattern
+
+1. Define keys in locale files under a descriptive namespace:
+
+```json
+// src/i18n/locales/zh.json
+{
+  "envVarDescriptions": {
+    "githubClientId": "GitHub OAuth 应用的 Client ID，用于用户一键登录",
+    "jwtSecret": "JWT 令牌签名密钥，用于用户认证会话管理"
+  }
+}
+```
+
+```json
+// src/i18n/locales/en.json
+{
+  "envVarDescriptions": {
+    "githubClientId": "GitHub OAuth App Client ID, used for one-click login",
+    "jwtSecret": "JWT token signing secret, used for authentication session management"
+  }
+}
+```
+
+2. Use `i18n.t()` in the API route:
+
+```typescript
+import i18n from '@/i18n';
+
+// Store i18n keys, not hardcoded strings
+const ITEMS: { key: string; descriptionKey: string }[] = [
+  { key: 'GITHUB_CLIENT_ID', descriptionKey: 'envVarDescriptions.githubClientId' },
+  { key: 'JWT_SECRET', descriptionKey: 'envVarDescriptions.jwtSecret' },
+];
+
+export default function handler(req, res) {
+  const result = ITEMS.map((item) => ({
+    key: item.key,
+    description: i18n.t(item.descriptionKey), // localized at runtime
+  }));
+  return res.status(200).json({ items: result });
+}
+```
+
+### Wrong Pattern (will fail i18n test)
+
+```typescript
+// ❌ Hardcoded Chinese — caught by i18n compliance test
+const ITEMS = [{ key: 'GITHUB_CLIENT_ID', description: 'GitHub OAuth 应用的 Client ID' }];
+```
+
+```typescript
+// ❌ English hardcoded — technically passes test but wrong for i18n
+const ITEMS = [{ key: 'GITHUB_CLIENT_ID', description: 'GitHub OAuth App Client ID' }];
+```
+
+### Key Rule
+
+**Every user-facing string in every `.ts`/`.tsx` file (except tests and locale files) must be an i18n key.** This includes:
+
+- API response messages, errors, descriptions
+- Dynamic content generated server-side
+- Configuration labels returned to the frontend
+
 ## Common Issues and Fixes
 
 ### 1. TypeScript Target Error with `u` Flag
