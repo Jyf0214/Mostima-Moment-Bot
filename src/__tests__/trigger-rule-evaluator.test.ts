@@ -176,7 +176,7 @@ describe('规则匹配引擎', () => {
       checks: [],
     };
 
-    it('应该匹配 OWNER 发送的 @{BOT_NAME} /fix 评论', () => {
+    it('应该匹配 OWNER 发送的 @{GITHUB_APP_SLUG} /fix 评论', () => {
       const payload: WebhookPayload = {
         event: 'issue_comment',
         action: 'created',

@@ -180,12 +180,18 @@ model WebhookConfig {
 - **Crypto module**: 8 test cases
 - **JWT authentication**: 4 test cases
 - **PR reporter**: 3 test cases
-- **Database operations**: 4 test cases
-- **Auth flow**: 6 test cases
-- **Encryption storage**: 8 test cases
+- **Database operations**: 6 test cases
+- **Auth flow**: 7 test cases
+- **Encryption storage**: 5 test cases
 - **i18n compliance**: 3 test cases
+- **UI compliance**: 26 test cases
+- **Prisma enforcement**: 2 test cases
+- **Cookie utilities**: 16 test cases
+- **GitHub auth (getAppId/getPrivateKey/generateJWT)**: 12 test cases
+- **Webhook installation events**: 7 test cases
+- **Private key API**: 9 test cases
 
-**Total: 36 test cases, all passing**
+**Total: 108 test cases, all passing**
 
 ## Environment Variables
 

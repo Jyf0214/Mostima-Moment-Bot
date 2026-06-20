@@ -29,7 +29,7 @@ interface IssuePayload {
  *
  * 触发条件：
  * 1. Issue 被贴上 `auto-fix` 标签
- * 2. 评论以 `@{BOT_NAME} /fix` 开头，且评论者是 OWNER/MEMBER/COLLABORATOR
+ * 2. 评论以 `@{GITHUB_APP_SLUG} /fix` 开头，且评论者是 OWNER/MEMBER/COLLABORATOR
  */
 export function shouldTriggerIssueFix(eventName: string, payload: IssuePayload): boolean {
   if (eventName === 'issues' && payload.label?.name === 'auto-fix') {
