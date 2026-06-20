@@ -1,11 +1,17 @@
 import { prisma } from './prisma';
 
 /**
- * 检查是否为全新应用（无管理员）
+ * Check if this is a fresh application (no admins)
+ * Returns true if table does not exist (treat as fresh install)
  */
 export async function isNewApplication(): Promise<boolean> {
-  const count = await prisma.admin.count();
-  return count === 0;
+  try {
+    const count = await prisma.admin.count();
+    return count === 0;
+  } catch (error: any) {
+    if (error.code === 'P2021') return true;
+    throw error;
+  }
 }
 
 /**
