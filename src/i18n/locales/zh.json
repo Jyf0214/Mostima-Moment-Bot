@@ -266,6 +266,15 @@
     "appUrlWarn": "{{url}} — HTTP 非 localhost 环境下 Cookie 可能无法正常工作",
     "appUrlWarnDetail": "生产环境建议使用 HTTPS"
   },
+  "settings": {
+    "privateKey": "GitHub App 私钥文件",
+    "privateKeyPlaceholder": "拖拽 .pem 文件至此处，或点击浏览",
+    "configured": "已配置",
+    "missingLabel": "未配置",
+    "configSaved": "配置保存成功",
+    "setupFailed": "设置失败",
+    "appInfo": "GitHub App"
+  },
   "api": {
     "methodNotAllowed": "Method not allowed",
     "serverError": "Internal server error",

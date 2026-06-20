@@ -266,6 +266,15 @@
     "appUrlWarn": "{{url}} — HTTP on non-localhost may cause cookie issues",
     "appUrlWarnDetail": "HTTPS is recommended for production"
   },
+  "settings": {
+    "privateKey": "GitHub App Private Key",
+    "privateKeyPlaceholder": "Drag and drop .pem file here, or click to browse",
+    "configured": "Configured",
+    "missingLabel": "Not configured",
+    "configSaved": "Configuration saved successfully",
+    "setupFailed": "Setup failed",
+    "appInfo": "GitHub App"
+  },
   "api": {
     "methodNotAllowed": "Method not allowed",
     "serverError": "Internal server error",

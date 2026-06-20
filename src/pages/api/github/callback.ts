@@ -84,12 +84,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       const { getInstallationAccessToken } = await import('@/lib/github/installation');
       // 用 App JWT 获取 installation 信息
-      const { generateJWT } = await import('@/lib/github/auth');
-      const appId = process.env.GITHUB_APP_ID;
-      const privateKeyPath = process.env.GITHUB_PRIVATE_KEY_PATH;
+      const { generateJWTAuto } = await import('@/lib/github/auth');
 
-      if (appId && privateKeyPath) {
-        const appJwt = generateJWT(appId, privateKeyPath);
+      try {
+        const appJwt = await generateJWTAuto();
         const response = await fetch(`https://api.github.com/app/installations/${installId}`, {
           headers: {
             Authorization: `Bearer ${appJwt}`,
@@ -124,6 +122,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             },
           });
         }
+      } catch {
+        // JWT 生成失败，用最小信息存储
+        await prisma.gitHubInstallation.create({
+          data: {
+            installationId: installId,
+            accountLogin: 'unknown',
+            accountType: 'Unknown',
+            accountId: 0,
+            adminId: admin.id,
+          },
+        });
       }
     } catch (error) {
       console.error('Failed to fetch installation details:', error);

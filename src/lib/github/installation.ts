@@ -1,17 +1,13 @@
-import { generateJWT } from './auth';
+import { generateJWT, getAppId, getPrivateKey } from './auth';
 
 /**
  * 获取 GitHub App Installation 的访问令牌
  */
 export async function getInstallationAccessToken(installationId: number): Promise<string> {
-  const appId = process.env.GITHUB_APP_ID;
-  const privateKeyPath = process.env.GITHUB_PRIVATE_KEY_PATH;
+  const appId = await getAppId();
+  const privateKey = await getPrivateKey();
 
-  if (!appId || !privateKeyPath) {
-    throw new Error('GITHUB_APP_ID and GITHUB_PRIVATE_KEY_PATH must be set');
-  }
-
-  const jwt = generateJWT(appId, privateKeyPath);
+  const jwt = generateJWT(appId, privateKey);
 
   const response = await fetch(
     `https://api.github.com/app/installations/${installationId}/access_tokens`,

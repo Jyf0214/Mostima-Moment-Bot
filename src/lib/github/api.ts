@@ -1,4 +1,4 @@
-import { generateJWT } from './auth';
+import { generateJWT, getAppId, getPrivateKey } from './auth';
 
 let accessToken: string | null = null;
 let tokenExpiry: number = 0;
@@ -12,15 +12,11 @@ async function getAccessToken(): Promise<string> {
     return accessToken;
   }
 
-  const appId = process.env.GITHUB_APP_ID;
-  const privateKeyPath = process.env.GITHUB_PRIVATE_KEY_PATH;
-
-  if (!appId || !privateKeyPath) {
-    throw new Error('GITHUB_APP_ID and GITHUB_PRIVATE_KEY_PATH must be set');
-  }
+  const appId = await getAppId();
+  const privateKey = await getPrivateKey();
 
   // 生成 JWT
-  const jwt = generateJWT(appId, privateKeyPath);
+  const jwt = generateJWT(appId, privateKey);
 
   // 获取安装列表
   const installationsResponse = await fetch('https://api.github.com/app/installations', {

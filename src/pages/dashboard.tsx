@@ -524,12 +524,151 @@ function RepoSection({ title, repos }: { title: string; repos: Repo[] }) {
 
 function SettingsPage() {
   const { t } = useTranslation();
+  const [privateKeyStatus, setPrivateKeyStatus] = useState<{
+    configured: boolean;
+    source: string;
+  } | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadMsg, setUploadMsg] = useState<string | null>(null);
+  const [uploadMsgType, setUploadMsgType] = useState<'success' | 'error'>('success');
+
+  useEffect(() => {
+    checkPrivateKey();
+  }, []);
+
+  const checkPrivateKey = async () => {
+    try {
+      const res = await fetch('/api/github/private-key');
+      if (res.ok) {
+        setPrivateKeyStatus(await res.json());
+      }
+    } catch {
+      setPrivateKeyStatus({ configured: false, source: 'none' });
+    }
+  };
+
+  const handleFileUpload = async (file: File) => {
+    setUploading(true);
+    setUploadMsg(null);
+
+    try {
+      const content = await file.text();
+      const res = await fetch('/api/github/private-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ privateKey: content }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setUploadMsg(t('settings.configSaved'));
+        setUploadMsgType('success');
+        checkPrivateKey();
+      } else {
+        setUploadMsg(data.error || t('settings.setupFailed'));
+        setUploadMsgType('error');
+      }
+    } catch (err) {
+      setUploadMsg(err instanceof Error ? err.message : t('settings.setupFailed'));
+      setUploadMsgType('error');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file && file.name.endsWith('.pem')) {
+      handleFileUpload(file);
+    } else {
+      setUploadMsg('Please select a .pem file');
+      setUploadMsgType('error');
+    }
+  };
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleFileUpload(file);
+  };
+
   return (
-    <ProCard className="bg-white/5 backdrop-blur-xl border-white/10" padding="p-8">
-      <div className="text-center">
-        <Settings className="h-10 w-10 text-white/20 mx-auto mb-3" />
-        <p className="text-white/40 text-sm">{t('sidebar.settings')}</p>
-      </div>
-    </ProCard>
+    <div className="space-y-4">
+      {/* 私钥配置状态 */}
+      <ProCard className="bg-white/5 backdrop-blur-xl border-white/10" padding="p-5">
+        <div className="flex items-center gap-3 mb-4">
+          <Lock className="h-5 w-5 text-purple-400" />
+          <h3 className="text-white font-medium">{t('setup.privateKey')}</h3>
+        </div>
+
+        {privateKeyStatus && (
+          <div className="mb-4">
+            <div className="flex items-center gap-2">
+              {privateKeyStatus.configured ? (
+                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+              ) : (
+                <AlertTriangle className="h-4 w-4 text-amber-400" />
+              )}
+              <span className="text-sm text-white/70">
+                {privateKeyStatus.configured
+                  ? `${t('settings.configured')} (${privateKeyStatus.source === 'file' ? 'File' : 'Database'})`
+                  : t('settings.missingLabel')}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* 上传区域 */}
+        <div
+          onDrop={handleDrop}
+          onDragOver={(e) => e.preventDefault()}
+          className="border-2 border-dashed border-white/10 rounded-xl p-6 text-center hover:border-purple-500/30 transition-colors cursor-pointer"
+          onClick={() => document.getElementById('pem-file-input')?.click()}
+        >
+          <Lock className="h-8 w-8 text-white/20 mx-auto mb-2" />
+          <p className="text-white/50 text-sm mb-2">{t('setup.privateKeyPlaceholder')}</p>
+          <p className="text-white/30 text-xs">.pem</p>
+          <input
+            id="pem-file-input"
+            type="file"
+            accept=".pem"
+            className="hidden"
+            onChange={handleFileInput}
+          />
+        </div>
+
+        {uploading && (
+          <div className="mt-3 flex items-center gap-2">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-purple-400 border-t-transparent" />
+            <span className="text-xs text-white/50">Uploading...</span>
+          </div>
+        )}
+
+        {uploadMsg && (
+          <div
+            className={`mt-3 text-xs px-3 py-2 rounded-lg ${
+              uploadMsgType === 'success'
+                ? 'bg-emerald-500/10 text-emerald-400'
+                : 'bg-red-500/10 text-red-400'
+            }`}
+          >
+            {uploadMsg}
+          </div>
+        )}
+      </ProCard>
+
+      {/* App ID 配置提示 */}
+      <ProCard className="bg-white/5 backdrop-blur-xl border-white/10" padding="p-5">
+        <div className="flex items-center gap-3 mb-3">
+          <Settings className="h-5 w-5 text-blue-400" />
+          <h3 className="text-white font-medium">GitHub App</h3>
+        </div>
+        <p className="text-white/40 text-xs">
+          {process.env.GITHUB_APP_ID
+            ? `GITHUB_APP_ID: ${process.env.GITHUB_APP_ID}`
+            : 'GITHUB_APP_ID not set in environment variables'}
+        </p>
+      </ProCard>
+    </div>
   );
 }
