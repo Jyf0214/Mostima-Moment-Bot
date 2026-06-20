@@ -99,11 +99,11 @@
     "databaseUrl": "PostgreSQL database connection string, used to store application data"
   },
   "envVarHints": {
-    "githubClientId": "GitHub → Settings → Developer settings → OAuth Apps → create new App → copy Client ID",
-    "githubClientSecret": "GitHub → Settings → Developer settings → OAuth Apps → create new App → generate client secret → copy value (shown only once)",
-    "jwtSecret": "Run: openssl rand -hex 32",
-    "encryptionKey": "Run: openssl rand -hex 32",
-    "databaseUrl": "Format: postgresql://user:password@host:port/dbname\nDocker: docker run -d --name postgres -e POSTGRES_USER=user -e POSTGRES_PASSWORD=password -e POSTGRES_DB=manticore -p 5432:5432 postgres:16-alpine"
+    "githubClientId": "1. Go to https://github.com/settings/developers\n2. Click \"New OAuth App\"\n3. Fill in: Application name = Manticore Bot, Homepage URL = your domain, Callback URL = your-domain/api/auth/callback\n4. Click \"Register application\"\n5. Copy the Client ID shown on the page",
+    "githubClientSecret": "1. On the OAuth App page (same as above)\n2. Click \"Generate a new client secret\"\n3. Copy the secret value immediately (shown only once!)\n4. If lost, delete and generate a new one",
+    "jwtSecret": "Run in terminal:\nopenssl rand -hex 32\n\nThen copy the 64-character hex string to .env.local",
+    "encryptionKey": "Run in terminal:\nopenssl rand -hex 32\n\nThen copy the 64-character hex string to .env.local",
+    "databaseUrl": "Option A - Docker (recommended):\ndocker run -d --name postgres -e POSTGRES_USER=user -e POSTGRES_PASSWORD=password -e POSTGRES_DB=manticore -p 5432:5432 postgres:16-alpine\n\nThen set: postgresql://user:password@localhost:5432/manticore\n\nOption B - Local PostgreSQL:\n1. Install: sudo apt install postgresql\n2. Create DB: psql -U postgres -c \"CREATE DATABASE manticore;\"\n3. Set connection string accordingly"
   },
   "api": {
     "methodNotAllowed": "Method not allowed",

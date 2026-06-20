@@ -99,11 +99,11 @@
     "databaseUrl": "PostgreSQL 数据库连接字符串，用于存储应用数据"
   },
   "envVarHints": {
-    "githubClientId": "GitHub → Settings → Developer settings → OAuth Apps → 创建新 App → 复制 Client ID",
-    "githubClientSecret": "GitHub → Settings → Developer settings → OAuth Apps → 创建新 App → 生成 Client Secret → 复制值（仅显示一次）",
-    "jwtSecret": "运行命令: openssl rand -hex 32",
-    "encryptionKey": "运行命令: openssl rand -hex 32",
-    "databaseUrl": "格式: postgresql://用户名:密码@主机:端口/数据库名\nDocker: docker run -d --name postgres -e POSTGRES_USER=user -e POSTGRES_PASSWORD=password -e POSTGRES_DB=manticore -p 5432:5432 postgres:16-alpine"
+    "githubClientId": "1. 打开 https://github.com/settings/developers\n2. 点击 \"New OAuth App\"\n3. 填写: Application name = Manticore Bot, Homepage URL = 你的域名, Callback URL = 你的域名/api/auth/callback\n4. 点击 \"Register application\"\n5. 复制页面上的 Client ID",
+    "githubClientSecret": "1. 在 OAuth App 页面（同上）\n2. 点击 \"Generate a new client secret\"\n3. 立即复制 secret 值（仅显示一次！）\n4. 如果丢失，需删除后重新生成",
+    "jwtSecret": "在终端运行:\nopenssl rand -hex 32\n\n然后将 64 位十六进制字符串复制到 .env.local",
+    "encryptionKey": "在终端运行:\nopenssl rand -hex 32\n\n然后将 64 位十六进制字符串复制到 .env.local",
+    "databaseUrl": "方案 A - Docker（推荐）:\ndocker run -d --name postgres -e POSTGRES_USER=user -e POSTGRES_PASSWORD=password -e POSTGRES_DB=manticore -p 5432:5432 postgres:16-alpine\n\n然后设置: postgresql://user:password@localhost:5432/manticore\n\n方案 B - 本地 PostgreSQL:\n1. 安装: sudo apt install postgresql\n2. 创建数据库: psql -U postgres -c \"CREATE DATABASE manticore;\"\n3. 根据实际情况填写连接字符串"
   },
   "api": {
     "methodNotAllowed": "Method not allowed",

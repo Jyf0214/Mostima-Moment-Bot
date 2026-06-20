@@ -1,15 +1,15 @@
 ---
 name: env-validation-block
-description: Environment variable validation with blocking UI when required vars are missing
+description: Environment variable validation with blocking UI, including generate hints for each missing var
 source: auto-skill
-extracted_at: '2026-06-20T03:10:00.000Z'
+extracted_at: '2026-06-20T05:07:15.385Z'
 ---
 
 # Environment Variable Validation and Blocking
 
 ## Overview
 
-Implementing environment variable validation that blocks application access when required variables are missing, showing a dedicated error page with clear instructions.
+Environment variable validation that blocks application access when required variables are missing, showing a dedicated error page with **per-variable descriptions and generate hints** (how to create/obtain each value).
 
 ## Architecture
 
@@ -21,11 +21,11 @@ Request → Proxy/Middleware → Check Env Vars → Redirect to /env-error (if m
 
 ## Required Environment Variables
 
-Define which variables are mandatory:
+Define which variables are mandatory. Keep `proxy.ts` and `env-check.ts` in sync:
 
 ```typescript
-// src/lib/env-config.ts
-export const REQUIRED_ENV_VARS = [
+// src/proxy.ts and src/pages/api/env-check.ts — must match
+const REQUIRED_ENV_VARS = [
   'GITHUB_CLIENT_ID',
   'GITHUB_CLIENT_SECRET',
   'JWT_SECRET',
@@ -36,26 +36,65 @@ export const REQUIRED_ENV_VARS = [
 
 ## Implementation
 
-### 1. Environment Check API
+### 1. Environment Check API (with description + generateHint)
+
+The API returns each variable's **description** (what it does) and **generateHint** (how to create/obtain it). All strings go through i18n.
 
 ```typescript
 // src/pages/api/env-check.ts
 import { NextApiRequest, NextApiResponse } from 'next';
-import { REQUIRED_ENV_VARS } from '@/lib/env-config';
+import i18n from '@/i18n';
+
+const REQUIRED_ENV_VARS: {
+  key: string;
+  descriptionKey: string;
+  generateHintKey: string;
+}[] = [
+  {
+    key: 'GITHUB_CLIENT_ID',
+    descriptionKey: 'envVarDescriptions.githubClientId',
+    generateHintKey: 'envVarHints.githubClientId',
+  },
+  {
+    key: 'GITHUB_CLIENT_SECRET',
+    descriptionKey: 'envVarDescriptions.githubClientSecret',
+    generateHintKey: 'envVarHints.githubClientSecret',
+  },
+  {
+    key: 'JWT_SECRET',
+    descriptionKey: 'envVarDescriptions.jwtSecret',
+    generateHintKey: 'envVarHints.jwtSecret',
+  },
+  {
+    key: 'ENCRYPTION_KEY',
+    descriptionKey: 'envVarDescriptions.encryptionKey',
+    generateHintKey: 'envVarHints.encryptionKey',
+  },
+  {
+    key: 'DATABASE_URL',
+    descriptionKey: 'envVarDescriptions.databaseUrl',
+    generateHintKey: 'envVarHints.databaseUrl',
+  },
+];
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const missing: string[] = [];
-  const present: string[] = [];
+  const missing: { key: string; description: string; generateHint: string }[] = [];
+  const present: { key: string; description: string; generateHint: string }[] = [];
 
-  for (const envVar of REQUIRED_ENV_VARS) {
-    if (process.env[envVar]) {
-      present.push(envVar);
+  for (const item of REQUIRED_ENV_VARS) {
+    const entry = {
+      key: item.key,
+      description: i18n.t(item.descriptionKey),
+      generateHint: i18n.t(item.generateHintKey),
+    };
+    if (process.env[item.key]) {
+      present.push(entry);
     } else {
-      missing.push(envVar);
+      missing.push(entry);
     }
   }
 
@@ -64,12 +103,42 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     missing,
     present,
     message:
-      missing.length === 0 ? '所有环境变量已配置' : `缺少 ${missing.length} 个必要的环境变量`,
+      missing.length === 0
+        ? i18n.t('api.envConfigured')
+        : i18n.t('api.envMissing', { count: missing.length }),
   });
 }
 ```
 
-### 2. Error Page Component
+### 2. i18n Keys (descriptions + hints)
+
+```json
+// src/i18n/locales/en.json
+{
+  "envVarDescriptions": {
+    "githubClientId": "GitHub OAuth App Client ID, used for one-click login",
+    "jwtSecret": "JWT token signing secret, used for authentication session management",
+    "databaseUrl": "PostgreSQL database connection string, used to store application data"
+  },
+  "envVarHints": {
+    "githubClientId": "GitHub → Settings → Developer settings → OAuth Apps → create new App → copy Client ID",
+    "jwtSecret": "Run: openssl rand -hex 32",
+    "databaseUrl": "Format: postgresql://user:password@host:port/dbname\nDocker: docker run -d --name postgres -e POSTGRES_USER=user -e POSTGRES_PASSWORD=password -e POSTGRES_DB=manticore -p 5432:5432 postgres:16-alpine"
+  }
+}
+```
+
+**Hint format conventions:**
+
+| Variable type      | Hint pattern                                             |
+| ------------------ | -------------------------------------------------------- |
+| GitHub credentials | `GitHub → Settings → ... → copy value`                   |
+| Generated secrets  | `Run: openssl rand -hex 32` or `openssl rand -base64 32` |
+| Connection strings | Format description + Docker one-liner                    |
+
+### 3. Error Page Component (with per-var hints)
+
+Each missing variable shows in its own card: name badge, description, and a `Code` block with the generate hint.
 
 ```tsx
 // src/pages/env-error.tsx
@@ -77,94 +146,194 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
 
 import { useState, useEffect } from 'react';
 import {
+  Box,
   Container,
   Paper,
   Title,
   Text,
   Stack,
-  Alert,
+  Badge,
   Loader,
   Center,
-  Code,
-  List,
+  Group,
   ThemeIcon,
+  Button,
+  Code,
 } from '@mantine/core';
-import { IconAlertCircle, IconX, IconCheck } from '@tabler/icons-react';
+import { IconAlertTriangle, IconX, IconCheck, IconRefresh } from '@tabler/icons-react';
+import { useTranslation } from 'react-i18next';
+
+interface EnvVar {
+  key: string;
+  description: string;
+  generateHint: string;
+}
 
 interface EnvStatus {
   isConfigured: boolean;
-  missing: string[];
-  present: string[];
+  missing: EnvVar[];
+  present: EnvVar[];
   message: string;
 }
 
 export default function EnvErrorPage() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [envStatus, setEnvStatus] = useState<EnvStatus | null>(null);
 
   useEffect(() => {
-    fetch('/api/env-check')
-      .then((res) => res.json())
-      .then(setEnvStatus)
-      .finally(() => setLoading(false));
+    checkEnvStatus();
   }, []);
+
+  const checkEnvStatus = async () => {
+    try {
+      const res = await fetch('/api/env-check');
+      setEnvStatus(await res.json());
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (loading) {
     return (
       <Center h="100vh">
-        <Loader size="xl" />
+        <Stack align="center" gap="md">
+          <Loader size="xl" color="red" />
+          <Text c="dimmed" size="sm">
+            Loading...
+          </Text>
+        </Stack>
       </Center>
     );
   }
 
   return (
-    <Container size="md" py="xl">
-      <Paper shadow="md" p="xl" radius="md">
-        <Stack gap="md">
-          <Title order={2} c="red">
-            ⚠️ 环境变量配置缺失
-          </Title>
-
-          <Alert color="red" icon={<IconAlertCircle size={16} />}>
-            应用无法正常运行，因为缺少必要的环境变量配置。
-          </Alert>
-
-          {envStatus?.missing.length > 0 && (
-            <List
-              size="sm"
-              center
-              icon={
-                <ThemeIcon color="red" size={16} radius="xl">
-                  <IconX size={10} />
-                </ThemeIcon>
-              }
-            >
-              {envStatus.missing.map((envVar) => (
-                <List.Item key={envVar}>
-                  <Code>{envVar}</Code>
-                </List.Item>
-              ))}
-            </List>
-          )}
-
-          <Paper bg="gray.1" p="md" radius="md">
-            <Text fw={500} mb="xs">
-              解决方法：
+    <Box
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1rem',
+      }}
+    >
+      <Container size="sm" w="100%">
+        <Paper shadow="xl" p="xl" radius="lg">
+          <Stack gap="lg" align="center">
+            <ThemeIcon size={72} radius="xl" variant="light" color="red">
+              <IconAlertTriangle size={36} />
+            </ThemeIcon>
+            <Title order={2} ta="center">
+              {t('envError.title')}
+            </Title>
+            <Text c="dimmed" ta="center" size="sm">
+              {t('envError.description')}
             </Text>
-            <Text size="sm">
-              1. 在项目根目录创建 <Code>.env.local</Code> 文件
-            </Text>
-            <Text size="sm">2. 添加缺失的环境变量配置</Text>
-            <Text size="sm">3. 重启应用</Text>
-          </Paper>
-        </Stack>
-      </Paper>
-    </Container>
+
+            {envStatus && (
+              <Stack gap="md" w="100%">
+                {/* Missing Variables — each with generateHint */}
+                {envStatus.missing.length > 0 && (
+                  <Paper p="md" radius="md" bg="red.0" withBorder>
+                    <Group gap="xs" mb="sm">
+                      <ThemeIcon size={20} radius="xl" variant="light" color="red">
+                        <IconX size={12} />
+                      </ThemeIcon>
+                      <Text fw={600} size="sm" c="red.7">
+                        {t('envError.missingVars')}
+                      </Text>
+                      <Badge color="red" variant="filled" size="sm" circle>
+                        {envStatus.missing.length}
+                      </Badge>
+                    </Group>
+                    <Stack gap="sm">
+                      {envStatus.missing.map((envVar) => (
+                        <Paper key={envVar.key} p="sm" radius="sm" bg="red.1" withBorder>
+                          <Badge
+                            color="red"
+                            variant="light"
+                            leftSection={<IconX size={10} />}
+                            flex="0 0 auto"
+                          >
+                            {envVar.key}
+                          </Badge>
+                          <Text size="xs" c="dimmed" mb={4}>
+                            {envVar.description}
+                          </Text>
+                          <Group gap="xs" align="flex-start">
+                            <Text size="xs" fw={600} c="dark" flex="0 0 auto">
+                              {t('envError.howToGet')}:
+                            </Text>
+                            <Code
+                              block
+                              p={6}
+                              fz="xs"
+                              style={{ flex: 1, wordBreak: 'break-all', whiteSpace: 'pre-wrap' }}
+                            >
+                              {envVar.generateHint}
+                            </Code>
+                          </Group>
+                        </Paper>
+                      ))}
+                    </Stack>
+                  </Paper>
+                )}
+
+                {/* Present Variables — simple badge list */}
+                {envStatus.present.length > 0 && (
+                  <Paper p="md" radius="md" bg="green.0" withBorder>
+                    <Group gap="xs" mb="sm">
+                      <ThemeIcon size={20} radius="xl" variant="light" color="green">
+                        <IconCheck size={12} />
+                      </ThemeIcon>
+                      <Text fw={600} size="sm" c="green.7">
+                        {t('envError.presentVars')}
+                      </Text>
+                      <Badge color="green" variant="filled" size="sm" circle>
+                        {envStatus.present.length}
+                      </Badge>
+                    </Group>
+                    <Stack gap="xs">
+                      {envStatus.present.map((envVar) => (
+                        <Group key={envVar.key} gap="sm" align="flex-start">
+                          <Badge
+                            color="green"
+                            variant="light"
+                            leftSection={<IconCheck size={10} />}
+                            flex="0 0 auto"
+                          >
+                            {envVar.key}
+                          </Badge>
+                          <Text size="xs" c="dimmed">
+                            {envVar.description}
+                          </Text>
+                        </Group>
+                      ))}
+                    </Stack>
+                  </Paper>
+                )}
+
+                <Button
+                  variant="light"
+                  color="red"
+                  leftSection={<IconRefresh size={16} />}
+                  onClick={checkEnvStatus}
+                  fullWidth
+                  size="md"
+                >
+                  {t('envError.retry')}
+                </Button>
+              </Stack>
+            )}
+          </Stack>
+        </Paper>
+      </Container>
+    </Box>
   );
 }
 ```
 
-### 3. Next.js Proxy/Middleware
+### 4. Next.js Proxy/Middleware
 
 ```typescript
 // src/proxy.ts (Next.js 16) or src/middleware.ts (Next.js 14/15)
@@ -179,110 +348,55 @@ const REQUIRED_ENV_VARS = [
   'DATABASE_URL',
 ];
 
-// Paths exempt from env check
 const ENV_CHECK_EXEMPT_PATHS = ['/api/env-check', '/env-error', '/_next', '/favicon.ico'];
 
 function checkEnvironmentVariables(): string[] {
   const missing: string[] = [];
   for (const envVar of REQUIRED_ENV_VARS) {
-    if (!process.env[envVar]) {
-      missing.push(envVar);
-    }
+    if (!process.env[envVar]) missing.push(envVar);
   }
   return missing;
 }
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  if (ENV_CHECK_EXEMPT_PATHS.some((p) => pathname.startsWith(p))) return NextResponse.next();
 
-  // Skip check for exempt paths
-  if (ENV_CHECK_EXEMPT_PATHS.some((path) => pathname.startsWith(path))) {
-    return NextResponse.next();
-  }
-
-  // Check environment variables
   const missingEnvVars = checkEnvironmentVariables();
   if (missingEnvVars.length > 0) {
     const errorUrl = new URL('/env-error', request.url);
     errorUrl.searchParams.set('missing', missingEnvVars.join(','));
     return NextResponse.redirect(errorUrl);
   }
-
-  // ... other middleware logic
   return NextResponse.next();
-}
-```
-
-### 4. App-Level Check (Fallback)
-
-```tsx
-// src/pages/_app.tsx
-'use client';
-
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
-import { Center, Loader, MantineProvider } from '@mantine/core';
-
-export default function App({ Component, pageProps }: AppProps) {
-  const router = useRouter();
-  const [checking, setChecking] = useState(true);
-
-  useEffect(() => {
-    // Skip check for error page
-    if (router.pathname === '/env-error') {
-      setChecking(false);
-      return;
-    }
-
-    fetch('/api/env-check')
-      .then((res) => res.json())
-      .then((data) => {
-        if (!data.isConfigured && router.pathname !== '/env-error') {
-          router.push('/env-error');
-        }
-      })
-      .finally(() => setChecking(false));
-  }, [router]);
-
-  if (checking) {
-    return (
-      <MantineProvider theme={theme}>
-        <Center h="100vh">
-          <Loader size="xl" />
-        </Center>
-      </MantineProvider>
-    );
-  }
-
-  return (
-    <MantineProvider theme={theme}>
-      <Component {...pageProps} />
-    </MantineProvider>
-  );
 }
 ```
 
 ## Key Design Decisions
 
-### 1. Proxy-Level vs App-Level Check
+### 1. Per-Variable Cards with Generate Hints
+
+Each missing variable gets its own card showing:
+
+- **Variable name** (Badge)
+- **Description** — what it does (dimmed text)
+- **How to get** — command or path (Code block)
+
+This eliminates guesswork for users who don't know how to create each value.
+
+### 2. i18n for All Strings
+
+All descriptions, hints, and labels go through `i18n.t()` in the API and `useTranslation()` in the frontend. The i18n compliance test scans all `.ts`/`.tsx` files for hardcoded Chinese, so any hardcoded string will fail the test.
+
+### 3. Proxy-Level vs App-Level Check
 
 - **Proxy-level**: Faster, blocks before React renders
 - **App-level**: Fallback for client-side navigation
 - **Both recommended**: Defense in depth
 
-### 2. Exempt Paths
+### 4. Exempt Paths
 
-Always exempt:
-
-- `/env-error` (the error page itself)
-- `/api/env-check` (the check API)
-- `/_next` (static assets)
-- `/favicon.ico`
-
-### 3. Redirect vs Render
-
-- **Redirect to `/env-error`**: Cleaner URL, consistent UX
-- **Inline error**: More complex, harder to maintain
+Always exempt: `/env-error`, `/api/env-check`, `/_next`, `/favicon.ico`
 
 ## Common Issues and Fixes
 
@@ -292,26 +406,25 @@ Always exempt:
 
 **Fix**: Add `/env-error` to exempt paths list
 
-### 2. Middleware Runs on Static Assets
+### 2. i18n Test Fails on API Routes
 
-**Problem**: Env check runs on `_next/static` files
+**Problem**: Hardcoded Chinese in env-check API
 
-**Fix**: Exclude static files in matcher config:
+**Fix**: Store i18n keys (not strings) in the config array, call `i18n.t()` at runtime:
 
 ```typescript
-export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
-};
+// ✅ Correct — key reference, not hardcoded string
+{ key: 'JWT_SECRET', descriptionKey: 'envVarDescriptions.jwtSecret' }
+
+// ❌ Wrong — hardcoded Chinese
+{ key: 'JWT_SECRET', description: 'JWT 令牌签名密钥' }
 ```
 
-### 3. Server vs Client Environment Variables
+### 3. Missing generateHint in Response
 
-**Problem**: `process.env.VAR` only works server-side in Next.js
+**Problem**: Frontend shows variable name but not how to create it
 
-**Fix**:
-
-- For public vars: Use `NEXT_PUBLIC_` prefix
-- For server vars: Only access in API routes, middleware, or server components
+**Fix**: Add `generateHintKey` to the env config array and `generateHint` to the response interface
 
 ## Verification
 
@@ -319,34 +432,13 @@ export const config = {
 # Test with missing env vars
 unset GITHUB_CLIENT_ID
 npm run dev
-# Should redirect to /env-error
+# Should redirect to /env-error with hints
 
 # Test API response
 curl http://localhost:3000/api/env-check
-# Should return { isConfigured: false, missing: [...] }
+# Should return { isConfigured: false, missing: [{ key, description, generateHint }] }
 
-# Test with all vars present
-cp .env.example .env.local
-npm run dev
-# Should load normally
-```
-
-## Environment Variables Template
-
-```env
-# ===========================================
-# Required (app won't start without these)
-# ===========================================
-GITHUB_CLIENT_ID=
-GITHUB_CLIENT_SECRET=
-JWT_SECRET=
-ENCRYPTION_KEY=
-DATABASE_URL=
-
-# ===========================================
-# Optional
-# ===========================================
-BOT_PORT=3001
-WORKSPACE_DIR=/app/workspace
-PUBLIC_URL=https://your-domain.com
+# Test i18n compliance
+npx jest src/__tests__/i18n.test.ts --verbose
+# Should pass (no hardcoded Chinese in .ts/.tsx files)
 ```
