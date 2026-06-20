@@ -10,36 +10,20 @@ import {
   XCircle,
   Clock,
   Loader2,
-  X,
-  Search,
+  FolderGit2,
+  ArrowRight,
   GitBranch,
-  GitCommitHorizontal,
-  ExternalLink,
 } from 'lucide-react';
 
-interface CiRun {
-  id: number;
-  event: string;
-  action?: string | null;
-  branch?: string | null;
-  commitSha?: string | null;
-  prNumber?: number | null;
-  status: string;
-  conclusion?: string | null;
-  triggeredBy?: string | null;
-  ruleId?: string | null;
-  checksRan: string[];
-  startedAt?: string | null;
-  completedAt?: string | null;
-  duration?: number | null;
-  createdAt: string;
-}
-
-interface RunsResponse {
-  runs: CiRun[];
-  total: number;
-  limit: number;
-  offset: number;
+interface RepoSummary {
+  repoFullName: string;
+  totalRuns: number;
+  latest: {
+    status: string;
+    createdAt: string;
+    event: string;
+    branch: string | null;
+  };
 }
 
 const STATUS_CONFIG: Record<string, { icon: React.ElementType; color: string; bg: string }> = {
@@ -57,14 +41,6 @@ const EVENT_LABELS: Record<string, string> = {
   workflow_run: 'Run',
 };
 
-function formatDuration(duration: number): string {
-  if (duration < 1000) return `${duration}ms`;
-  const s = Math.round(duration / 1000);
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  return `${m}m ${s % 60}s`;
-}
-
 function timeAgo(dateStr: string): string {
   const now = Date.now();
   const then = new Date(dateStr).getTime();
@@ -75,151 +51,58 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
-function shaShort(sha: string | null): string {
-  if (!sha) return '—';
-  return sha.slice(0, 7);
-}
-
 export default function WorkflowLogsPage() {
   const { t } = useTranslation();
-  const [runs, setRuns] = useState<CiRun[]>([]);
-  const [total, setTotal] = useState(0);
+  const [repos, setRepos] = useState<RepoSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [filterStatus, setFilterStatus] = useState<string>('');
-  const [filterEvent, setFilterEvent] = useState<string>('');
-  const [searchRepo, setSearchRepo] = useState('');
 
-  const fetchRuns = useCallback(
-    async (showRefresh = false) => {
-      if (showRefresh) setRefreshing(true);
-      else setLoading(true);
+  const fetchRepos = useCallback(async (showRefresh = false) => {
+    if (showRefresh) setRefreshing(true);
+    else setLoading(true);
 
-      try {
-        const params = new URLSearchParams({ limit: '50' });
-        if (searchRepo.trim()) params.set('repo', searchRepo.trim());
-
-        const res = await fetch(`/api/ci/runs?${params}`);
-        if (res.ok) {
-          const data: RunsResponse = await res.json();
-          let filtered = data.runs;
-          if (filterStatus) filtered = filtered.filter((r) => r.status === filterStatus);
-          if (filterEvent) filtered = filtered.filter((r) => r.event === filterEvent);
-          setRuns(filtered);
-          setTotal(data.total);
-        }
-      } catch {
-        // 静默处理
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
+    try {
+      const res = await fetch('/api/ci/runs');
+      if (res.ok) {
+        const data = await res.json();
+        setRepos(data.repos || []);
       }
-    },
-    [searchRepo, filterStatus, filterEvent]
-  );
+    } catch {
+      // 静默处理
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
 
   useEffect(() => {
-    fetchRuns();
+    fetchRepos();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleRefresh = () => fetchRuns(true);
-
-  const handleSearch = () => fetchRuns();
+  const handleViewDetail = (repoFullName: string) => {
+    window.location.href = `/dashboard/logs/${encodeURIComponent(repoFullName)}`;
+  };
 
   return (
     <div className="space-y-4">
       {/* 标题栏 */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-white/40 text-xs">
-            {total > 0 && (
-              <span>
-                {total} {t('repoDetail.totalRuns')}
-              </span>
-            )}
-          </div>
+        <div className="flex items-center gap-2 text-white/40 text-xs">
+          {repos.length > 0 && (
+            <span>
+              {repos.length} {t('home.repositories')}
+            </span>
+          )}
         </div>
         <Button
           variant="ghost"
           size="sm"
           icon={<RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />}
-          onClick={handleRefresh}
+          onClick={() => fetchRepos(true)}
           className="text-white/50 hover:text-white"
         >
           {t('dashboard.refresh')}
         </Button>
-      </div>
-
-      {/* 搜索和过滤 */}
-      <div className="flex flex-wrap items-center gap-3">
-        {/* 仓库搜索 */}
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
-          <input
-            type="text"
-            value={searchRepo}
-            onChange={(e) => setSearchRepo(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            placeholder="owner/repo"
-            className="w-full h-9 pl-9 pr-4 rounded-lg bg-white/5 border border-white/10 text-white text-sm placeholder:text-white/30 outline-none focus:border-purple-500/50 transition-colors"
-          />
-          {searchRepo && (
-            <button
-              onClick={() => {
-                setSearchRepo('');
-              }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
-
-        {/* 状态过滤 */}
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          className="h-9 px-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm outline-none focus:border-purple-500/50 transition-colors appearance-none cursor-pointer"
-        >
-          <option value="" className="bg-slate-800">
-            {t('githubTest.envVars')} / Status
-          </option>
-          <option value="success" className="bg-slate-800">
-            ✓ Success
-          </option>
-          <option value="failure" className="bg-slate-800">
-            ✗ Failure
-          </option>
-          <option value="running" className="bg-slate-800">
-            ⟳ Running
-          </option>
-          <option value="pending" className="bg-slate-800">
-            ⏳ Pending
-          </option>
-          <option value="cancelled" className="bg-slate-800">
-            — Cancelled
-          </option>
-        </select>
-
-        {/* 事件过滤 */}
-        <select
-          value={filterEvent}
-          onChange={(e) => setFilterEvent(e.target.value)}
-          className="h-9 px-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm outline-none focus:border-purple-500/50 transition-colors appearance-none cursor-pointer"
-        >
-          <option value="" className="bg-slate-800">
-            Event / {t('home.repositories')}
-          </option>
-          <option value="pull_request" className="bg-slate-800">
-            PR
-          </option>
-          <option value="push" className="bg-slate-800">
-            Push
-          </option>
-          <option value="workflow_job" className="bg-slate-800">
-            Workflow Job
-          </option>
-        </select>
       </div>
 
       {/* 加载中 */}
@@ -230,7 +113,7 @@ export default function WorkflowLogsPage() {
       )}
 
       {/* 空状态 */}
-      {!loading && runs.length === 0 && (
+      {!loading && repos.length === 0 && (
         <ProCard
           className="bg-white/5 backdrop-blur-xl border-white/10 border-dashed"
           padding="p-8"
@@ -242,86 +125,74 @@ export default function WorkflowLogsPage() {
         </ProCard>
       )}
 
-      {/* 运行列表 */}
-      {!loading && runs.length > 0 && (
+      {/* 仓库列表 */}
+      {!loading && repos.length > 0 && (
         <div className="space-y-2">
-          {runs.map((run) => {
-            const cfg = STATUS_CONFIG[run.status] || STATUS_CONFIG.pending;
+          {repos.map((repo) => {
+            const cfg = STATUS_CONFIG[repo.latest.status] || STATUS_CONFIG.pending;
             const StatusIcon = cfg.icon;
-            const eventLabel = EVENT_LABELS[run.event] || run.event;
+            const eventLabel = EVENT_LABELS[repo.latest.event] || repo.latest.event;
+            const repoName = repo.repoFullName.split('/').pop() || repo.repoFullName;
+            const owner = repo.repoFullName.split('/').slice(0, -1).join('/');
 
             return (
-              <ProCard
-                key={run.id}
-                className="bg-white/5 backdrop-blur-xl border-white/10 hover:border-white/20 transition-all"
-                padding="p-4"
+              <button
+                key={repo.repoFullName}
+                onClick={() => handleViewDetail(repo.repoFullName)}
+                className="w-full text-left"
               >
-                <div className="flex items-center gap-3">
-                  {/* 状态图标 */}
-                  <div
-                    className={`h-8 w-8 rounded-lg ${cfg.bg} flex items-center justify-center shrink-0`}
-                  >
-                    <StatusIcon
-                      className={`h-4 w-4 ${cfg.color} ${run.status === 'running' ? 'animate-spin' : ''}`}
-                    />
-                  </div>
-
-                  {/* 主信息 */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {/* 事件类型 */}
-                      <span className="inline-flex items-center rounded-md bg-purple-500/10 px-2 py-0.5 text-[10px] font-medium text-purple-400">
-                        {eventLabel}
-                      </span>
-                      {/* 分支 */}
-                      {run.branch && (
-                        <span className="inline-flex items-center gap-1 text-xs text-white/50">
-                          <GitBranch className="h-3 w-3" />
-                          {run.branch}
-                        </span>
-                      )}
-                      {/* PR 编号 */}
-                      {run.prNumber && (
-                        <a
-                          href={`#/pr-${run.prNumber}`}
-                          className="inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300"
-                        >
-                          PR #{run.prNumber}
-                        </a>
-                      )}
-                      {/* Action */}
-                      {run.action && (
-                        <span className="text-[10px] text-white/30">{run.action}</span>
-                      )}
+                <ProCard
+                  className="bg-white/5 backdrop-blur-xl border-white/10 hover:border-purple-500/30 hover:bg-white/[0.07] transition-all cursor-pointer group"
+                  padding="p-4"
+                >
+                  <div className="flex items-center gap-4">
+                    {/* 仓库图标 */}
+                    <div className="h-10 w-10 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0">
+                      <FolderGit2 className="h-5 w-5 text-purple-400" />
                     </div>
-                    <div className="flex items-center gap-3 mt-1 flex-wrap">
-                      {/* Commit SHA */}
-                      {run.commitSha && (
-                        <span className="inline-flex items-center gap-1 text-xs text-white/40 font-mono">
-                          <GitCommitHorizontal className="h-3 w-3" />
-                          {shaShort(run.commitSha)}
+
+                    {/* 仓库信息 */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-white font-medium text-sm truncate">{repoName}</span>
+                        <span className="text-white/30 text-xs truncate">{owner}</span>
+                      </div>
+                      <div className="flex items-center gap-3 mt-1">
+                        <span className="text-white/40 text-xs">
+                          {repo.totalRuns} {t('repoDetail.totalRuns')}
                         </span>
-                      )}
-                      {/* 触发者 */}
-                      {run.triggeredBy && (
-                        <span className="text-xs text-white/40">@{run.triggeredBy}</span>
-                      )}
-                      {/* 耗时 */}
-                      {run.duration != null && (
-                        <span className="text-xs text-white/30">
-                          {formatDuration(run.duration)}
+                        {repo.latest.branch && (
+                          <span className="inline-flex items-center gap-1 text-xs text-white/40">
+                            <GitBranch className="h-3 w-3" />
+                            {repo.latest.branch}
+                          </span>
+                        )}
+                        <span className="inline-flex items-center rounded-md bg-purple-500/10 px-1.5 py-0.5 text-[10px] font-medium text-purple-400">
+                          {eventLabel}
                         </span>
-                      )}
+                      </div>
+                    </div>
+
+                    {/* 右侧：最新状态 + 箭头 */}
+                    <div className="flex items-center gap-3 shrink-0">
+                      <div className="text-right">
+                        <div className="flex items-center gap-1.5">
+                          <StatusIcon
+                            className={`h-3.5 w-3.5 ${cfg.color} ${repo.latest.status === 'running' ? 'animate-spin' : ''}`}
+                          />
+                          <span className={`text-xs font-medium ${cfg.color}`}>
+                            {repo.latest.status}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-white/30 block mt-0.5">
+                          {timeAgo(repo.latest.createdAt)}
+                        </span>
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-white/20 group-hover:text-purple-400 transition-colors" />
                     </div>
                   </div>
-
-                  {/* 右侧信息 */}
-                  <div className="text-right shrink-0">
-                    <span className="text-xs text-white/30 block">{timeAgo(run.createdAt)}</span>
-                    <span className={`text-[10px] font-medium ${cfg.color}`}>{run.status}</span>
-                  </div>
-                </div>
-              </ProCard>
+                </ProCard>
+              </button>
             );
           })}
         </div>

@@ -84,7 +84,18 @@ describe('/api/ci/runs API', () => {
       expect(JSON.parse(res._getData())).toEqual({ error: 'Invalid token' });
     });
 
-    it('缺少 repo 参数时应返回 400', async () => {
+    it('缺少 repo 参数时应返回仓库列表', async () => {
+      mockPrisma.ciRun.findMany.mockResolvedValue([
+        {
+          repoFullName: 'owner/repo',
+          status: 'success',
+          createdAt: new Date(),
+          event: 'push',
+          branch: 'main',
+        },
+      ]);
+      mockPrisma.ciRun.count.mockResolvedValue(10);
+
       const token = jwt.sign({ githubId: 12345 }, process.env.JWT_SECRET!);
       const { req, res } = mockReqRes('GET', {
         cookies: { auth_token: token },
@@ -92,8 +103,10 @@ describe('/api/ci/runs API', () => {
 
       await handler(req, res);
 
-      expect(res._getStatusCode()).toBe(400);
-      expect(JSON.parse(res._getData())).toEqual({ error: 'Missing repo parameter' });
+      expect(res._getStatusCode()).toBe(200);
+      const data = JSON.parse(res._getData());
+      expect(data.repos).toBeDefined();
+      expect(Array.isArray(data.repos)).toBe(true);
     });
 
     it('应该正确查询仓库运行日志', async () => {

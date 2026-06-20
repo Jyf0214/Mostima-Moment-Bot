@@ -13,8 +13,9 @@ const db = prisma as unknown as {
 
 /**
  * CI 运行日志
- * GET  /api/ci/runs?repo=owner/repo&limit=50  — 查询仓库运行日志
- * POST /api/ci/runs                           — 记录新的运行（内部调用）
+ * GET  /api/ci/runs                    — 查询所有仓库摘要（仓库列表页）
+ * GET  /api/ci/runs?repo=owner/repo    — 查询指定仓库运行日志（详情页）
+ * POST /api/ci/runs                    — 记录新的运行（内部调用）
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
@@ -40,8 +41,10 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
   }
 
   const repo = String(req.query.repo || '');
+
+  // 没有 repo 参数时，返回所有仓库摘要
   if (!repo) {
-    return res.status(400).json({ error: 'Missing repo parameter' });
+    return handleGetRepos(req, res);
   }
 
   const limit = Math.min(Number(req.query.limit) || 50, 200);
@@ -70,7 +73,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
           completedAt: true,
           duration: true,
           createdAt: true,
-          logs: false, // 列表不返回完整日志，节省带宽
+          logs: false,
         },
       }),
       db.ciRun.count({ where: { repoFullName: repo } }),
@@ -80,6 +83,82 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
   } catch (error) {
     return res.status(500).json({
       error: `Failed to query CI runs: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    });
+  }
+}
+
+/**
+ * 返回所有有运行记录的仓库摘要
+ * 每个仓库包含：名称、总运行数、最近一次运行状态/时间
+ */
+async function handleGetRepos(req: NextApiRequest, res: NextApiResponse) {
+  try {
+    // 获取最近 500 条运行记录，按仓库分组统计
+    const recentRuns = (await db.ciRun.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 500,
+      select: {
+        repoFullName: true,
+        status: true,
+        createdAt: true,
+        event: true,
+        branch: true,
+      },
+    })) as Array<{
+      repoFullName: string;
+      status: string;
+      createdAt: Date;
+      event: string;
+      branch: string | null;
+    }>;
+
+    // 按仓库分组，取每个仓库的统计和最新运行
+    const repoMap = new Map<
+      string,
+      {
+        total: number;
+        latest: { status: string; createdAt: string; event: string; branch: string | null };
+      }
+    >();
+
+    for (const run of recentRuns) {
+      const existing = repoMap.get(run.repoFullName);
+      if (existing) {
+        existing.total++;
+      } else {
+        repoMap.set(run.repoFullName, {
+          total: 1,
+          latest: {
+            status: run.status,
+            createdAt: String(run.createdAt),
+            event: run.event,
+            branch: run.branch,
+          },
+        });
+      }
+    }
+
+    // 也统计每个仓库的总数（包括不在最近 500 条中的）
+    const repoNames = Array.from(repoMap.keys());
+    const countResults = await Promise.all(
+      repoNames.map((name) => db.ciRun.count({ where: { repoFullName: name } }))
+    );
+
+    const repos = repoNames.map((name, i) => ({
+      repoFullName: name,
+      totalRuns: countResults[i],
+      latest: repoMap.get(name)!.latest,
+    }));
+
+    // 按最新运行时间排序
+    repos.sort(
+      (a, b) => new Date(b.latest.createdAt).getTime() - new Date(a.latest.createdAt).getTime()
+    );
+
+    return res.status(200).json({ repos, total: repos.length });
+  } catch (error) {
+    return res.status(500).json({
+      error: `Failed to query repos: ${error instanceof Error ? error.message : 'Unknown error'}`,
     });
   }
 }
