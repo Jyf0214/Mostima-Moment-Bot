@@ -19,7 +19,8 @@ model Admin {
   createdAt   DateTime @default(now()) @map("created_at")
   lastLogin   DateTime @default(now()) @map("last_login")
 
-  builds Build[]
+  builds       Build[]
+  installations GitHubInstallation[]
 
   @@map("admins")
 }
@@ -36,7 +37,7 @@ model AppConfig {
   @@map("app_config")
 }
 
-// Webhook 配置表
+// Webhook 配置表（deprecated，使用 GitHubInstallation 替代）
 model WebhookConfig {
   id                    Int      @id @default(autoincrement())
   appId                 String   @map("app_id")
@@ -85,4 +86,22 @@ model BuildStep {
   build Build @relation(fields: [buildId], references: [id])
 
   @@map("build_steps")
+}
+
+// GitHub App 安装记录表
+model GitHubInstallation {
+  id             Int      @id @default(autoincrement())
+  installationId Int      @unique @map("installation_id")
+  accountLogin   String   @map("account_login")
+  accountType    String   @map("account_type")
+  accountId      Int      @map("account_id")
+  avatarUrl      String?  @map("avatar_url")
+  adminId        Int      @map("admin_id")
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  admin Admin @relation(fields: [adminId], references: [id])
+
+  @@map("github_installations")
 }

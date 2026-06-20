@@ -50,7 +50,22 @@
     "techDocker": "Containerized deploy + GHCR",
     "techHmac": "Webhook signature verification",
     "techJwt": "HttpOnly Cookie auth",
-    "techTypescript": "Strict type checking"
+    "techTypescript": "Strict type checking",
+    "installApp": "Install GitHub App",
+    "installAppDesc": "Install Manticore Bot on your GitHub account or organization to authorize repository access",
+    "installAppButton": "Go to GitHub",
+    "installSuccess": "GitHub App installed successfully",
+    "installError": "Installation failed, please try again",
+    "repositories": "Authorized Repositories",
+    "personalRepos": "Personal Repositories",
+    "orgRepos": "Organization Repositories",
+    "noRepos": "No authorized repositories",
+    "noInstallations": "GitHub App not installed yet",
+    "noInstallationsDesc": "Install the GitHub App to manage CI/CD automation for your repositories",
+    "repoPrivate": "Private",
+    "repoPublic": "Public",
+    "appNotConfigured": "GitHub App not configured",
+    "appNotConfiguredDesc": "Please ask the admin to configure GITHUB_APP_ID and GITHUB_APP_SLUG environment variables"
   },
   "setup": {
     "title": "Initial Setup",
@@ -100,6 +115,11 @@
     "configSavedDesc": "You can now login with GitHub to access the dashboard",
     "repoInfo": "Repository Info",
     "appInfo": "App Info"
+  },
+  "dashboard": {
+    "refresh": "Refresh",
+    "totalRepos": "Total Repos",
+    "activeInstallations": "Active Installations"
   },
   "envError": {
     "title": "Environment Variables Missing",

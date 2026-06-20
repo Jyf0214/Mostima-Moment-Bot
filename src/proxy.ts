@@ -20,6 +20,7 @@ const publicPaths = [
   '/api/auth/status',
   '/api/webhook/github',
   '/api/health',
+  '/api/github/callback',
   '/env-error',
   '/api/env-check',
   '/_next',

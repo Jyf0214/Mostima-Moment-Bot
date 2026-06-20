@@ -50,7 +50,22 @@
     "techDocker": "容器化部署 + GHCR",
     "techHmac": "Webhook 签名验证",
     "techJwt": "HttpOnly Cookie 认证",
-    "techTypescript": "严格类型检查"
+    "techTypescript": "严格类型检查",
+    "installApp": "安装 GitHub App",
+    "installAppDesc": "将 Manticore Bot 安装到你的 GitHub 账户或组织，授权仓库访问权限",
+    "installAppButton": "前往 GitHub 安装",
+    "installSuccess": "GitHub App 安装成功",
+    "installError": "安装失败，请重试",
+    "repositories": "授权仓库",
+    "personalRepos": "个人仓库",
+    "orgRepos": "组织仓库",
+    "noRepos": "暂无授权仓库",
+    "noInstallations": "尚未安装 GitHub App",
+    "noInstallationsDesc": "安装 GitHub App 后，可以管理你的仓库 CI/CD 自动化",
+    "repoPrivate": "私有",
+    "repoPublic": "公开",
+    "appNotConfigured": "GitHub App 未配置",
+    "appNotConfiguredDesc": "请联系管理员配置 GITHUB_APP_ID 和 GITHUB_APP_SLUG 环境变量"
   },
   "setup": {
     "title": "初始设置",
@@ -100,6 +115,11 @@
     "configSavedDesc": "你现在可以使用 GitHub 登录以访问仪表盘",
     "repoInfo": "仓库信息",
     "appInfo": "应用信息"
+  },
+  "dashboard": {
+    "refresh": "刷新",
+    "totalRepos": "仓库总数",
+    "activeInstallations": "活跃安装"
   },
   "envError": {
     "title": "环境变量配置缺失",
