@@ -154,7 +154,8 @@
     "resetSuccess": "已恢复默认配置",
     "runLogs": "运行日志",
     "totalRuns": "次运行",
-    "noRuns": "暂无运行记录"
+    "noRuns": "暂无运行记录",
+    "viewLogs": "查看详情"
   },
   "envPage": {
     "title": "环境变量配置",

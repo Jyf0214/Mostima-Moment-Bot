@@ -154,7 +154,8 @@
     "resetSuccess": "Reset to defaults",
     "runLogs": "Run Logs",
     "totalRuns": "runs",
-    "noRuns": "No run logs yet"
+    "noRuns": "No run logs yet",
+    "viewLogs": "View Details"
   },
   "envPage": {
     "title": "Environment Variables",

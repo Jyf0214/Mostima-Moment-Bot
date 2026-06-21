@@ -110,58 +110,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     switch (event) {
       case 'pull_request': {
         const prPayload = payload as unknown as PREventPayload;
-        const repo = String(
-          (payload as Record<string, unknown>).repository
-            ? ((payload as Record<string, unknown>).repository as Record<string, unknown>)
-                .full_name || ''
-            : ''
-        );
-        const prActor = String(
-          (payload as Record<string, unknown>).sender
-            ? ((payload as Record<string, unknown>).sender as Record<string, unknown>).login || ''
-            : ''
-        );
-
-        // 记录运行日志
-        const prRunId = await recordCiRun({
-          repo,
-          event: 'pull_request',
-          action: prPayload.action,
-          branch:
-            ((prPayload.pull_request.head as unknown as Record<string, unknown>).ref as string) ||
-            '',
-          commitSha: prPayload.pull_request.head.sha,
-          prNumber: prPayload.pull_request.number,
-          status: 'running',
-          triggeredBy: prActor,
-        });
 
         // fire-and-forget：不阻塞 webhook 响应
-        handlePullRequest(prPayload as unknown as PRPayload)
-          .then(() => {
-            if (prRunId) {
-              updateCiRun(prRunId, { status: 'success', conclusion: 'success' });
-            }
-          })
-          .catch((err) => {
-            console.error(
-              `[Webhook] CI pipeline failed for PR #${prPayload.pull_request.number}:`,
-              err
-            );
-            if (prRunId) {
-              updateCiRun(prRunId, {
-                status: 'failure',
-                conclusion: 'failure',
-                logs: err instanceof Error ? err.message : String(err),
-              });
-            }
-          });
+        handlePullRequest(prPayload as unknown as PRPayload).catch((err) => {
+          console.error(
+            `[Webhook] CI pipeline failed for PR #${prPayload.pull_request.number}:`,
+            err
+          );
+        });
 
         // PR 安全审计（bot 自身的工作流）
         if (prPayload.action === 'opened' || prPayload.action === 'synchronize') {
           const prNumber = prPayload.pull_request.number;
           const baseBranch = prPayload.pull_request.base.ref;
           const headSha = prPayload.pull_request.head.sha;
+          const repo = String(
+            (payload as Record<string, unknown>).repository
+              ? ((payload as Record<string, unknown>).repository as Record<string, unknown>)
+                  .full_name || ''
+              : ''
+          );
 
           const auditRunId = await recordCiRun({
             repo,
@@ -253,51 +221,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       case 'push': {
         const pushPayload = payload as unknown as PushPayload;
         const commitMsg = pushPayload.head_commit?.message?.slice(0, 80) || 'no message';
-        const repoObj = (payload as Record<string, unknown>).repository as
-          | Record<string, unknown>
-          | undefined;
-        const pushRepo = String(repoObj?.full_name || '');
         const pushBranch = String(pushPayload.ref || '').replace('refs/heads/', '');
         console.log(
           `[Webhook] Push to ${pushPayload.ref}: ${pushPayload.head_commit?.id?.slice(0, 7) || 'unknown'} — ${commitMsg}`
         );
-
-        // 记录 push 事件日志
-        recordCiRun({
-          repo: pushRepo,
-          event: 'push',
-          branch: pushBranch,
-          commitSha: pushPayload.head_commit?.id,
-          status: 'success',
-          conclusion: 'success',
-          triggeredBy: String(pushPayload.pusher?.name || ''),
-          logs: commitMsg,
-        }).catch(() => {});
+        // 不记录 push 事件到 CiRun（禁止存储 GitHub Actions 记录）
         break;
       }
 
       case 'workflow_job': {
         const jobPayload = payload as unknown as WorkflowJobPayload;
         const job = jobPayload.workflow_job;
-        const jobRepoObj = (payload as Record<string, unknown>).repository as
-          | Record<string, unknown>
-          | undefined;
-        const jobRepo = String(jobRepoObj?.full_name || '');
         console.log(
           `[Webhook] Workflow job ${jobPayload.action}: ${job.name} — status=${job.status}, conclusion=${job.conclusion || 'pending'}`
         );
-
-        // 记录 workflow job 日志
-        if (job.conclusion && job.conclusion !== 'pending' && job.conclusion !== 'in_progress') {
-          recordCiRun({
-            repo: jobRepo,
-            event: 'workflow_job',
-            action: jobPayload.action,
-            status: job.conclusion === 'success' ? 'success' : 'failure',
-            conclusion: job.conclusion,
-            logs: `Job: ${job.name} — ${job.conclusion}`,
-          }).catch(() => {});
-        }
+        // 不记录 workflow_job 事件到 CiRun（禁止存储 GitHub Actions 记录）
         break;
       }
 

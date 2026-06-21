@@ -81,8 +81,8 @@ describe('Webhook 事件日志记录', () => {
     mockUpdateCiRun.mockResolvedValue(undefined);
   });
 
-  describe('push 事件日志', () => {
-    it('应该为 push 事件创建运行日志', async () => {
+  describe('push 事件', () => {
+    it('push 事件不应创建 CiRun 记录（禁止存储 GitHub Actions 记录）', async () => {
       const pushPayload = {
         ref: 'refs/heads/main',
         head_commit: { id: 'abc123def456', message: 'feat: new feature' },
@@ -96,19 +96,10 @@ describe('Webhook 事件日志记录', () => {
       await handler(req, res);
 
       expect(res._getStatusCode()).toBe(200);
-      expect(mockRecordCiRun).toHaveBeenCalledTimes(1);
-
-      const callArgs = mockRecordCiRun.mock.calls[0][0];
-      expect(callArgs.repo).toBe('owner/repo');
-      expect(callArgs.event).toBe('push');
-      expect(callArgs.branch).toBe('main');
-      expect(callArgs.commitSha).toBe('abc123def456');
-      expect(callArgs.status).toBe('success');
-      expect(callArgs.triggeredBy).toBe('testuser');
-      expect(callArgs.logs).toBe('feat: new feature');
+      expect(mockRecordCiRun).not.toHaveBeenCalled();
     });
 
-    it('push 事件 head_commit 为 null 时应安全处理', async () => {
+    it('push 事件应安全处理', async () => {
       const pushPayload = {
         ref: 'refs/heads/feature',
         head_commit: null,
@@ -122,32 +113,12 @@ describe('Webhook 事件日志记录', () => {
       await handler(req, res);
 
       expect(res._getStatusCode()).toBe(200);
-      const callArgs = mockRecordCiRun.mock.calls[0][0];
-      expect(callArgs.branch).toBe('feature');
-      expect(callArgs.commitSha).toBeUndefined();
-      expect(callArgs.logs).toBe('no message');
-    });
-
-    it('push 事件应去除 refs/heads/ 前缀', async () => {
-      const pushPayload = {
-        ref: 'refs/heads/develop',
-        head_commit: { id: 'abc123', message: 'update' },
-        pusher: { name: 'user' },
-        repository: { full_name: 'owner/repo' },
-      };
-
-      const req = createWebhookRequest('push', pushPayload);
-      const res = createMockResponse();
-
-      await handler(req, res);
-
-      const callArgs = mockRecordCiRun.mock.calls[0][0];
-      expect(callArgs.branch).toBe('develop');
+      expect(mockRecordCiRun).not.toHaveBeenCalled();
     });
   });
 
-  describe('workflow_job 事件日志', () => {
-    it('应该为已完成的 workflow_job 创建运行日志', async () => {
+  describe('workflow_job 事件', () => {
+    it('workflow_job 事件不应创建 CiRun 记录（禁止存储 GitHub Actions 记录）', async () => {
       const jobPayload = {
         action: 'completed',
         workflow_job: {
@@ -165,18 +136,10 @@ describe('Webhook 事件日志记录', () => {
       await handler(req, res);
 
       expect(res._getStatusCode()).toBe(200);
-      expect(mockRecordCiRun).toHaveBeenCalledTimes(1);
-
-      const callArgs = mockRecordCiRun.mock.calls[0][0];
-      expect(callArgs.repo).toBe('owner/repo');
-      expect(callArgs.event).toBe('workflow_job');
-      expect(callArgs.action).toBe('completed');
-      expect(callArgs.status).toBe('success');
-      expect(callArgs.conclusion).toBe('success');
-      expect(callArgs.logs).toContain('ci-build');
+      expect(mockRecordCiRun).not.toHaveBeenCalled();
     });
 
-    it('失败的 workflow_job 应记录 failure 状态', async () => {
+    it('失败的 workflow_job 也不应创建日志', async () => {
       const jobPayload = {
         action: 'completed',
         workflow_job: {
@@ -193,55 +156,12 @@ describe('Webhook 事件日志记录', () => {
 
       await handler(req, res);
 
-      const callArgs = mockRecordCiRun.mock.calls[0][0];
-      expect(callArgs.status).toBe('failure');
-      expect(callArgs.conclusion).toBe('failure');
-    });
-
-    it('in_progress 状态的 workflow_job 不应创建日志', async () => {
-      const jobPayload = {
-        action: 'in_progress',
-        workflow_job: {
-          id: 789,
-          name: 'deploy',
-          status: 'in_progress',
-          conclusion: null,
-        },
-        repository: { full_name: 'owner/repo' },
-      };
-
-      const req = createWebhookRequest('workflow_job', jobPayload);
-      const res = createMockResponse();
-
-      await handler(req, res);
-
-      expect(res._getStatusCode()).toBe(200);
-      expect(mockRecordCiRun).not.toHaveBeenCalled();
-    });
-
-    it('pending 状态的 workflow_job 不应创建日志', async () => {
-      const jobPayload = {
-        action: 'queued',
-        workflow_job: {
-          id: 101,
-          name: 'lint',
-          status: 'pending',
-          conclusion: null,
-        },
-        repository: { full_name: 'owner/repo' },
-      };
-
-      const req = createWebhookRequest('workflow_job', jobPayload);
-      const res = createMockResponse();
-
-      await handler(req, res);
-
       expect(mockRecordCiRun).not.toHaveBeenCalled();
     });
   });
 
   describe('PR 事件日志', () => {
-    it('PR 事件应创建 running 状态日志', async () => {
+    it('PR 事件应只创建安全审计日志（bot 触发）', async () => {
       const prPayload = {
         action: 'opened',
         pull_request: {
@@ -259,23 +179,10 @@ describe('Webhook 事件日志记录', () => {
       await handler(req, res);
 
       expect(res._getStatusCode()).toBe(200);
-      // PR opened 事件会记录 2 条：CI 检查 + 安全审计
-      expect(mockRecordCiRun).toHaveBeenCalledTimes(2);
+      // PR opened 事件只记录 1 条：安全审计（bot 触发）
+      expect(mockRecordCiRun).toHaveBeenCalledTimes(1);
 
-      // 第一条：PR CI 检查（用户触发）
-      const ciCallArgs = mockRecordCiRun.mock.calls[0][0];
-      expect(ciCallArgs.repo).toBe('owner/repo');
-      expect(ciCallArgs.event).toBe('pull_request');
-      expect(ciCallArgs.action).toBe('opened');
-      expect(ciCallArgs.branch).toBe('feature/test');
-      expect(ciCallArgs.commitSha).toBe('abc123');
-      expect(ciCallArgs.prNumber).toBe(42);
-      expect(ciCallArgs.status).toBe('running');
-      expect(ciCallArgs.triggeredBy).toBe('testuser');
-      expect(ciCallArgs.isBotInitiated).toBeFalsy();
-
-      // 第二条：安全审计（bot 触发）
-      const auditCallArgs = mockRecordCiRun.mock.calls[1][0];
+      const auditCallArgs = mockRecordCiRun.mock.calls[0][0];
       expect(auditCallArgs.repo).toBe('owner/repo');
       expect(auditCallArgs.event).toBe('security_audit');
       expect(auditCallArgs.isBotInitiated).toBe(true);
