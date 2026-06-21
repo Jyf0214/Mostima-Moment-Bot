@@ -1,11 +1,12 @@
 name: HF Spaces 同步
 
 on:
-  workflow_call:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 jobs:
-  sync-to-hf:
+  sync:
     runs-on: ubuntu-latest
     permissions:
       contents: write
