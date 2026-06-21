@@ -78,6 +78,17 @@ export default function DashboardPage() {
     checkAuth();
   }, []);
 
+  // 挂载时读取 logsRepo 参数（不依赖 auth）
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const logsRepoParam = params.get('logsRepo');
+    if (logsRepoParam) {
+      setLogsRepo(logsRepoParam);
+      setActivePage('logs');
+      window.history.replaceState({}, '', '/dashboard');
+    }
+  }, []);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const install = params.get('install');
@@ -89,14 +100,6 @@ export default function DashboardPage() {
       setInstallMsgType('error');
     }
     if (install) {
-      window.history.replaceState({}, '', '/dashboard');
-    }
-
-    // 从重定向参数中读取 logsRepo，自动打开日志详情
-    const logsRepoParam = params.get('logsRepo');
-    if (logsRepoParam) {
-      setLogsRepo(logsRepoParam);
-      setActivePage('logs');
       window.history.replaceState({}, '', '/dashboard');
     }
   }, [user]);
