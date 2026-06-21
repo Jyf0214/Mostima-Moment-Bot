@@ -97,17 +97,17 @@ extracted_at: '2026-06-20T22:28:39.213Z'
 
 **修复**：getPrivateKey() 添加 AppConfig 读取优先级
 
-### 案例 5：WEBHOOK_SECRET not configured
+### 案例 5：ENCRYPTION_KEY not configured
 
-**日志**：`WEBHOOK_SECRET not configured`
+**日志**：`ENCRYPTION_KEY not configured`
 
 **排查链**：
 
 1. 用户只有一个 ENCRYPTION_KEY
-2. 代码只读取 WEBHOOK_SECRET
+2. 代码只读取 ENCRYPTION_KEY
 3. 用户说明两者等价
 
-**修复**：`process.env.WEBHOOK_SECRET || process.env.ENCRYPTION_KEY` 回退
+**修复**：`process.env.ENCRYPTION_KEY || process.env.ENCRYPTION_KEY` 回退
 
 ## 反模式（避免）
 

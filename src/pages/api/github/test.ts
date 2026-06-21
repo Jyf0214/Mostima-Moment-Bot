@@ -40,7 +40,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     { key: 'GITHUB_APP_ID', required: true },
     { key: 'GITHUB_APP_SLUG', required: true },
     { key: 'GITHUB_PRIVATE_KEY_PATH', required: true },
-    { key: 'WEBHOOK_SECRET', required: true },
     { key: 'GITHUB_CLIENT_ID', required: true },
     { key: 'GITHUB_CLIENT_SECRET', required: true },
     { key: 'APP_URL', required: true },
@@ -292,17 +291,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   }
 
-  // ── 8. Webhook 配置检查 ──
-  const webhookSecret = process.env.WEBHOOK_SECRET;
-  if (webhookSecret) {
+  // ── 8. ENCRYPTION_KEY 强度检查 ──
+  const encryptionKey = process.env.ENCRYPTION_KEY;
+  if (encryptionKey) {
     const strength =
-      webhookSecret.length >= 32 ? 'strong' : webhookSecret.length >= 16 ? 'medium' : 'weak';
+      encryptionKey.length >= 32 ? 'strong' : encryptionKey.length >= 16 ? 'medium' : 'weak';
     results.push({
       name: t('githubTest.webhookSecretLabel'),
       status: strength === 'weak' ? 'warn' : 'pass',
       message: t('githubTest.webhookSecretPass', {
         strength,
-        length: String(webhookSecret.length),
+        length: String(encryptionKey.length),
       }),
       detail: strength === 'weak' ? t('githubTest.webhookSecretWeak') : undefined,
     });

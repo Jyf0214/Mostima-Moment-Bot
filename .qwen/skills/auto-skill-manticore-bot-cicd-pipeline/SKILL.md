@@ -206,10 +206,10 @@ DATABASE_URL=postgresql://user:pass@localhost:5432/manticore
 # Optional
 PORT=3001
 GITHUB_APP_ID=your_app_id
-GITHUB_WEBHOOK_SECRET=your_webhook_secret
+ENCRYPTION_KEY=your_webhook_secret
 REPO_OWNER=your_username
 REPO_NAME=your_repo
-WEBHOOK_SECRET=your_webhook_secret
+ENCRYPTION_KEY=your_webhook_secret
 PUBLIC_URL=https://your-domain.com
 COLLABORATORS=user1,user2
 ```

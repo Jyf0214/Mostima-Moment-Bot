@@ -132,14 +132,14 @@ cp .env.example .env.local
 # GitHub App 配置
 GITHUB_APP_ID=123456                    # 替换为你的 App ID
 GITHUB_PRIVATE_KEY_PATH=./private-key.pem
-GITHUB_WEBHOOK_SECRET=my_secret_key_12345  # 替换为你的 Webhook secret
+ENCRYPTION_KEY=my_secret_key_12345  # 替换为你的 Webhook secret
 
 # 仓库配置
 REPO_OWNER=your-username                # 替换为你的 GitHub 用户名
 REPO_NAME=Mostima-Moment-Bot            # 替换为你的仓库名
 
 # Webhook 密钥（用于签名验证）
-WEBHOOK_SECRET=my_secret_key_12345      # 与 GITHUB_WEBHOOK_SECRET 一致
+ENCRYPTION_KEY=my_secret_key_12345      # 与 ENCRYPTION_KEY 一致
 
 # 服务器配置
 BOT_PORT=3001
@@ -531,7 +531,7 @@ kill -9 <PID>
 
 ```bash
 echo $GITHUB_APP_ID
-echo $WEBHOOK_SECRET
+echo $ENCRYPTION_KEY
 # 如果为空，重新加载环境变量
 source .env.local
 ```

@@ -252,13 +252,13 @@ export function clearCookie(name: string, options?: {...}): string {
 
 **根因**：`src/pages/api/webhook/github.ts` 使用 `process.env.ENCRYPTION_KEY` 验证 HMAC-SHA256 签名，但 GitHub App 配置的是独立的 Webhook Secret。
 
-**修复**：优先使用 `WEBHOOK_SECRET`，未配置时回退到 `ENCRYPTION_KEY`（兼容只配置了一个密钥的部署环境）：
+**修复**：优先使用 `ENCRYPTION_KEY`，未配置时回退到 `ENCRYPTION_KEY`（兼容只配置了一个密钥的部署环境）：
 
 ```typescript
-const secret = process.env.WEBHOOK_SECRET || process.env.ENCRYPTION_KEY;
+const secret = process.env.ENCRYPTION_KEY || process.env.ENCRYPTION_KEY;
 ```
 
-`.env.example` 必须包含 `WEBHOOK_SECRET` 变量说明。
+`.env.example` 必须包含 `ENCRYPTION_KEY` 变量说明。
 
 ### Bug 4: Webhook 缺少 `installation` 事件处理（P0）
 
@@ -396,12 +396,12 @@ export function setCookie(name: string, value: string, options = {}) {
 
 ### 修复 2：Webhook 签名回退
 
-**问题**：部署环境可能只配置了 `ENCRYPTION_KEY` 而没有 `WEBHOOK_SECRET`。
+**问题**：部署环境可能只配置了 `ENCRYPTION_KEY` 而没有 `ENCRYPTION_KEY`。
 
-**修复**：webhook 处理器优先使用 `WEBHOOK_SECRET`，回退到 `ENCRYPTION_KEY`：
+**修复**：webhook 处理器优先使用 `ENCRYPTION_KEY`，回退到 `ENCRYPTION_KEY`：
 
 ```typescript
-const secret = process.env.WEBHOOK_SECRET || process.env.ENCRYPTION_KEY;
+const secret = process.env.ENCRYPTION_KEY || process.env.ENCRYPTION_KEY;
 ```
 
 ### 修复 3：installation 事件处理
@@ -500,9 +500,9 @@ export async function getAppId(): Promise<string> {
 
 ### Webhook 签名验证失败
 
-- 确认使用 `WEBHOOK_SECRET` 而非 `ENCRYPTION_KEY`
-- 确认 `.env` 中的 `WEBHOOK_SECRET` 与 GitHub App 设置中的 Webhook secret 一致
-- **部署环境**：代码会自动回退到 `ENCRYPTION_KEY`（如果 `WEBHOOK_SECRET` 未配置）
+- 确认使用 `ENCRYPTION_KEY` 而非 `ENCRYPTION_KEY`
+- 确认 `.env` 中的 `ENCRYPTION_KEY` 与 GitHub App 设置中的 Webhook secret 一致
+- **部署环境**：代码会自动回退到 `ENCRYPTION_KEY`（如果 `ENCRYPTION_KEY` 未配置）
 - 使用连通性测试页面 `/github-test` 验证配置
 
 ### 仓库列表为空（安装成功后）

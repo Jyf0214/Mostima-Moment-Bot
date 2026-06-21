@@ -67,7 +67,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 **环境变量检查**：
 
 ```typescript
-const envVars = ['GITHUB_APP_ID', 'GITHUB_APP_SLUG', 'GITHUB_PRIVATE_KEY_PATH', 'WEBHOOK_SECRET', ...];
+const envVars = ['GITHUB_APP_ID', 'GITHUB_APP_SLUG', 'GITHUB_PRIVATE_KEY_PATH', 'ENCRYPTION_KEY', ...];
 const missing = envVars.filter((v) => !process.env[v.key]);
 ```
 

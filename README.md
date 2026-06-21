@@ -76,7 +76,7 @@ npm install
 | **Webhook URL**    | `https://your-domain.com/api/webhook/github` |
 | **Webhook secret** | 点击 "Generate a new webhook secret" 生成    |
 
-> ⚠️ **重要**：记住这个 secret，后续需要配置到环境变量 `WEBHOOK_SECRET`。
+> ⚠️ **重要**：记住这个 secret，后续需要配置到环境变量 `ENCRYPTION_KEY`。
 
 ### 2.3 配置权限
 
@@ -167,15 +167,15 @@ GITHUB_PRIVATE_KEY_PATH=./private-key.pem
 # ---- Webhook Secret ----
 # 由你自行设定，同时填入 GitHub App 的 Webhook secret 字段
 # 用下方命令生成，不要使用明文
-GITHUB_WEBHOOK_SECRET=your_webhook_secret
+ENCRYPTION_KEY=your_webhook_secret
 
 # ---- 仓库配置 ----
 REPO_OWNER=your_username
 REPO_NAME=your_repo
 
 # ---- Webhook 签名验证密钥 ----
-# 与 GITHUB_WEBHOOK_SECRET 保持一致
-WEBHOOK_SECRET=your_webhook_secret
+# 与 ENCRYPTION_KEY 保持一致
+ENCRYPTION_KEY=your_webhook_secret
 
 # ---- 服务器配置 ----
 PORT=3001
@@ -195,13 +195,13 @@ openssl rand -hex 32
 # 生成 ENCRYPTION_KEY（32 字节随机十六进制字符串）
 openssl rand -hex 32
 
-# 生成 GITHUB_WEBHOOK_SECRET / WEBHOOK_SECRET（推荐用 base64 格式）
+# 生成 ENCRYPTION_KEY / ENCRYPTION_KEY（推荐用 base64 格式）
 openssl rand -base64 32
 ```
 
 将输出的值复制到 `.env.local` 对应字段中。
 
-> **注意**：`GITHUB_WEBHOOK_SECRET` 和 `WEBHOOK_SECRET` 必须保持一致，且需同时填入 GitHub App 设置中的 Webhook secret 字段。
+> **注意**：`ENCRYPTION_KEY` 和 `ENCRYPTION_KEY` 必须保持一致，且需同时填入 GitHub App 设置中的 Webhook secret 字段。
 
 ---
 
@@ -553,7 +553,7 @@ psql $DATABASE_URL
 **排查步骤**：
 
 1. 检查 GitHub App 的 Webhook URL 是否正确
-2. 检查 Webhook secret 是否与环境变量 `WEBHOOK_SECRET` 一致
+2. 检查 Webhook secret 是否与环境变量 `ENCRYPTION_KEY` 一致
 3. 查看 GitHub App 的 "Recent deliveries" 页面
 4. 检查服务器日志
 

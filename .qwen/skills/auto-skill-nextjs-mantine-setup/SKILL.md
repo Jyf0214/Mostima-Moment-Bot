@@ -167,7 +167,7 @@ NEXT_PUBLIC_APP_URL=https://your-domain.com  # Used for OAuth redirect_uri
 # Optional (CI/CD features)
 PORT=3001
 GITHUB_APP_ID=your_app_id
-GITHUB_WEBHOOK_SECRET=your_webhook_secret
+ENCRYPTION_KEY=your_webhook_secret
 REPO_OWNER=your_username
 REPO_NAME=your_repo
 ```
