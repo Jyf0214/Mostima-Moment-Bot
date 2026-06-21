@@ -1,0 +1,31 @@
+name: HF Spaces 同步
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  sync-to-hf:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 同步到 HF Spaces
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_REPO: ${{ secrets.HF_REPO }}
+        run: |
+          if [ -z "$HF_TOKEN" ] || [ -z "$HF_REPO" ]; then
+            echo "⚠️  HF_TOKEN 或 HF_REPO 未配置，跳过同步"
+            exit 0
+          fi
+
+          git remote add hf "https://oauth2:${HF_TOKEN}@huggingface.co/spaces/${HF_REPO}.git" || true
+          git push hf main --force
+          echo "✅ 已同步到 HF Spaces: ${HF_REPO}"
