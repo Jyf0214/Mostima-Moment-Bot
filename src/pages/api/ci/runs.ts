@@ -81,7 +81,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
           logs: false,
         },
       }),
-      db.ciRun.count({ where: { repoFullName: repo } }),
+      db.ciRun.count({ where }),
     ]);
 
     return res.status(200).json({ runs, total, limit, offset });
