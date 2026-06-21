@@ -381,7 +381,7 @@ export default function RepoDetailPage() {
                     </div>
                   </div>
                   <a
-                    href={`/dashboard?logsRepo=${encodeURIComponent(repoName)}`}
+                    href={`/dashboard/logs/${encodeURIComponent(repoName)}`}
                     className="inline-flex items-center gap-2 rounded-lg bg-cyan-500/10 px-4 py-2 text-sm text-cyan-400 hover:bg-cyan-500/20 transition-colors"
                   >
                     {t('repoDetail.viewLogs')}
