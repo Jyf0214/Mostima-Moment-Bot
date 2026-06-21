@@ -65,8 +65,20 @@ export default function DashboardPage() {
   const { t } = useTranslation();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activePage, setActivePage] = useState<SidebarPage>('overview');
-  const [logsRepo, setLogsRepo] = useState<string | null>(null);
+  const [activePage, setActivePage] = useState<SidebarPage>(() => {
+    // 初始渲染时检查 logsRepo 参数，直接切换到日志页面
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('logsRepo')) return 'logs';
+    }
+    return 'overview';
+  });
+  const [logsRepo, setLogsRepo] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return new URLSearchParams(window.location.search).get('logsRepo');
+    }
+    return null;
+  });
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [repos, setRepos] = useState<ReposData | null>(null);
   const [reposLoading, setReposLoading] = useState(false);
