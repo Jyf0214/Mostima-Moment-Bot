@@ -288,7 +288,12 @@
     "missingLabel": "未配置",
     "configSaved": "配置保存成功",
     "setupFailed": "设置失败",
-    "appInfo": "GitHub App"
+    "appInfo": "GitHub App",
+    "botInfo": "机器人信息",
+    "botSlug": "App Slug",
+    "botAppId": "App ID",
+    "botMention": "Issue 触发命令",
+    "botInstall": "安装链接"
   },
   "api": {
     "methodNotAllowed": "Method not allowed",

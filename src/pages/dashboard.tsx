@@ -591,9 +591,17 @@ function SettingsPage() {
   const [uploading, setUploading] = useState(false);
   const [uploadMsg, setUploadMsg] = useState<string | null>(null);
   const [uploadMsgType, setUploadMsgType] = useState<'success' | 'error'>('success');
+  const [botInfo, setBotInfo] = useState<{
+    slug: string;
+    appId: string;
+    mention: string;
+    fixCommand: string;
+    installUrl: string;
+  } | null>(null);
 
   useEffect(() => {
     checkPrivateKey();
+    fetchBotInfo();
   }, []);
 
   const checkPrivateKey = async () => {
@@ -604,6 +612,17 @@ function SettingsPage() {
       }
     } catch {
       setPrivateKeyStatus({ configured: false, source: 'none' });
+    }
+  };
+
+  const fetchBotInfo = async () => {
+    try {
+      const res = await fetch('/api/bot/info');
+      if (res.ok) {
+        setBotInfo(await res.json());
+      }
+    } catch {
+      // 静默处理
     }
   };
 
@@ -654,6 +673,47 @@ function SettingsPage() {
 
   return (
     <div className="space-y-4">
+      {/* 机器人信息 */}
+      {botInfo && botInfo.slug && (
+        <ProCard className="bg-white/5 backdrop-blur-xl border-white/10" padding="p-5">
+          <div className="flex items-center gap-3 mb-4">
+            <Plug className="h-5 w-5 text-purple-400" />
+            <h3 className="text-white font-medium">{t('settings.botInfo')}</h3>
+          </div>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-white/50 text-sm">{t('settings.botSlug')}</span>
+              <span className="text-white text-sm font-mono">{botInfo.slug}</span>
+            </div>
+            {botInfo.appId && (
+              <div className="flex items-center justify-between">
+                <span className="text-white/50 text-sm">{t('settings.botAppId')}</span>
+                <span className="text-white text-sm font-mono">{botInfo.appId}</span>
+              </div>
+            )}
+            <div className="flex items-center justify-between">
+              <span className="text-white/50 text-sm">{t('settings.botMention')}</span>
+              <code className="text-purple-400 text-sm bg-purple-500/10 px-2 py-0.5 rounded">
+                {botInfo.fixCommand}
+              </code>
+            </div>
+            {botInfo.installUrl && (
+              <div className="flex items-center justify-between">
+                <span className="text-white/50 text-sm">{t('settings.botInstall')}</span>
+                <a
+                  href={botInfo.installUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-purple-400 text-sm hover:text-purple-300 transition-colors"
+                >
+                  {t('home.installAppButton')} ↗
+                </a>
+              </div>
+            )}
+          </div>
+        </ProCard>
+      )}
+
       {/* 私钥配置状态 */}
       <ProCard className="bg-white/5 backdrop-blur-xl border-white/10" padding="p-5">
         <div className="flex items-center gap-3 mb-4">

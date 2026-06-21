@@ -288,7 +288,12 @@
     "missingLabel": "Not configured",
     "configSaved": "Configuration saved successfully",
     "setupFailed": "Setup failed",
-    "appInfo": "GitHub App"
+    "appInfo": "GitHub App",
+    "botInfo": "Bot Information",
+    "botSlug": "App Slug",
+    "botAppId": "App ID",
+    "botMention": "Issue Trigger Command",
+    "botInstall": "Install Link"
   },
   "api": {
     "methodNotAllowed": "Method not allowed",
