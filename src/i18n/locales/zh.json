@@ -181,7 +181,8 @@
     "step4": "参考 .env.example 文件了解完整的环境变量配置",
     "retry": "重新检查环境变量",
     "howToGet": "获取方式",
-    "loading": "加载中..."
+    "loading": "加载中...",
+    "checkFailed": "检查环境变量失败"
   },
   "envVarDescriptions": {
     "githubClientId": "GitHub OAuth App 的 Client ID，用于用户登录认证",
