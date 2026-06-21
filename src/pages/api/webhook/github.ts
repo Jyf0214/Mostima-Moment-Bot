@@ -10,6 +10,7 @@ import {
   type WorkflowPayload,
 } from '@/lib/ci/runner';
 import { shouldTriggerIssueFix, solveIssue } from '@/lib/ci/issue-solver';
+import { getFixCommand } from '@/lib/ci/config';
 import { auditPR } from '@/lib/ci/security-auditor';
 import { recordCiRun, updateCiRun } from '@/lib/ci/run-logger';
 
@@ -93,6 +94,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // 2. 解析事件
   const event = req.headers['x-github-event'] as string;
+
+  console.log(`[Webhook] Received: event=${event}`);
   let payload: Record<string, unknown>;
 
   try {
@@ -100,8 +103,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } catch {
     return res.status(400).json({ error: 'Invalid JSON payload' });
   }
-
-  console.log(`Received GitHub event: ${event}`);
 
   const workspaceDir = process.env.WORKSPACE_DIR || '.';
 
@@ -167,8 +168,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       case 'issue_comment': {
         const issuePayload = payload as unknown as IssueEventPayload;
 
+        console.log(
+          `[Webhook] Issue event: ${event}, action=${issuePayload.action}, ` +
+            `issue=#${issuePayload.issue.number}, ` +
+            `label=${issuePayload.label?.name || 'none'}, ` +
+            `comment_body=${(issuePayload.comment?.body || '').slice(0, 80)}, ` +
+            `comment_assoc=${issuePayload.comment?.author_association || 'none'}`
+        );
+
         // Issue 自动修复
-        if (shouldTriggerIssueFix(event, issuePayload)) {
+        const shouldFix = shouldTriggerIssueFix(event, issuePayload);
+        console.log(`[Webhook] shouldTriggerIssueFix=${shouldFix}, fixCmd="${getFixCommand()}"`);
+        if (shouldFix) {
           console.log(`[Webhook] Issue auto-fix triggered for Issue #${issuePayload.issue.number}`);
 
           // 记录 bot 触发的工作流日志
