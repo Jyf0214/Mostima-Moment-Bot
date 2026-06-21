@@ -17,7 +17,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 同步到 HF Spaces
+      - name: 注入 HF 元数据并同步
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           HF_REPO: ${{ secrets.HF_REPO }}
@@ -25,6 +25,24 @@ jobs:
           if [ -z "$HF_TOKEN" ] || [ -z "$HF_REPO" ]; then
             echo "⚠️  HF_TOKEN 或 HF_REPO 未配置，跳过同步"
             exit 0
+          fi
+
+          # 注入 HF Spaces 元数据到 README.md 开头
+          if ! head -1 README.md | grep -q "^---"; then
+            {
+              echo "---"
+              echo "title: Manticore Bot"
+              echo "emoji: 🤖"
+              echo "colorFrom: blue"
+              echo "colorTo: red"
+              echo "sdk: static"
+              echo "pinned: false"
+              echo "---"
+              echo ""
+              cat README.md
+            } > README.md.tmp && mv README.md.tmp README.md
+            git add README.md
+            git commit -m "ci: 注入 HF Spaces 元数据" || true
           fi
 
           git remote add hf "https://oauth2:${HF_TOKEN}@huggingface.co/spaces/${HF_REPO}.git" || true
