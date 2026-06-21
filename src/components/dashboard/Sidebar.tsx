@@ -12,9 +12,10 @@ import {
   ChevronLeft,
   ChevronRight,
   ScrollText,
+  Key,
 } from 'lucide-react';
 
-export type SidebarPage = 'overview' | 'repos' | 'logs' | 'env' | 'settings';
+export type SidebarPage = 'overview' | 'repos' | 'logs' | 'env' | 'apikeys' | 'settings';
 
 interface SidebarProps {
   activePage: SidebarPage;
@@ -30,6 +31,7 @@ const NAV_ITEMS: { id: SidebarPage; icon: React.ElementType; labelKey: string }[
   { id: 'repos', icon: Plug, labelKey: 'sidebar.repos' },
   { id: 'logs', icon: ScrollText, labelKey: 'sidebar.logs' },
   { id: 'env', icon: Shield, labelKey: 'sidebar.envVars' },
+  { id: 'apikeys', icon: Key, labelKey: 'sidebar.apiKeys' },
   { id: 'settings', icon: Settings, labelKey: 'sidebar.settings' },
 ];
 

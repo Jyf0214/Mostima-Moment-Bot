@@ -1,0 +1,274 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Button } from '@/components/ui/Button';
+import { ProCard } from '@/components/ui/ProCard';
+import { StatusCard } from '@/components/ui/StatusCard';
+import { RefreshCw, Plus, Trash2, Key, Clock, CheckCircle2, Copy, X } from 'lucide-react';
+
+interface ApiKeyItem {
+  id: number;
+  name: string;
+  lastUsedAt: string | null;
+  createdAt: string;
+  isActive: boolean;
+}
+
+interface CreatedKey {
+  id: number;
+  name: string;
+  key: string;
+  createdAt: string;
+}
+
+export default function ApiKeyPage() {
+  const { t } = useTranslation();
+  const [keys, setKeys] = useState<ApiKeyItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [newKeyName, setNewKeyName] = useState('');
+  const [createdKey, setCreatedKey] = useState<CreatedKey | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const fetchKeys = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/auth/api-keys');
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      setKeys(data.keys || []);
+    } catch {
+      setError(t('apiKey.failedToLoad'));
+    } finally {
+      setLoading(false);
+    }
+  }, [t]);
+
+  useEffect(() => {
+    fetchKeys();
+  }, [fetchKeys]);
+
+  const handleCreate = async () => {
+    if (!newKeyName.trim()) return;
+    setCreating(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/auth/api-keys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newKeyName.trim() }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      setCreatedKey(data);
+      setNewKeyName('');
+      await fetchKeys();
+    } catch {
+      setError(t('apiKey.failedToCreate'));
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    try {
+      const res = await fetch(`/api/auth/api-keys?id=${id}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+      await fetchKeys();
+    } catch {
+      setError(t('apiKey.failedToDelete'));
+    }
+  };
+
+  const handleCopyKey = () => {
+    if (createdKey?.key) {
+      navigator.clipboard.writeText(createdKey.key);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const timeAgo = (dateStr: string) => {
+    const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+    if (diff < 60) return `${diff}s ago`;
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return `${Math.floor(diff / 86400)}d ago`;
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* 标题区 */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/10">
+            <Key className="h-5 w-5 text-purple-400" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-white">{t('apiKey.title')}</h2>
+            <p className="text-white/40 text-xs">{t('apiKey.subtitle')}</p>
+          </div>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          icon={<RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />}
+          onClick={fetchKeys}
+          className="text-white/50 hover:text-white"
+        >
+          {t('dashboard.refresh')}
+        </Button>
+      </div>
+
+      {/* 错误提示 */}
+      {error && (
+        <ProCard className="bg-red-500/10 border-red-500/20">
+          <StatusCard
+            icon={<X className="h-4 w-4" />}
+            title="Error"
+            status={error}
+            statusType="error"
+          />
+        </ProCard>
+      )}
+
+      {/* 新建密钥成功提示 */}
+      {createdKey && (
+        <ProCard className="bg-emerald-500/10 border-emerald-500/20">
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-emerald-400">{t('apiKey.createdSuccess')}</p>
+              <p className="text-xs text-white/40 mt-1">{t('apiKey.createdHint')}</p>
+              <div className="mt-3 flex items-center gap-2">
+                <code className="flex-1 px-3 py-2 rounded-lg bg-black/30 text-emerald-300 text-xs font-mono break-all">
+                  {createdKey.key}
+                </code>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon={
+                    copied ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />
+                  }
+                  onClick={handleCopyKey}
+                  className="text-white/50 hover:text-white shrink-0"
+                >
+                  {copied ? t('apiKey.copied') : t('apiKey.copy')}
+                </Button>
+              </div>
+            </div>
+            <button
+              onClick={() => setCreatedKey(null)}
+              className="text-white/30 hover:text-white shrink-0"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </ProCard>
+      )}
+
+      {/* 创建新密钥 */}
+      <ProCard title={t('apiKey.createTitle')}>
+        <div className="flex items-center gap-3">
+          <input
+            type="text"
+            value={newKeyName}
+            onChange={(e) => setNewKeyName(e.target.value)}
+            placeholder={t('apiKey.namePlaceholder')}
+            className="flex-1 h-10 px-4 rounded-lg bg-white/5 border border-white/10 text-white text-sm outline-none focus:border-purple-500/50 transition-colors"
+            onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+          />
+          <Button
+            variant="default"
+            size="sm"
+            icon={<Plus className="h-4 w-4" />}
+            onClick={handleCreate}
+            loading={creating}
+            disabled={!newKeyName.trim()}
+          >
+            {t('apiKey.createButton')}
+          </Button>
+        </div>
+      </ProCard>
+
+      {/* 密钥列表 */}
+      <ProCard title={`${t('apiKey.existingKeys')} (${keys.length})`}>
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/20 border-t-purple-500" />
+          </div>
+        ) : keys.length === 0 ? (
+          <div className="text-center py-8">
+            <Key className="h-10 w-10 text-white/20 mx-auto mb-3" />
+            <p className="text-white/40 text-sm">{t('apiKey.noKeys')}</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {keys.map((key) => (
+              <div
+                key={key.id}
+                className="flex items-center gap-4 rounded-lg border border-white/10 bg-white/5 p-4"
+              >
+                <Key className="h-4 w-4 text-purple-400 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white truncate">{key.name}</p>
+                  <div className="flex items-center gap-3 mt-1">
+                    <span className="text-xs text-white/30">
+                      {t('apiKey.createdAt')} {timeAgo(key.createdAt)}
+                    </span>
+                    {key.lastUsedAt && (
+                      <span className="text-xs text-white/30 flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {t('apiKey.lastUsed')} {timeAgo(key.lastUsedAt)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon={<Trash2 className="h-4 w-4" />}
+                  onClick={() => handleDelete(key.id)}
+                  className="text-white/30 hover:text-red-400"
+                >
+                  {t('apiKey.delete')}
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </ProCard>
+
+      {/* 使用说明 */}
+      <ProCard title={t('apiKey.usageTitle')}>
+        <div className="space-y-3">
+          <div>
+            <p className="text-xs font-medium text-white/60 mb-1">{t('apiKey.usageBrowser')}</p>
+            <code className="block px-3 py-2 rounded-lg bg-black/30 text-white/70 text-xs font-mono break-all">
+              https://your-domain.com/api/auth/api-key-login?key=YOUR_API_KEY
+            </code>
+          </div>
+          <div>
+            <p className="text-xs font-medium text-white/60 mb-1">{t('apiKey.usageApi')}</p>
+            <code className="block px-3 py-2 rounded-lg bg-black/30 text-white/70 text-xs font-mono">
+              POST /api/auth/api-key-login{'\n'}
+              {'{'}"apiKey": "YOUR_API_KEY"{'}'}
+            </code>
+          </div>
+        </div>
+      </ProCard>
+    </div>
+  );
+}

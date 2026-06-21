@@ -7,6 +7,7 @@ import { ProCard } from '@/components/ui/ProCard';
 import Sidebar, { type SidebarPage } from '@/components/dashboard/Sidebar';
 import EnvVarsPage from '@/components/dashboard/EnvVarsPage';
 import WorkflowLogsPage from '@/components/dashboard/WorkflowLogsPage';
+import ApiKeyPage from '@/components/dashboard/ApiKeyPage';
 import {
   LogOut,
   Plug,
@@ -198,6 +199,7 @@ export default function DashboardPage() {
                   {activePage === 'repos' && t('sidebar.repos')}
                   {activePage === 'logs' && t('sidebar.logs')}
                   {activePage === 'env' && t('sidebar.envVars')}
+                  {activePage === 'apikeys' && t('sidebar.apiKeys')}
                   {activePage === 'settings' && t('sidebar.settings')}
                 </h1>
                 <p className="text-white/40 text-xs">@{user?.githubLogin}</p>
@@ -246,6 +248,7 @@ export default function DashboardPage() {
           {activePage === 'repos' && <ReposPage repos={repos} reposLoading={reposLoading} />}
           {activePage === 'logs' && <WorkflowLogsPage initialRepo={logsRepo} />}
           {activePage === 'env' && <EnvVarsPage />}
+          {activePage === 'apikeys' && <ApiKeyPage />}
           {activePage === 'settings' && <SettingsPage />}
         </div>
       </div>

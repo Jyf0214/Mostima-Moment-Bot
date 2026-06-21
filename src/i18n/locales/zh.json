@@ -132,6 +132,7 @@
     "repos": "仓库",
     "logs": "工作流日志",
     "envVars": "环境变量",
+    "apiKeys": "API 密钥",
     "settings": "设置",
     "collapse": "收起"
   },
@@ -168,6 +169,28 @@
     "configuredLabel": "已配置",
     "missingLabel": "未配置",
     "search": "搜索变量名或用途..."
+  },
+  "apiKey": {
+    "title": "API 密钥",
+    "subtitle": "管理 API 密钥，用于免 OAuth 登录",
+    "createTitle": "创建新密钥",
+    "createButton": "创建",
+    "namePlaceholder": "密钥名称（如：测试密钥）",
+    "createdSuccess": "密钥已创建",
+    "createdHint": "请立即复制保存，此密钥只会显示一次",
+    "copy": "复制",
+    "copied": "已复制",
+    "existingKeys": "已有的密钥",
+    "noKeys": "暂无 API 密钥",
+    "delete": "删除",
+    "createdAt": "创建于",
+    "lastUsed": "最后使用",
+    "usageTitle": "使用方式",
+    "usageBrowser": "浏览器直接访问（自动登录）",
+    "usageApi": "API 调用",
+    "failedToLoad": "加载失败",
+    "failedToCreate": "创建失败",
+    "failedToDelete": "删除失败"
   },
   "envError": {
     "title": "环境变量配置缺失",

@@ -132,6 +132,7 @@
     "repos": "Repositories",
     "logs": "Workflow Logs",
     "envVars": "Environment Variables",
+    "apiKeys": "API Keys",
     "settings": "Settings",
     "collapse": "Collapse"
   },
@@ -168,6 +169,28 @@
     "configuredLabel": "Configured",
     "missingLabel": "Missing",
     "search": "Search variable name or usage..."
+  },
+  "apiKey": {
+    "title": "API Keys",
+    "subtitle": "Manage API keys for passwordless login",
+    "createTitle": "Create New Key",
+    "createButton": "Create",
+    "namePlaceholder": "Key name (e.g., Test Key)",
+    "createdSuccess": "Key Created",
+    "createdHint": "Please copy and save immediately, this key will only be shown once",
+    "copy": "Copy",
+    "copied": "Copied",
+    "existingKeys": "Existing Keys",
+    "noKeys": "No API keys yet",
+    "delete": "Delete",
+    "createdAt": "Created",
+    "lastUsed": "Last used",
+    "usageTitle": "Usage",
+    "usageBrowser": "Browser direct access (auto-login)",
+    "usageApi": "API call",
+    "failedToLoad": "Failed to load",
+    "failedToCreate": "Failed to create",
+    "failedToDelete": "Failed to delete"
   },
   "envError": {
     "title": "Environment Variables Missing",
