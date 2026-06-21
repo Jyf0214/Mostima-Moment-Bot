@@ -193,7 +193,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             repo: issueRepo,
             event: event === 'issues' ? 'issue_labeled' : 'issue_comment',
             action: event === 'issues' ? 'auto-fix' : 'fix-command',
-            prNumber: issuePayload.issue.number,
             status: 'running',
             triggeredBy: 'bot',
             isBotInitiated: true,
