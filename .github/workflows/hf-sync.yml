@@ -35,7 +35,7 @@ jobs:
               echo "emoji: 🤖"
               echo "colorFrom: blue"
               echo "colorTo: red"
-              echo "sdk: static"
+              echo "sdk: docker"
               echo "pinned: false"
               echo "---"
               echo ""
@@ -44,8 +44,15 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add README.md
-            git commit -m "ci: 注入 HF Spaces 元数据" || true
           fi
+
+          # HF Spaces 要求 Dockerfile 在根目录
+          if [ ! -f Dockerfile ] && [ -f docker/Dockerfile ]; then
+            cp docker/Dockerfile .
+            git add Dockerfile
+          fi
+
+          git diff --cached --quiet || git commit -m "ci: 注入 HF Spaces 元数据和 Dockerfile"
 
           git remote add hf "https://oauth2:${HF_TOKEN}@huggingface.co/spaces/${HF_REPO}.git" || true
           git push hf main --force
