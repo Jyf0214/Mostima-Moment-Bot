@@ -48,6 +48,16 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // 重定向旧路由 /dashboard/logs/{repo} → /dashboard?logsRepo={repo}
+  if (pathname.startsWith('/dashboard/logs')) {
+    const repoPart = pathname.replace('/dashboard/logs/', '');
+    const target = new URL('/dashboard', request.url);
+    if (repoPart) {
+      target.searchParams.set('logsRepo', decodeURIComponent(repoPart));
+    }
+    return NextResponse.redirect(target);
+  }
+
   // 检查环境变量
   const missingEnvVars = checkEnvironmentVariables();
   if (missingEnvVars.length > 0) {

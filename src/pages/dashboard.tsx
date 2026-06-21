@@ -66,6 +66,7 @@ export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [activePage, setActivePage] = useState<SidebarPage>('overview');
+  const [logsRepo, setLogsRepo] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [repos, setRepos] = useState<ReposData | null>(null);
   const [reposLoading, setReposLoading] = useState(false);
@@ -88,6 +89,14 @@ export default function DashboardPage() {
       setInstallMsgType('error');
     }
     if (install) {
+      window.history.replaceState({}, '', '/dashboard');
+    }
+
+    // 从重定向参数中读取 logsRepo，自动打开日志详情
+    const logsRepoParam = params.get('logsRepo');
+    if (logsRepoParam) {
+      setLogsRepo(logsRepoParam);
+      setActivePage('logs');
       window.history.replaceState({}, '', '/dashboard');
     }
   }, [user]);
@@ -159,7 +168,10 @@ export default function DashboardPage() {
     <div className="h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex overflow-hidden">
       <Sidebar
         activePage={activePage}
-        onNavigate={setActivePage}
+        onNavigate={(page) => {
+          setActivePage(page);
+          setLogsRepo(null);
+        }}
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         userLogin={user?.githubLogin || ''}
@@ -229,7 +241,7 @@ export default function DashboardPage() {
             />
           )}
           {activePage === 'repos' && <ReposPage repos={repos} reposLoading={reposLoading} />}
-          {activePage === 'logs' && <WorkflowLogsPage />}
+          {activePage === 'logs' && <WorkflowLogsPage initialRepo={logsRepo} />}
           {activePage === 'env' && <EnvVarsPage />}
           {activePage === 'settings' && <SettingsPage />}
         </div>

@@ -88,11 +88,11 @@ function shaShort(sha: string | null): string {
   return sha.slice(0, 7);
 }
 
-export default function WorkflowLogsPage() {
+export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string | null }) {
   const { t } = useTranslation();
 
   // 列表/详情视图切换
-  const [selectedRepo, setSelectedRepo] = useState<string | null>(null);
+  const [selectedRepo, setSelectedRepo] = useState<string | null>(initialRepo || null);
 
   // === 列表视图状态 ===
   const [repos, setRepos] = useState<RepoSummary[]>([]);
@@ -162,6 +162,16 @@ export default function WorkflowLogsPage() {
   useEffect(() => {
     if (!selectedRepo) fetchRepos();
   }, [selectedRepo]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 同步外部传入的 initialRepo 变化
+  useEffect(() => {
+    if (initialRepo) {
+      setSelectedRepo(initialRepo);
+      setPage(0);
+      setFilterStatus('');
+      setFilterEvent('');
+    }
+  }, [initialRepo]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (selectedRepo) fetchRuns();
