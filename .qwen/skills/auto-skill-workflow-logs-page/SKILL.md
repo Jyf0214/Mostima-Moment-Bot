@@ -1,37 +1,36 @@
 ---
 name: workflow-logs-page
-description: 工作流日志页面：仓库列表 + 独立详情页 + bot 触发过滤 + isBotInitiated 字段
+description: 工作流日志页面：单组件双视图（仓库列表 + 详情） + bot 触发过滤 + isBotInitiated 字段
 source: auto-skill
-extracted_at: '2026-06-21T00:48:12.475Z'
+extracted_at: '2026-06-21T01:06:00.000Z'
 ---
 
 # 工作流日志页面
 
 ## 架构
 
-两层结构：仓库列表页 → 点击仓库 → 独立日志详情页。
+单组件双视图：`WorkflowLogsPage` 通过 `selectedRepo` state 切换列表/详情。
 
-### 仓库列表页
+### 仓库列表视图
 
 - 组件：`src/components/dashboard/WorkflowLogsPage.tsx`
-- 路由：仪表盘侧边栏 `logs` 导航项
+- 无 `selectedRepo` 时显示
 - API：`GET /api/ci/runs`（无 repo 参数）→ 返回有 bot 记录的仓库摘要
 - 每个仓库卡片显示：名称、总运行数、最新状态、最新分支、事件类型
-- 点击跳转到 `/dashboard/logs/{repo}`
+- 点击仓库 → 设置 `selectedRepo` → 切换到详情视图
 
-### 日志详情页
+### 详情视图
 
-- 文件：`src/pages/dashboard/logs/[repo].tsx`
-- 路由：`/dashboard/logs/{repo}`（动态路由）
+- 同一组件 `WorkflowLogsPage.tsx`，有 `selectedRepo` 时显示
 - API：`GET /api/ci/runs?repo={repo}&botOnly=true` → 返回运行记录
 - 支持状态/事件过滤、分页（每页 30 条）
 - 每条记录显示：状态图标、事件类型、分支、PR、SHA、触发者、耗时、相对时间
-- 返回按钮回到仪表盘
+- 返回按钮 → 清除 `selectedRepo` → 回到列表视图
 
 ### 仓库详情页日志卡片
 
 - 文件：`src/pages/dashboard/repo.tsx`
-- 运行日志区域显示总数 + "查看详情"链接跳转到 `/dashboard/logs/{repo}`
+- 运行日志区域显示总数 + "查看详情"链接跳转到 `/dashboard` 的 logs 导航
 - 不再内联显示日志列表
 
 ## 数据模型
@@ -77,6 +76,8 @@ model CiRun {
 | Issue 评论 @{slug} /fix  | issue_comment  | bot         | `shouldTriggerIssueFix` |
 | PR 安全审计              | security_audit | bot         | `auditPR`               |
 
+**注意：** issue_comment 日志的 `prNumber` 字段**不**存储 issue 编号（issue ≠ PR）。issue 编号只在 `logs` 文本字段中显示。
+
 ### 不记录（禁止存储 GitHub Actions 记录）
 
 | 事件                            | 原因                               |
@@ -106,14 +107,14 @@ model CiRun {
 - `src/lib/ci/run-logger.ts` — 记录/更新运行日志
 - `src/pages/api/ci/runs.ts` — 查询 API（支持仓库列表模式 + 详情模式）
 - `src/pages/api/webhook/github.ts` — Webhook 事件记录（只记录 bot 工作流）
-- `src/components/dashboard/WorkflowLogsPage.tsx` — 仓库列表页
-- `src/pages/dashboard/logs/[repo].tsx` — 日志详情页
+- `src/components/dashboard/WorkflowLogsPage.tsx` — 单组件双视图（列表+详情）
 - `src/pages/dashboard/repo.tsx` — 仓库详情页日志卡片
 
 ## 注意事项
 
-- 详情页使用动态路由 `[repo]`，需要 `decodeURIComponent` 处理仓库名中的 `/`
+- **不用动态路由**：删除了 `/dashboard/logs/[repo]` 页面，因为 `owner/repo` 中的 `/` 会与 Next.js 路由冲突
 - 列表查询不返回 `logs` 字段，节省带宽
 - 日志大小限制 50KB
 - `isBotInitiated` 字段需要 `db push` 后才生效
 - push/workflow_job/PR CI 事件的 CiRun 记录已永久移除
+- issue_comment 事件不应将 issue 编号写入 `prNumber` 字段
