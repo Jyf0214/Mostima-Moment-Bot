@@ -22,6 +22,7 @@ model Admin {
   builds       Build[]
   installations GitHubInstallation[]
   repoConfigs  RepoConfig[]
+  apiKeys      ApiKey[]
 
   @@map("admins")
 }
@@ -151,4 +152,20 @@ model RepoConfig {
 
   @@unique([repoId, adminId])
   @@map("repo_configs")
+}
+
+// API 密钥表
+model ApiKey {
+  id          Int      @id @default(autoincrement())
+  keyHash     String   @unique @map("key_hash")
+  name        String
+  adminId     Int      @map("admin_id")
+  lastUsedAt  DateTime? @map("last_used_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  isActive    Boolean  @default(true) @map("is_active")
+
+  admin Admin @relation(fields: [adminId], references: [id])
+
+  @@index([keyHash])
+  @@map("api_keys")
 }
