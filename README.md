@@ -10,6 +10,7 @@
 - **质量卡口校验**：npm ci → lint → tsc → build 四步检查
 - **PR 报告生成**：Vercel 风格状态表格，自动在 PR 下留言
 - **GitHub 一键登录**：OAuth 认证，首个用户自动绑定管理员
+- **API 密钥登录**：支持通过 API 密钥免 OAuth 登录，便于测试
 - **环境变量检查**：缺失必要配置时阻止应用访问
 
 ## 架构
@@ -18,10 +19,11 @@
 ┌─────────────────────────────────────────────────────────┐
 │                    Next.js 单一服务                      │
 │  ┌─────────────────────────────────────────────────┐   │
-│  │  - Mantine v9 + Chart.js                        │   │
+│  │  - React 19 + Tailwind CSS v4                   │   │
 │  │  - Next.js 16 Pages Router                      │   │
 │  │  - API Routes (Webhook / Auth / Health)         │   │
 │  │  - Proxy Middleware (认证检查)                   │   │
+│  │  - Prisma ORM + PostgreSQL                      │   │
 │  └─────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────┘
                           ▲
@@ -162,26 +164,14 @@ DATABASE_URL=postgresql://user:password@localhost:5432/manticore
 # ---- GitHub App 配置 ----
 # 在 GitHub → Settings → Developer settings → GitHub Apps 页面获取
 GITHUB_APP_ID=123456
+GITHUB_APP_SLUG=your-app-slug
 GITHUB_PRIVATE_KEY_PATH=./private-key.pem
-
-# ---- Webhook Secret ----
-# 由你自行设定，同时填入 GitHub App 的 Webhook secret 字段
-# 用下方命令生成，不要使用明文
-ENCRYPTION_KEY=your_webhook_secret
-
-# ---- 仓库配置 ----
-REPO_OWNER=your_username
-REPO_NAME=your_repo
-
-# ---- Webhook 签名验证密钥 ----
-# 与 ENCRYPTION_KEY 保持一致
-ENCRYPTION_KEY=your_webhook_secret
 
 # ---- 服务器配置 ----
 PORT=3001
 
-# ---- 合作者列表（逗号分隔） ----
-COLLABORATORS=user1,user2
+# ---- 应用公开地址（用于 OAuth 回调） ----
+APP_URL=http://localhost:3001
 ```
 
 ### 3.3 生成密钥
@@ -194,14 +184,9 @@ openssl rand -hex 32
 
 # 生成 ENCRYPTION_KEY（32 字节随机十六进制字符串）
 openssl rand -hex 32
-
-# 生成 ENCRYPTION_KEY / ENCRYPTION_KEY（推荐用 base64 格式）
-openssl rand -base64 32
 ```
 
 将输出的值复制到 `.env.local` 对应字段中。
-
-> **注意**：`ENCRYPTION_KEY` 和 `ENCRYPTION_KEY` 必须保持一致，且需同时填入 GitHub App 设置中的 Webhook secret 字段。
 
 ---
 
@@ -272,7 +257,7 @@ CREATE DATABASE manticore;
 
 ```bash
 npx prisma generate
-npx prisma migrate dev
+npx prisma db push
 ```
 
 ---
@@ -305,9 +290,41 @@ PORT=3001 npm start
 
 ---
 
-## 7. Webhook 可达性配置
+## 7. API 密钥登录
 
-### 7.1 开发环境 - 使用 ngrok
+除了 GitHub OAuth 登录外，系统还支持 API 密钥登录，便于测试和自动化。
+
+### 7.1 生成 API 密钥
+
+1. 登录 Dashboard
+2. 点击侧边栏 "API Keys"
+3. 输入密钥名称，点击 "创建"
+4. **立即复制保存密钥**（只会显示一次）
+
+### 7.2 使用 API 密钥登录
+
+**浏览器直接访问（自动登录）：**
+
+```
+https://your-domain.com/api/auth/api-key-login?key=YOUR_API_KEY
+```
+
+**API 调用：**
+
+```bash
+POST /api/auth/api-key-login
+Content-Type: application/json
+
+{
+  "apiKey": "YOUR_API_KEY"
+}
+```
+
+---
+
+## 8. Webhook 可达性配置
+
+### 8.1 开发环境 - 使用 ngrok
 
 ```bash
 # 安装 ngrok
@@ -322,7 +339,7 @@ ngrok http 3000
 
 将 `https://xxxx-xxx.ngrok.io/api/webhook/github` 设置为 GitHub App 的 Webhook URL。
 
-### 7.2 开发环境 - 使用 cloudflared
+### 8.2 开发环境 - 使用 cloudflared
 
 ```bash
 # 安装 cloudflared
@@ -338,7 +355,7 @@ sudo mv cloudflared-linux-amd64 /usr/local/bin/cloudflared
 cloudflared tunnel --url http://localhost:3000
 ```
 
-### 7.3 生产环境 - 使用 Nginx + Let's Encrypt
+### 8.3 生产环境 - 使用 Nginx + Let's Encrypt
 
 #### 安装 Nginx 和 Certbot
 
@@ -427,28 +444,28 @@ sudo certbot renew --dry-run
 
 ---
 
-## 8. Docker 部署
+## 9. Docker 部署
 
-### 8.1 构建并启动
+### 9.1 构建并启动
 
 ```bash
 cd docker
 docker-compose up -d --build
 ```
 
-### 8.2 查看日志
+### 9.2 查看日志
 
 ```bash
 docker-compose logs -f manticore-bot
 ```
 
-### 8.3 停止服务
+### 9.3 停止服务
 
 ```bash
 docker-compose down
 ```
 
-### 8.4 自定义端口
+### 9.4 自定义端口
 
 ```bash
 PORT=8080 docker-compose up -d
@@ -456,23 +473,23 @@ PORT=8080 docker-compose up -d
 
 ---
 
-## 9. 验证部署
+## 10. 验证部署
 
-### 9.1 健康检查
+### 10.1 健康检查
 
 ```bash
 curl http://localhost:3000/api/health
 # 预期：{"status":"ok","service":"manticore-bot",...}
 ```
 
-### 9.2 环境变量检查
+### 10.2 环境变量检查
 
 ```bash
 curl http://localhost:3000/api/env-check
 # 预期：{"isConfigured":true,...}
 ```
 
-### 9.3 Webhook 签名验证
+### 10.3 Webhook 签名验证
 
 ```bash
 PAYLOAD='{"action":"opened","pull_request":{"number":1}}'
@@ -487,7 +504,7 @@ curl -X POST http://localhost:3000/api/webhook/github \
 # 预期：{"received":true}
 ```
 
-### 9.4 测试无签名请求
+### 10.4 测试无签名请求
 
 ```bash
 curl -X POST http://localhost:3000/api/webhook/github \
@@ -498,7 +515,7 @@ curl -X POST http://localhost:3000/api/webhook/github \
 
 ---
 
-## 10. 故障排查
+## 11. 故障排查
 
 ### 环境变量缺失
 
@@ -573,7 +590,7 @@ docker-compose build --no-cache
 
 ---
 
-## 可用命令
+## 12. 可用命令
 
 ```bash
 # 开发
@@ -596,6 +613,42 @@ npm run prisma:generate     # 生成 Prisma Client
 npm run prisma:migrate      # 运行数据库迁移
 npm run prisma:studio       # 打开 Prisma Studio
 ```
+
+## API 端点
+
+### 认证相关
+
+| 端点                      | 方法            | 说明                  |
+| ------------------------- | --------------- | --------------------- |
+| `/api/auth/login`         | GET             | GitHub OAuth 登录入口 |
+| `/api/auth/callback`      | GET             | GitHub OAuth 回调     |
+| `/api/auth/me`            | GET             | 获取当前用户信息      |
+| `/api/auth/logout`        | POST            | 登出                  |
+| `/api/auth/status`        | GET             | 检查应用状态          |
+| `/api/auth/api-keys`      | GET/POST/DELETE | 管理 API 密钥         |
+| `/api/auth/api-key-login` | GET/POST        | API 密钥登录          |
+
+### Webhook
+
+| 端点                  | 方法 | 说明                |
+| --------------------- | ---- | ------------------- |
+| `/api/webhook/github` | POST | GitHub Webhook 接收 |
+
+### 系统
+
+| 端点             | 方法 | 说明         |
+| ---------------- | ---- | ------------ |
+| `/api/health`    | GET  | 健康检查     |
+| `/api/env-check` | GET  | 环境变量检查 |
+| `/api/init`      | POST | 数据库初始化 |
+
+### GitHub
+
+| 端点                  | 方法 | 说明            |
+| --------------------- | ---- | --------------- |
+| `/api/github/install` | GET  | 安装 GitHub App |
+| `/api/github/repos`   | GET  | 获取仓库列表    |
+| `/api/github/test`    | GET  | 连通性测试      |
 
 ## 许可证
 
