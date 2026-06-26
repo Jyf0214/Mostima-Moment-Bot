@@ -9,6 +9,7 @@ import {
   discardNonAdminData,
 } from '@/lib/db';
 import { setCookie, clearCookie } from '@/lib/cookie';
+import { autoSaveEnvVars } from '@/lib/bootstrap';
 
 const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
@@ -104,6 +105,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // 全新应用，第一个用户自动成为管理员
       admin = await createAdmin(userData.id, userData.login, userData.avatar_url);
       console.log(`New admin created: ${userData.login}`);
+
+      // 首次启动：自动保存环境变量到数据库
+      await autoSaveEnvVars();
     } else if (!admin) {
       // 非管理员，丢弃数据
       await discardNonAdminData(userData.id, userData.login);
