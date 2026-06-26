@@ -43,10 +43,26 @@ export default function HomePage() {
   const { t } = useTranslation();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [heroGradient, setHeroGradient] = useState('from-blue-50 via-transparent to-purple-50');
+  const [heroImageUrl, setHeroImageUrl] = useState('');
 
   useEffect(() => {
     checkStatus();
+    fetchHeroConfig();
   }, []);
+
+  const fetchHeroConfig = async () => {
+    try {
+      const res = await fetch('/api/site-config');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.hero_gradient) setHeroGradient(data.hero_gradient);
+        if (data.hero_image_url) setHeroImageUrl(data.hero_image_url);
+      }
+    } catch {
+      // 使用默认值
+    }
+  };
 
   const checkStatus = async () => {
     try {
@@ -146,7 +162,8 @@ export default function HomePage() {
                 variant: 'ghost',
               },
             ]}
-            gradient="from-blue-50 via-transparent to-purple-50"
+            gradient={heroImageUrl ? undefined : heroGradient}
+            backgroundImage={heroImageUrl || undefined}
             align="center"
           />
         </div>

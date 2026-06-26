@@ -1,0 +1,81 @@
+import { NextApiRequest, NextApiResponse } from 'next';
+import jwt from 'jsonwebtoken';
+import { prisma } from '@/lib/prisma';
+
+const JWT_SECRET = process.env.JWT_SECRET;
+
+interface JwtPayload {
+  githubId: number;
+  isAdmin: boolean;
+}
+
+/**
+ * 站点配置 API
+ * GET  /api/site-config          - 获取所有配置（公开）
+ * GET  /api/site-config?key=xxx  - 获取指定配置（公开）
+ * PUT  /api/site-config          - 更新配置（需管理员）
+ */
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // GET 请求无需认证（首页需要公开读取）
+  if (req.method === 'GET') {
+    const key = req.query.key as string | undefined;
+
+    if (key) {
+      const config = await prisma.appConfig.findUnique({
+        where: { configKey: key },
+      });
+      return res.status(200).json({ key, value: config?.configValue || null });
+    }
+
+    // 获取所有配置
+    const configs = await prisma.appConfig.findMany({
+      where: { configKey: { startsWith: 'hero_' } },
+    });
+    const result: Record<string, string> = {};
+    configs.forEach((c) => {
+      result[c.configKey] = c.configValue;
+    });
+    return res.status(200).json(result);
+  }
+
+  // PUT 请求需要管理员认证
+  if (req.method === 'PUT') {
+    if (!JWT_SECRET) {
+      return res.status(500).json({ error: 'Server configuration error' });
+    }
+
+    const token = req.cookies.auth_token;
+    if (!token) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+      if (!decoded.isAdmin) {
+        return res.status(403).json({ error: 'Admin only' });
+      }
+    } catch {
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    const { key, value } = req.body;
+    if (!key || typeof key !== 'string') {
+      return res.status(400).json({ error: 'Key required' });
+    }
+
+    // 只允许 hero_ 前缀的配置
+    if (!key.startsWith('hero_')) {
+      return res.status(400).json({ error: 'Only hero_ prefix keys are allowed' });
+    }
+
+    await prisma.appConfig.upsert({
+      where: { configKey: key },
+      update: { configValue: String(value ?? '') },
+      create: { configKey: key, configValue: String(value ?? '') },
+    });
+
+    return res.status(200).json({ success: true });
+  }
+
+  return res.status(405).json({ error: 'Method not allowed' });
+}

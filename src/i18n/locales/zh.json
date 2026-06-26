@@ -318,7 +318,19 @@
     "botSlug": "App Slug",
     "botAppId": "App ID",
     "botMention": "Issue 触发命令",
-    "botInstall": "安装链接"
+    "botInstall": "安装链接",
+    "heroBackground": "Hero 背景",
+    "presetGradients": "预设渐变",
+    "customImageUrl": "自定义背景图",
+    "imageUrlHint": "输入图片 URL，设置后将覆盖渐变背景",
+    "preview": "预览",
+    "save": "保存",
+    "gradientBluePurple": "蓝紫渐变",
+    "gradientMint": "薄荷清新",
+    "gradientSunset": "暖阳橙光",
+    "gradientRose": "玫瑰柔粉",
+    "gradientIndigo": "深邃靛蓝",
+    "gradientWhite": "纯净白"
   },
   "api": {
     "methodNotAllowed": "Method not allowed",

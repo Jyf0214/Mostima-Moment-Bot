@@ -22,6 +22,7 @@ import {
   Settings,
   Search,
   X,
+  Paintbrush,
 } from 'lucide-react';
 
 interface User {
@@ -615,10 +616,61 @@ function SettingsPage() {
     installUrl: string;
   } | null>(null);
 
+  // Hero 背景配置
+  const [heroGradient, setHeroGradient] = useState('from-blue-50 via-transparent to-purple-50');
+  const [heroImageUrl, setHeroImageUrl] = useState('');
+  const [heroSaving, setHeroSaving] = useState(false);
+  const [heroMsg, setHeroMsg] = useState<string | null>(null);
+
+  const GRADIENT_PRESETS = [
+    { labelKey: 'settings.gradientBluePurple', value: 'from-blue-50 via-transparent to-purple-50' },
+    { labelKey: 'settings.gradientMint', value: 'from-emerald-50 via-teal-50 to-cyan-50' },
+    { labelKey: 'settings.gradientSunset', value: 'from-amber-50 via-orange-50 to-yellow-50' },
+    { labelKey: 'settings.gradientRose', value: 'from-pink-50 via-rose-50 to-red-50' },
+    { labelKey: 'settings.gradientIndigo', value: 'from-indigo-50 via-blue-50 to-sky-50' },
+    { labelKey: 'settings.gradientWhite', value: 'from-white via-zinc-50 to-zinc-100' },
+  ];
+
   useEffect(() => {
     checkPrivateKey();
     fetchBotInfo();
+    fetchHeroConfig();
   }, []);
+
+  const fetchHeroConfig = async () => {
+    try {
+      const res = await fetch('/api/site-config');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.hero_gradient) setHeroGradient(data.hero_gradient);
+        if (data.hero_image_url !== undefined) setHeroImageUrl(data.hero_image_url);
+      }
+    } catch {
+      // 使用默认值
+    }
+  };
+
+  const saveHeroConfig = async () => {
+    setHeroSaving(true);
+    setHeroMsg(null);
+    try {
+      await fetch('/api/site-config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'hero_gradient', value: heroGradient }),
+      });
+      await fetch('/api/site-config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'hero_image_url', value: heroImageUrl }),
+      });
+      setHeroMsg(t('settings.configSaved'));
+    } catch {
+      setHeroMsg(t('settings.setupFailed'));
+    } finally {
+      setHeroSaving(false);
+    }
+  };
 
   const checkPrivateKey = async () => {
     try {
@@ -804,6 +856,76 @@ function SettingsPage() {
             ? `GITHUB_APP_ID: ${process.env.GITHUB_APP_ID}`
             : 'GITHUB_APP_ID not set in environment variables'}
         </p>
+      </ProCard>
+
+      {/* Hero 背景配置 */}
+      <ProCard className="bg-white border-zinc-200" padding="p-5">
+        <div className="flex items-center gap-3 mb-4">
+          <Paintbrush className="h-5 w-5 text-zinc-500" />
+          <h3 className="text-zinc-900 font-medium">{t('settings.heroBackground')}</h3>
+        </div>
+
+        {/* 预设渐变选择 */}
+        <div className="mb-4">
+          <p className="text-xs font-medium text-zinc-600 mb-2">{t('settings.presetGradients')}</p>
+          <div className="grid grid-cols-3 gap-2">
+            {GRADIENT_PRESETS.map((preset) => (
+              <button
+                key={preset.value}
+                onClick={() => {
+                  setHeroGradient(preset.value);
+                  setHeroImageUrl('');
+                }}
+                className={`h-12 rounded-lg bg-gradient-to-br ${preset.value} border-2 transition-all ${
+                  heroGradient === preset.value && !heroImageUrl
+                    ? 'border-blue-500 shadow-md'
+                    : 'border-zinc-200 hover:border-zinc-300'
+                }`}
+                title={t(preset.labelKey)}
+              >
+                <span className="text-[10px] font-medium text-zinc-600 bg-white/80 px-1.5 py-0.5 rounded">
+                  {t(preset.labelKey)}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 自定义背景图 URL */}
+        <div className="mb-4">
+          <p className="text-xs font-medium text-zinc-600 mb-2">{t('settings.customImageUrl')}</p>
+          <input
+            type="url"
+            value={heroImageUrl}
+            onChange={(e) => setHeroImageUrl(e.target.value)}
+            placeholder="https://example.com/image.jpg"
+            className="w-full h-10 px-4 rounded-lg bg-white border border-zinc-200 text-zinc-700 text-sm outline-none focus:border-blue-500 transition-colors"
+          />
+          <p className="text-[10px] text-zinc-400 mt-1">{t('settings.imageUrlHint')}</p>
+        </div>
+
+        {/* 预览 */}
+        <div className="mb-4">
+          <p className="text-xs font-medium text-zinc-600 mb-2">{t('settings.preview')}</p>
+          <div
+            className={`h-24 rounded-xl bg-gradient-to-br ${heroImageUrl ? '' : heroGradient} overflow-hidden`}
+          >
+            {heroImageUrl && (
+              <div
+                className="w-full h-full bg-cover bg-center"
+                style={{ backgroundImage: `url(${heroImageUrl})` }}
+              />
+            )}
+          </div>
+        </div>
+
+        {/* 保存按钮 */}
+        <div className="flex items-center gap-3">
+          <Button variant="default" size="sm" onClick={saveHeroConfig} loading={heroSaving}>
+            {t('settings.save')}
+          </Button>
+          {heroMsg && <span className="text-xs text-zinc-500">{heroMsg}</span>}
+        </div>
       </ProCard>
     </div>
   );

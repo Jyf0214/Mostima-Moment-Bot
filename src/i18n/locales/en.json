@@ -318,7 +318,19 @@
     "botSlug": "App Slug",
     "botAppId": "App ID",
     "botMention": "Issue Trigger Command",
-    "botInstall": "Install Link"
+    "botInstall": "Install Link",
+    "heroBackground": "Hero Background",
+    "presetGradients": "Preset Gradients",
+    "customImageUrl": "Custom Background Image",
+    "imageUrlHint": "Enter image URL, will override gradient when set",
+    "preview": "Preview",
+    "save": "Save",
+    "gradientBluePurple": "Blue Purple",
+    "gradientMint": "Mint Fresh",
+    "gradientSunset": "Sunset Orange",
+    "gradientRose": "Rose Pink",
+    "gradientIndigo": "Deep Indigo",
+    "gradientWhite": "Pure White"
   },
   "api": {
     "methodNotAllowed": "Method not allowed",
