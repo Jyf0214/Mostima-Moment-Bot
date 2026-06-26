@@ -31,6 +31,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# qwen skills
+.qwen/skills/**
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
