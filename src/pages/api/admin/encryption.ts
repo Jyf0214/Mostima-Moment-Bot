@@ -1,32 +1,35 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import jwt from 'jsonwebtoken';
-import { prisma } from '@/lib/prisma';
 import { resetEncryptionKeyCache } from '@/lib/middleware';
 
-const JWT_SECRET = process.env.JWT_SECRET;
-
-interface JwtPayload {
-  githubId: number;
-  isAdmin: boolean;
-}
-
 /**
- * 加密密钥管理
- * GET  /api/admin/encryption  — 获取加密状态
- * PUT  /api/admin/encryption  — 开启/关闭加密
+ * 加密密钥存储管理
+ * GET  /api/admin/encryption  — 获取当前状态
+ * POST /api/admin/encryption  — 存储密钥到数据库
+ * DELETE /api/admin/encryption — 从数据库移除密钥
  *
- * 开启加密时：
- * - 需要用户提供 ENCRYPTION_KEY
- * - 密钥以明文存储在 AppConfig 中
- * - 显示警告：启用后必须始终提供密钥
- *
- * 关闭加密时：
- * - 清除存储的密钥
- * - 重新加载 Prisma 客户端（明文模式）
+ * 加密始终开启。此 API 管理的是密钥是否存储到数据库。
+ * - 存储：密钥明文存在 AppConfig，后续启动从 DB 读取，不再需要环境变量
+ * - 移除：删除 DB 中的密钥，后续启动必须通过环境变量提供
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (!JWT_SECRET) {
-    return res.status(500).json({ error: 'Server configuration error' });
+  // JWT_SECRET 从环境变量或数据库获取
+  let jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret) {
+    try {
+      const { prisma } = await import('@/lib/prisma');
+      const config = await prisma.appConfig.findUnique({
+        where: { configKey: 'jwt_secret' },
+      });
+      // jwt_secret 已通过加密中间件解密
+      jwtSecret = config?.configValue || '';
+    } catch {
+      return res.status(500).json({ error: 'Server configuration error' });
+    }
+  }
+
+  if (!jwtSecret) {
+    return res.status(500).json({ error: 'JWT_SECRET not configured' });
   }
 
   // 验证身份
@@ -36,7 +39,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    const decoded = jwt.verify(token, jwtSecret) as { githubId: number; isAdmin: boolean };
     if (!decoded.isAdmin) {
       return res.status(403).json({ error: 'Admin only' });
     }
@@ -44,86 +47,74 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'Invalid token' });
   }
 
-  // GET - 获取加密状态
+  const { prisma } = await import('@/lib/prisma');
+
+  // GET - 获取状态
   if (req.method === 'GET') {
     const keyConfig = await prisma.appConfig.findUnique({
       where: { configKey: 'encryption_key' },
     });
 
-    const enabledConfig = await prisma.appConfig.findUnique({
-      where: { configKey: 'encryption_enabled' },
-    });
-
-    const enabled = enabledConfig?.configValue === 'true';
     const hasStoredKey = !!keyConfig?.configValue;
+    const hasEnvKey = !!process.env.ENCRYPTION_KEY;
 
     return res.status(200).json({
-      enabled,
       hasStoredKey,
-      hasEnvKey: !!process.env.ENCRYPTION_KEY,
+      hasEnvKey,
+      source: hasEnvKey ? 'environment' : hasStoredKey ? 'database' : 'none',
     });
   }
 
-  // PUT - 开启/关闭加密
-  if (req.method === 'PUT') {
-    const { enabled, encryptionKey } = req.body;
+  // POST - 存储密钥到数据库
+  if (req.method === 'POST') {
+    const { encryptionKey } = req.body;
 
-    if (typeof enabled !== 'boolean') {
-      return res.status(400).json({ error: 'enabled must be boolean' });
+    if (!encryptionKey || typeof encryptionKey !== 'string') {
+      return res.status(400).json({ error: 'encryptionKey is required' });
     }
 
-    if (enabled) {
-      // 开启加密
-      if (!encryptionKey || typeof encryptionKey !== 'string') {
-        return res.status(400).json({
-          error: 'encryptionKey is required to enable encryption',
-        });
-      }
+    // 使用原始 Prisma 客户端明文写入（绕过加密中间件）
+    const rawClient = new (await import('@prisma/client')).PrismaClient();
+    await rawClient.appConfig.upsert({
+      where: { configKey: 'encryption_key' },
+      update: { configValue: encryptionKey, encrypted: false },
+      create: { configKey: 'encryption_key', configValue: encryptionKey, encrypted: false },
+    });
+    await rawClient.$disconnect();
 
-      // 存储加密密钥（明文）和启用状态
-      await prisma.appConfig.upsert({
-        where: { configKey: 'encryption_key' },
-        update: { configValue: encryptionKey },
-        create: { configKey: 'encryption_key', configValue: encryptionKey, encrypted: false },
-      });
+    // 重置密钥缓存
+    resetEncryptionKeyCache();
 
-      await prisma.appConfig.upsert({
-        where: { configKey: 'encryption_enabled' },
-        update: { configValue: 'true' },
-        create: { configKey: 'encryption_enabled', configValue: 'true', encrypted: false },
-      });
+    return res.status(200).json({
+      success: true,
+      warning:
+        'Encryption key stored in database as plaintext. You can now start without ENCRYPTION_KEY environment variable.',
+    });
+  }
 
-      // 重置加密密钥缓存，下次查询时使用新密钥
-      resetEncryptionKeyCache();
-
-      return res.status(200).json({
-        success: true,
-        enabled: true,
-        warning:
-          'Encryption enabled. You must always provide ENCRYPTION_KEY or store it in database.',
-      });
-    } else {
-      // 关闭加密
-      // 清除加密密钥
-      await prisma.appConfig.deleteMany({
-        where: { configKey: 'encryption_key' },
-      });
-
-      await prisma.appConfig.upsert({
-        where: { configKey: 'encryption_enabled' },
-        update: { configValue: 'false' },
-        create: { configKey: 'encryption_enabled', configValue: 'false', encrypted: false },
-      });
-
-      // 重置加密密钥缓存
-      resetEncryptionKeyCache();
-
-      return res.status(200).json({
-        success: true,
-        enabled: false,
-        warning: 'Encryption disabled. Stored values are now in plaintext.',
+  // DELETE - 从数据库移除密钥
+  if (req.method === 'DELETE') {
+    // 检查是否还有环境变量
+    if (!process.env.ENCRYPTION_KEY) {
+      return res.status(400).json({
+        error:
+          'Cannot remove stored key: ENCRYPTION_KEY environment variable is not set. Add it first, then remove the stored key.',
       });
     }
+
+    const rawClient = new (await import('@prisma/client')).PrismaClient();
+    await rawClient.appConfig.deleteMany({
+      where: { configKey: 'encryption_key' },
+    });
+    await rawClient.$disconnect();
+
+    // 重置密钥缓存，下次使用环境变量
+    resetEncryptionKeyCache();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Stored encryption key removed. Using ENCRYPTION_KEY environment variable.',
+    });
   }
 
   return res.status(405).json({ error: 'Method not allowed' });

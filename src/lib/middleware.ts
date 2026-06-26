@@ -4,12 +4,13 @@ import { encrypt, decrypt } from './crypto';
 /**
  * 加密中间件
  *
- * ENCRYPTION_KEY 可从以下来源获取：
- * 1. 环境变量 ENCRYPTION_KEY
- * 2. 数据库 AppConfig 中的 encryption_key（用户在设置页面开启加密后存储）
+ * 加密始终开启，所有 AppConfig 和 WebhookConfig 的敏感字段自动加解密。
  *
- * 当加密关闭时（无 ENCRYPTION_KEY），所有字段以明文存储和读取。
- * 当加密开启时，敏感字段自动加解密。
+ * ENCRYPTION_KEY 来源优先级：
+ *   1. 环境变量 ENCRYPTION_KEY
+ *   2. 数据库 AppConfig.encryption_key（用户在设置页面选择存储密钥后写入）
+ *
+ * 如果两者都不存在，系统无法启动（无法解密已有数据）。
  */
 
 // 需要加密的字段配置
@@ -22,11 +23,11 @@ let cachedEncryptionKey: string | null = null;
 let encryptionKeyLoaded = false;
 
 /**
- * 尝试获取加密密钥
+ * 获取加密密钥（必须存在）
  * 优先级：缓存 → 环境变量 → 数据库 AppConfig
  */
-async function getEncryptionKey(): Promise<string | null> {
-  if (encryptionKeyLoaded) return cachedEncryptionKey;
+async function getEncryptionKey(): Promise<string> {
+  if (encryptionKeyLoaded && cachedEncryptionKey) return cachedEncryptionKey;
 
   // 1. 环境变量
   const envKey = process.env.ENCRYPTION_KEY;
@@ -36,7 +37,7 @@ async function getEncryptionKey(): Promise<string | null> {
     return envKey;
   }
 
-  // 2. 数据库 AppConfig
+  // 2. 数据库 AppConfig（用户在设置页面存储的密钥，明文）
   try {
     const rawClient = new PrismaClient();
     const config = await rawClient.appConfig.findUnique({
@@ -50,30 +51,26 @@ async function getEncryptionKey(): Promise<string | null> {
       return config.configValue;
     }
   } catch {
-    // 数据库不可用，继续无加密模式
+    // 数据库不可用
   }
 
-  encryptionKeyLoaded = true;
-  cachedEncryptionKey = null;
-  return null;
+  throw new Error(
+    'ENCRYPTION_KEY not configured. Set it as environment variable or store it in database via Settings page.'
+  );
 }
 
-/** 重置加密密钥缓存（用户开关加密时调用） */
+/** 重置加密密钥缓存（用户存储/移除密钥时调用） */
 export function resetEncryptionKeyCache(): void {
   cachedEncryptionKey = null;
   encryptionKeyLoaded = false;
 }
 
-/**
- * 检查是否为加密字段
- */
+/** 检查是否为加密字段 */
 function isEncryptedField(model: string, field: string): boolean {
   return ENCRYPTED_FIELDS[model]?.includes(field) ?? false;
 }
 
-/**
- * 加密对象中的指定字段
- */
+/** 加密对象中的指定字段 */
 function encryptObject(
   obj: Record<string, unknown>,
   model: string,
@@ -88,9 +85,7 @@ function encryptObject(
   return result;
 }
 
-/**
- * 解密对象中的指定字段
- */
+/** 解密对象中的指定字段 */
 function decryptObject(
   obj: Record<string, unknown>,
   model: string,
@@ -109,19 +104,14 @@ function decryptObject(
   return result;
 }
 
-/**
- * 递归处理查询结果
- */
+/** 递归处理查询结果 */
 function processResult(result: unknown, model: string, key: string | null): unknown {
   if (result === null || result === undefined) return result;
   if (Array.isArray(result)) return result.map((item) => processResult(item, model, key));
   if (typeof result === 'object') {
     const obj = result as Record<string, unknown>;
     if ('id' in obj || 'configKey' in obj || 'appId' in obj) {
-      if (key) {
-        return decryptObject(obj, model, key);
-      }
-      // 无加密密钥，明文返回
+      if (key) return decryptObject(obj, model, key);
       return obj;
     }
   }
@@ -130,8 +120,7 @@ function processResult(result: unknown, model: string, key: string | null): unkn
 
 /**
  * 创建带加密中间件的 Prisma 客户端
- *
- * 加密密钥懒加载：首次查询时获取，支持无加密模式
+ * 加密始终开启，密钥懒加载
  */
 export function createEncryptedPrismaClient(): PrismaClient {
   const client = new PrismaClient();
@@ -149,26 +138,18 @@ export function createEncryptedPrismaClient(): PrismaClient {
           query: (args: Record<string, unknown>) => Promise<unknown>;
         }) {
           const model = (args.model as string) || '';
-
-          // 获取加密密钥（懒加载）
           const encKey = await getEncryptionKey();
 
           // 写入操作：加密
           if (['create', 'createMany', 'update', 'updateMany', 'upsert'].includes(operation)) {
             if (args.data && typeof args.data === 'object') {
-              if (encKey) {
-                args.data = encryptObject(args.data as Record<string, unknown>, model, encKey);
-              }
+              args.data = encryptObject(args.data as Record<string, unknown>, model, encKey);
             }
             if (args.create && typeof args.create === 'object') {
-              if (encKey) {
-                args.create = encryptObject(args.create as Record<string, unknown>, model, encKey);
-              }
+              args.create = encryptObject(args.create as Record<string, unknown>, model, encKey);
             }
             if (args.update && typeof args.update === 'object') {
-              if (encKey) {
-                args.update = encryptObject(args.update as Record<string, unknown>, model, encKey);
-              }
+              args.update = encryptObject(args.update as Record<string, unknown>, model, encKey);
             }
           }
 
