@@ -205,7 +205,17 @@
     "retry": "Re-check Environment Variables",
     "howToGet": "How to get",
     "loading": "Loading...",
-    "checkFailed": "Failed to check environment variables"
+    "checkFailed": "Failed to check environment variables",
+    "dbHasData": "Database contains data",
+    "dbHasDataHint": "Admin or config data detected. Only decryption key is needed to restore service.",
+    "dbEmpty": "Database is empty",
+    "dbEmptyHint": "Empty database detected. All environment variables must be configured for initialization.",
+    "requiredMissing": "Required Missing",
+    "optionalMissing": "Optional Missing",
+    "requiredVars": "Required Environment Variables (missing will block startup)",
+    "optionalVars": "Optional Environment Variables (not needed when data exists)",
+    "optionalVarsHint": "These variables are only required on first deployment (empty database). Database already has data, so they are optional.",
+    "existingDbHint": "Database has data. Add the missing decryption key (ENCRYPTION_KEY) to restore service"
   },
   "envVarDescriptions": {
     "githubClientId": "GitHub OAuth App Client ID, used for user login authentication",

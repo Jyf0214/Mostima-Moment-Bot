@@ -1,14 +1,23 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// 必要的环境变量列表
-const REQUIRED_ENV_VARS = [
-  'GITHUB_CLIENT_ID',
-  'GITHUB_CLIENT_SECRET',
-  'JWT_SECRET',
-  'ENCRYPTION_KEY',
-  'DATABASE_URL',
-];
+/**
+ * 分级环境变量检查策略
+ *
+ * Tier 1（始终必需）：数据库连接 + 密钥
+ *   → DATABASE_URL, JWT_SECRET, ENCRYPTION_KEY
+ *   → 缺失则无法运行，重定向到 env-error
+ *
+ * Tier 2（仅数据库为空时必需）：OAuth 配置
+ *   → GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET
+ *   → 数据库已有数据时可选（配置已存储在 DB 中）
+ */
+
+const TIER1_KEYS = ['DATABASE_URL', 'JWT_SECRET', 'ENCRYPTION_KEY'];
+const TIER2_KEYS = ['GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET'];
+
+// 所有需要检查的变量（合并）
+const ALL_KEYS = [...TIER1_KEYS, ...TIER2_KEYS];
 
 // 不需要环境变量检查的路径
 const ENV_CHECK_EXEMPT_PATHS = ['/api/env-check', '/env-error', '/_next', '/favicon.ico'];
@@ -27,20 +36,57 @@ const publicPaths = [
   '/favicon.ico',
 ];
 
+// 数据库状态缓存（避免每次请求都查库）
+let dbHasData: boolean | null = null;
+let dbCheckTime = 0;
+const DB_CACHE_TTL = 60_000; // 60 秒缓存
+
 /**
- * 检查环境变量是否已配置
+ * 检查数据库是否有数据（管理员或配置）
+ * 有数据说明是已使用的数据库，Tier2 变量可选
  */
-function checkEnvironmentVariables(): string[] {
+async function checkDatabaseHasData(): Promise<boolean> {
+  const now = Date.now();
+  if (dbHasData !== null && now - dbCheckTime < DB_CACHE_TTL) {
+    return dbHasData;
+  }
+
+  try {
+    // 动态导入避免 middleware 边界问题
+    const { prisma } = await import('@/lib/prisma');
+    const adminCount = await prisma.admin.count();
+    const configCount = await prisma.appConfig.count();
+    dbHasData = adminCount > 0 || configCount > 0;
+    dbCheckTime = now;
+    return dbHasData;
+  } catch {
+    // 数据库连接失败，保守处理：假设为空（需要完整环境变量）
+    return false;
+  }
+}
+
+/**
+ * 检查环境变量缺失情况
+ * 返回缺失的变量列表
+ */
+function getMissingEnvVars(): string[] {
   const missing: string[] = [];
-  for (const envVar of REQUIRED_ENV_VARS) {
-    if (!process.env[envVar]) {
-      missing.push(envVar);
+  for (const key of ALL_KEYS) {
+    if (!process.env[key]) {
+      missing.push(key);
     }
   }
   return missing;
 }
 
-export function proxy(request: NextRequest) {
+/**
+ * 获取缺失的 Tier1 变量
+ */
+function getMissingTier1(): string[] {
+  return TIER1_KEYS.filter((key) => !process.env[key]);
+}
+
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // 检查是否为免检路径
@@ -48,14 +94,31 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 检查环境变量
-  const missingEnvVars = checkEnvironmentVariables();
-  if (missingEnvVars.length > 0) {
-    // 环境变量缺失，重定向到错误页面
+  // Tier 1 检查：始终必需
+  const missingTier1 = getMissingTier1();
+  if (missingTier1.length > 0) {
     const errorUrl = new URL('/env-error', request.url);
-    errorUrl.searchParams.set('missing', missingEnvVars.join(','));
+    errorUrl.searchParams.set('missing', missingTier1.join(','));
+    errorUrl.searchParams.set('tier', '1');
     return NextResponse.redirect(errorUrl);
   }
+
+  // Tier 1 通过，检查数据库状态
+  const hasData = await checkDatabaseHasData();
+
+  if (!hasData) {
+    // 数据库为空 → Tier 2 也必需
+    const missingTier2 = TIER2_KEYS.filter((key) => !process.env[key]);
+    if (missingTier2.length > 0) {
+      const allMissing = [...missingTier1, ...missingTier2];
+      const errorUrl = new URL('/env-error', request.url);
+      errorUrl.searchParams.set('missing', allMissing.join(','));
+      errorUrl.searchParams.set('tier', '2');
+      return NextResponse.redirect(errorUrl);
+    }
+  }
+
+  // 数据库有数据 → Tier 2 可选，不需要检查
 
   // 检查是否为公开路径
   if (publicPaths.some((path) => pathname.startsWith(path))) {
@@ -73,10 +136,8 @@ export function proxy(request: NextRequest) {
   if (!token) {
     // 未登录，检查是否为全新应用
     if (pathname === '/') {
-      // 首页，允许访问（页面会检查应用状态）
       return NextResponse.next();
     }
-    // 其他页面，重定向到首页
     return NextResponse.redirect(new URL('/', request.url));
   }
 
@@ -84,13 +145,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    /*
-     * 匹配所有路径除了:
-     * - _next/static (静态文件)
-     * - _next/image (图片优化)
-     * - favicon.ico
-     */
-    '/((?!_next/static|_next/image|favicon.ico).*)',
-  ],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };

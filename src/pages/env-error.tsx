@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, X, Check, RefreshCw, Info, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, X, Check, RefreshCw, Info, ShieldAlert, Database, Key } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { StatusCard } from '@/components/ui/StatusCard';
 import { PageContainer } from '@/components/ui/PageContainer';
@@ -10,18 +10,19 @@ import { ProCard } from '@/components/ui/ProCard';
 
 interface EnvVar {
   key: string;
+  tier: number;
+  required: boolean;
   description: string;
   generateHint: string;
 }
 
 interface EnvStatus {
   isConfigured: boolean;
+  dbHasData: boolean;
   missing: EnvVar[];
   present: EnvVar[];
   message: string;
 }
-
-const STEPS_KEYS = ['envError.step1', 'envError.step2', 'envError.step3'] as const;
 
 export default function EnvErrorPage() {
   const { t } = useTranslation();
@@ -53,8 +54,10 @@ export default function EnvErrorPage() {
     checkEnvStatus();
   }, [checkEnvStatus]);
 
-  const failCount = envStatus?.missing.length ?? 0;
+  const trulyMissing = envStatus?.missing.filter((m) => m.required) ?? [];
+  const optionalMissing = envStatus?.missing.filter((m) => !m.required) ?? [];
   const passCount = envStatus?.present.length ?? 0;
+  const isNewDb = envStatus !== null && !envStatus.dbHasData;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
@@ -107,13 +110,48 @@ export default function EnvErrorPage() {
           {/* 检测结果 */}
           {envStatus && (
             <>
+              {/* 数据库状态提示 */}
+              <div
+                className={`flex items-center gap-3 rounded-lg border p-4 ${
+                  envStatus.dbHasData
+                    ? 'border-emerald-200 bg-emerald-50'
+                    : 'border-amber-200 bg-amber-50'
+                }`}
+              >
+                {envStatus.dbHasData ? (
+                  <Database className="h-5 w-5 shrink-0 text-emerald-500" />
+                ) : (
+                  <Database className="h-5 w-5 shrink-0 text-amber-500" />
+                )}
+                <div>
+                  <p
+                    className={`text-sm font-medium ${envStatus.dbHasData ? 'text-emerald-700' : 'text-amber-700'}`}
+                  >
+                    {envStatus.dbHasData ? t('envError.dbHasData') : t('envError.dbEmpty')}
+                  </p>
+                  <p
+                    className={`text-xs ${envStatus.dbHasData ? 'text-emerald-600' : 'text-amber-600'}`}
+                  >
+                    {envStatus.dbHasData ? t('envError.dbHasDataHint') : t('envError.dbEmptyHint')}
+                  </p>
+                </div>
+              </div>
+
               {/* 统计卡片 */}
               <div className="flex gap-4">
-                {failCount > 0 && (
+                {trulyMissing.length > 0 && (
                   <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5">
                     <AlertTriangle className="h-4 w-4 text-red-500" />
                     <span className="text-sm font-medium text-red-700">
-                      {t('envError.missingVars')} {failCount}
+                      {t('envError.requiredMissing')} {trulyMissing.length}
+                    </span>
+                  </div>
+                )}
+                {optionalMissing.length > 0 && (
+                  <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5">
+                    <Key className="h-4 w-4 text-amber-500" />
+                    <span className="text-sm font-medium text-amber-700">
+                      {t('envError.optionalMissing')} {optionalMissing.length}
                     </span>
                   </div>
                 )}
@@ -125,24 +163,61 @@ export default function EnvErrorPage() {
                 </div>
               </div>
 
-              {/* 缺失的环境变量 */}
-              {envStatus.missing.length > 0 && (
+              {/* 必需但缺失的环境变量 */}
+              {trulyMissing.length > 0 && (
                 <ProCard
-                  title={t('envError.missingVars')}
+                  title={t('envError.requiredVars')}
                   extra={
                     <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-medium text-white">
-                      {failCount}
+                      {trulyMissing.length}
                     </span>
                   }
                 >
                   <div className="flex flex-col gap-3">
-                    {envStatus.missing.map((envVar) => (
+                    {trulyMissing.map((envVar) => (
                       <div key={envVar.key} className="flex flex-col gap-2">
                         <StatusCard
                           icon={<X className="h-4 w-4" />}
                           title={envVar.key}
                           status={envVar.description}
                           statusType="error"
+                        />
+                        <div className="flex items-start gap-2 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
+                          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-zinc-400" />
+                          <div className="flex-1">
+                            <span className="mb-1 block text-xs font-semibold text-zinc-700">
+                              {t('envError.howToGet')}:
+                            </span>
+                            <code className="block break-all whitespace-pre-wrap rounded-md bg-zinc-100 px-2.5 py-1.5 text-xs text-zinc-700">
+                              {envVar.generateHint}
+                            </code>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ProCard>
+              )}
+
+              {/* 可选但缺失的环境变量 */}
+              {optionalMissing.length > 0 && (
+                <ProCard
+                  title={t('envError.optionalVars')}
+                  extra={
+                    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-xs font-medium text-white">
+                      {optionalMissing.length}
+                    </span>
+                  }
+                >
+                  <p className="text-xs text-zinc-500 mb-3">{t('envError.optionalVarsHint')}</p>
+                  <div className="flex flex-col gap-3">
+                    {optionalMissing.map((envVar) => (
+                      <div key={envVar.key} className="flex flex-col gap-2">
+                        <StatusCard
+                          icon={<Key className="h-4 w-4" />}
+                          title={envVar.key}
+                          status={envVar.description}
+                          statusType="warning"
                         />
                         <div className="flex items-start gap-2 rounded-lg border border-zinc-200 bg-zinc-50 p-3">
                           <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-zinc-400" />
@@ -186,7 +261,7 @@ export default function EnvErrorPage() {
               )}
 
               {/* 全部配置完成 */}
-              {failCount === 0 && (
+              {trulyMissing.length === 0 && (
                 <div className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
                   <Check className="h-5 w-5 shrink-0 text-emerald-500" />
                   <div>
@@ -197,17 +272,38 @@ export default function EnvErrorPage() {
               )}
 
               {/* 解决方法 */}
-              {failCount > 0 && (
+              {trulyMissing.length > 0 && (
                 <ProCard title={t('envError.solution')}>
                   <div className="flex flex-col gap-3">
-                    {STEPS_KEYS.map((key, index) => (
-                      <div key={key} className="flex items-start gap-3">
-                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-500">
-                          <span className="text-xs font-bold text-white">{index + 1}</span>
+                    {isNewDb ? (
+                      <>
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-500">
+                            <span className="text-xs font-bold text-white">1</span>
+                          </div>
+                          <p className="text-sm text-zinc-700">{t('envError.step1')}</p>
                         </div>
-                        <p className="text-sm text-zinc-700">{t(key)}</p>
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-500">
+                            <span className="text-xs font-bold text-white">2</span>
+                          </div>
+                          <p className="text-sm text-zinc-700">{t('envError.step2')}</p>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-500">
+                            <span className="text-xs font-bold text-white">3</span>
+                          </div>
+                          <p className="text-sm text-zinc-700">{t('envError.step3')}</p>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-500">
+                          <span className="text-xs font-bold text-white">1</span>
+                        </div>
+                        <p className="text-sm text-zinc-700">{t('envError.existingDbHint')}</p>
                       </div>
-                    ))}
+                    )}
                     <p className="ml-9 text-xs text-zinc-500">{t('envError.step4')}</p>
                   </div>
                 </ProCard>
