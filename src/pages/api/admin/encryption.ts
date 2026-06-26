@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import jwt from 'jsonwebtoken';
-import { resetEncryptionKeyCache } from '@/lib/middleware';
+import { resetEncryptionKeyCache } from '@/lib/prisma-encryption';
 
 /**
  * 加密密钥存储管理

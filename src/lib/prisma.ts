@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { createEncryptedPrismaClient } from './middleware';
+import { createEncryptedPrismaClient } from './prisma-encryption';
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
