@@ -456,7 +456,6 @@ describe('UI 组件结构验证', () => {
     const hero = readFile(path.join(COMPONENTS_DIR, 'HeroBanner.tsx'));
     expect(hero).toContain('backgroundImage');
     expect(hero).toContain('gradient');
-    expect(hero).toContain('DEFAULT_GRADIENT');
   });
 
   it('FormField 组件应支持 text/textarea/select 三种类型', () => {

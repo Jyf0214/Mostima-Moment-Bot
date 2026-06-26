@@ -150,7 +150,7 @@ export default function EnvErrorPage() {
                             <span className="mb-1 block text-xs font-semibold text-zinc-700">
                               {t('envError.howToGet')}:
                             </span>
-                            <code className="block break-all whitespace-pre-wrap rounded-md bg-zinc-900 px-2.5 py-1.5 text-xs text-zinc-100">
+                            <code className="block break-all whitespace-pre-wrap rounded-md bg-zinc-100 px-2.5 py-1.5 text-xs text-zinc-700">
                               {envVar.generateHint}
                             </code>
                           </div>

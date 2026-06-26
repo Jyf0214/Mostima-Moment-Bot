@@ -15,7 +15,7 @@ export interface HeroButton {
 export interface HeroBannerProps {
   /** 背景图 URL，未提供时使用渐变色 */
   backgroundImage?: string;
-  /** 自定义渐变色，如 "linear-gradient(135deg, #1e3a5f, #581c87)" */
+  /** 自定义渐变 className，如 "from-blue-50 to-purple-50" */
   gradient?: string;
   /** 提示文字标签，如 "最新" "推荐" "更新" */
   tips?: string;
@@ -50,10 +50,6 @@ const sizeMap = {
   },
 };
 
-/** 默认渐变背景 —— 3 种颜色缓慢流动 */
-const DEFAULT_GRADIENT =
-  'linear-gradient(135deg, #18181b 0%, #3f3f46 25%, #292524 50%, #3f3f46 75%, #18181b 100%)';
-
 export function HeroBanner({
   backgroundImage,
   gradient,
@@ -67,19 +63,20 @@ export function HeroBanner({
   className = '',
 }: HeroBannerProps) {
   const sizeStyle = sizeMap[size];
-  const hasGradient = !backgroundImage;
 
   const renderContent = () => (
     <>
       {tips && (
-        <span className="inline-block text-xs px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-white/90 mb-4">
+        <span className="inline-block text-xs px-3 py-1 bg-zinc-100 rounded-full text-zinc-600 mb-4 font-medium">
           {tips}
         </span>
       )}
-      <h1 className={`${sizeStyle.title} font-bold text-white tracking-tight leading-tight mb-4`}>
+      <h1
+        className={`${sizeStyle.title} font-bold text-zinc-900 tracking-tight leading-tight mb-4`}
+      >
         {title}
       </h1>
-      {description && <p className="text-base sm:text-lg text-white/70 max-w-2xl">{description}</p>}
+      {description && <p className="text-base sm:text-lg text-zinc-500 max-w-2xl">{description}</p>}
       {buttons && buttons.length > 0 && (
         <div
           className={`flex flex-wrap gap-3 mt-6 ${
@@ -89,9 +86,9 @@ export function HeroBanner({
           {buttons.map((btn, i) => {
             const btnBase =
               btn.variant === 'primary'
-                ? 'bg-white text-zinc-900 hover:bg-white/90 border-transparent'
-                : 'bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20';
-            const btnClasses = `inline-flex items-center gap-2 px-5 py-2.5 rounded-xl ${btnBase} transition-all font-medium text-sm`;
+                ? 'bg-zinc-900 text-white hover:bg-zinc-800 border-transparent'
+                : 'bg-white border border-zinc-200 text-zinc-700 hover:bg-zinc-50';
+            const btnClasses = `inline-flex items-center gap-2 px-5 py-2.5 rounded-xl ${btnBase} transition-all font-medium text-sm shadow-sm`;
 
             const children = (
               <>
@@ -118,26 +115,14 @@ export function HeroBanner({
     </>
   );
 
+  const bgClassName = gradient ? `bg-gradient-to-br ${gradient}` : 'bg-zinc-50';
+
   return (
     <>
       <motion.section
-        className={`relative w-full overflow-hidden rounded-2xl sm:rounded-3xl ${sizeStyle.padding} px-6 sm:px-8 ${className}`}
-        style={
-          hasGradient
-            ? {
-                background: gradient ?? DEFAULT_GRADIENT,
-                backgroundSize: '400% 400%',
-              }
-            : undefined
-        }
-        animate={
-          hasGradient
-            ? {
-                backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
-              }
-            : undefined
-        }
-        transition={hasGradient ? { duration: 18, ease: 'easeInOut', repeat: Infinity } : undefined}
+        className={`relative w-full overflow-hidden rounded-2xl sm:rounded-3xl ${sizeStyle.padding} px-6 sm:px-8 ${bgClassName} ${className}`}
+        animate={!backgroundImage ? { opacity: 1 } : undefined}
+        transition={!backgroundImage ? { duration: 0.6, ease: 'easeOut' } : undefined}
       >
         {/* 背景图 + 遮罩 */}
         {backgroundImage && (

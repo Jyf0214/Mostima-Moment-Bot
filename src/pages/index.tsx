@@ -68,30 +68,30 @@ export default function HomePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-white/20 border-t-purple-500" />
+      <div className="min-h-screen flex items-center justify-center bg-zinc-50">
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-zinc-200 border-t-blue-500" />
       </div>
     );
   }
 
   const features = [
     {
-      icon: <Zap className="h-6 w-6 text-emerald-400" />,
+      icon: <Zap className="h-6 w-6 text-emerald-500" />,
       title: t('home.featureCicdTitle'),
       desc: t('home.featureCicdDesc'),
-      bg: 'bg-emerald-500/10',
+      bg: 'bg-emerald-50',
     },
     {
-      icon: <FileCheck className="h-6 w-6 text-blue-400" />,
+      icon: <FileCheck className="h-6 w-6 text-blue-500" />,
       title: t('home.featurePrTitle'),
       desc: t('home.featurePrDesc'),
-      bg: 'bg-blue-500/10',
+      bg: 'bg-blue-50',
     },
     {
-      icon: <Shield className="h-6 w-6 text-purple-400" />,
+      icon: <Shield className="h-6 w-6 text-zinc-600" />,
       title: t('home.featureWebhookTitle'),
       desc: t('home.featureWebhookDesc'),
-      bg: 'bg-purple-500/10',
+      bg: 'bg-zinc-100',
     },
   ];
 
@@ -124,7 +124,7 @@ export default function HomePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div className="min-h-screen bg-zinc-50">
       {/* Hero */}
       <PageContainer maxWidth="6xl" padding="wide">
         <div className="pt-8">
@@ -146,7 +146,7 @@ export default function HomePage() {
                 variant: 'ghost',
               },
             ]}
-            gradient="from-purple-600/20 via-transparent to-blue-600/20"
+            gradient="from-blue-50 via-transparent to-purple-50"
             align="center"
           />
         </div>
@@ -157,16 +157,16 @@ export default function HomePage() {
         <PageContainer maxWidth="6xl" padding="default">
           <div className="py-16 sm:py-20">
             <div className="text-center mb-12">
-              <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3">
+              <h2 className="text-3xl sm:text-4xl font-bold text-zinc-900 mb-3">
                 {t('home.featuresTitle')}
               </h2>
-              <p className="text-white/50 text-lg">{t('home.featuresSubtitle')}</p>
+              <p className="text-zinc-500 text-lg">{t('home.featuresSubtitle')}</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {features.map((f, i) => (
                 <ProCard
                   key={i}
-                  className="bg-white/5 backdrop-blur-xl border-white/10 hover:border-white/20 transition-all"
+                  className="bg-white border-zinc-200 hover:shadow-md transition-all"
                   padding="p-6"
                 >
                   <div
@@ -174,8 +174,8 @@ export default function HomePage() {
                   >
                     {f.icon}
                   </div>
-                  <h3 className="text-lg font-semibold text-white mb-2">{f.title}</h3>
-                  <p className="text-white/50 text-sm leading-relaxed">{f.desc}</p>
+                  <h3 className="text-lg font-semibold text-zinc-900 mb-2">{f.title}</h3>
+                  <p className="text-zinc-500 text-sm leading-relaxed">{f.desc}</p>
                 </ProCard>
               ))}
             </div>
@@ -188,29 +188,26 @@ export default function HomePage() {
         <PageContainer maxWidth="6xl" padding="default">
           <div className="py-16 sm:py-20">
             <div className="text-center mb-12">
-              <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3">
+              <h2 className="text-3xl sm:text-4xl font-bold text-zinc-900 mb-3">
                 {t('home.howItWorks')}
               </h2>
-              <p className="text-white/50 text-lg">{t('home.howItWorksSubtitle')}</p>
+              <p className="text-zinc-500 text-lg">{t('home.howItWorksSubtitle')}</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {steps.map((s, i) => (
                 <div key={i} className="relative">
-                  <ProCard
-                    className="bg-white/5 backdrop-blur-xl border-white/10 h-full"
-                    padding="p-6"
-                  >
+                  <ProCard className="bg-white border-zinc-200 h-full" padding="p-6">
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-purple-500/20 text-purple-400 text-sm font-bold">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-white text-sm font-bold">
                         {i + 1}
                       </div>
-                      <div className="text-white/70">{s.icon}</div>
+                      <div className="text-zinc-600">{s.icon}</div>
                     </div>
-                    <h3 className="text-base font-semibold text-white mb-1">{s.title}</h3>
-                    <p className="text-white/40 text-sm leading-relaxed">{s.desc}</p>
+                    <h3 className="text-base font-semibold text-zinc-900 mb-1">{s.title}</h3>
+                    <p className="text-zinc-500 text-sm leading-relaxed">{s.desc}</p>
                   </ProCard>
                   {i < steps.length - 1 && (
-                    <div className="hidden lg:flex absolute top-1/2 -right-3 transform -translate-y-1/2 text-white/20">
+                    <div className="hidden lg:flex absolute top-1/2 -right-3 transform -translate-y-1/2 text-zinc-300">
                       <ArrowRight className="h-5 w-5" />
                     </div>
                   )}
@@ -226,20 +223,20 @@ export default function HomePage() {
         <PageContainer maxWidth="6xl" padding="default">
           <div className="py-16 sm:py-20">
             <div className="text-center mb-12">
-              <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3">
+              <h2 className="text-3xl sm:text-4xl font-bold text-zinc-900 mb-3">
                 {t('home.techStack')}
               </h2>
-              <p className="text-white/50 text-lg">{t('home.techStackSubtitle')}</p>
+              <p className="text-zinc-500 text-lg">{t('home.techStackSubtitle')}</p>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
               {techItems.map((tech, i) => (
                 <div
                   key={i}
-                  className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4 text-center hover:border-white/20 transition-all"
+                  className="bg-white border border-zinc-200 rounded-xl p-4 text-center hover:shadow-md transition-all"
                 >
-                  <div className="text-purple-400 flex justify-center mb-2">{tech.icon}</div>
-                  <p className="text-white font-semibold text-sm mb-1">{tech.name}</p>
-                  <p className="text-white/40 text-xs">{tech.desc}</p>
+                  <div className="text-zinc-600 flex justify-center mb-2">{tech.icon}</div>
+                  <p className="text-zinc-900 font-semibold text-sm mb-1">{tech.name}</p>
+                  <p className="text-zinc-500 text-xs">{tech.desc}</p>
                 </div>
               ))}
             </div>
@@ -251,15 +248,12 @@ export default function HomePage() {
       <section>
         <PageContainer maxWidth="4xl" padding="default">
           <div className="py-16 sm:py-20">
-            <ProCard
-              className="bg-gradient-to-r from-purple-500/10 via-blue-500/10 to-purple-500/10 border-white/10 text-center"
-              padding="p-10 sm:p-14"
-            >
-              <Lock className="h-10 w-10 text-purple-400 mx-auto mb-4" />
-              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">
+            <ProCard className="bg-white border-zinc-200 text-center" padding="p-10 sm:p-14">
+              <Lock className="h-10 w-10 text-zinc-500 mx-auto mb-4" />
+              <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 mb-3">
                 {t('home.ctaTitle')}
               </h2>
-              <p className="text-white/50 text-lg mb-8 max-w-lg mx-auto">{t('home.ctaSubtitle')}</p>
+              <p className="text-zinc-500 text-lg mb-8 max-w-lg mx-auto">{t('home.ctaSubtitle')}</p>
               <div className="flex flex-wrap items-center justify-center gap-4">
                 <Button
                   variant="primary"
@@ -286,15 +280,15 @@ export default function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-white/5">
+      <footer className="border-t border-zinc-200">
         <PageContainer maxWidth="6xl" padding="compact">
           <div className="py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <Zap className="h-4 w-4 text-purple-400" />
-              <span className="text-white/60 text-sm font-medium">Manticore Bot</span>
+              <Zap className="h-4 w-4 text-zinc-500" />
+              <span className="text-zinc-700 text-sm font-medium">Manticore Bot</span>
             </div>
-            <p className="text-white/30 text-xs text-center">{t('home.footerDesc')}</p>
-            <p className="text-white/30 text-xs">{t('home.footerLicense')}</p>
+            <p className="text-zinc-400 text-xs text-center">{t('home.footerDesc')}</p>
+            <p className="text-zinc-400 text-xs">{t('home.footerLicense')}</p>
           </div>
         </PageContainer>
       </footer>

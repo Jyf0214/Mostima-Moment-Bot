@@ -162,14 +162,14 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-white/20 border-t-purple-500" />
+      <div className="min-h-screen flex items-center justify-center bg-zinc-50">
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-zinc-200 border-t-blue-500" />
       </div>
     );
   }
 
   return (
-    <div className="h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex overflow-hidden">
+    <div className="h-screen bg-zinc-50 flex overflow-hidden">
       <Sidebar
         activePage={activePage}
         onNavigate={(page) => {
@@ -190,11 +190,11 @@ export default function DashboardPage() {
                 <img
                   src={user.avatarUrl}
                   alt=""
-                  className="h-10 w-10 rounded-full ring-2 ring-white/10"
+                  className="h-10 w-10 rounded-full ring-2 ring-zinc-200"
                 />
               )}
               <div>
-                <h1 className="text-xl font-bold text-white">
+                <h1 className="text-xl font-bold text-zinc-900">
                   {activePage === 'overview' && t('home.dashboard')}
                   {activePage === 'repos' && t('sidebar.repos')}
                   {activePage === 'logs' && t('sidebar.logs')}
@@ -202,7 +202,7 @@ export default function DashboardPage() {
                   {activePage === 'apikeys' && t('sidebar.apiKeys')}
                   {activePage === 'settings' && t('sidebar.settings')}
                 </h1>
-                <p className="text-white/40 text-xs">@{user?.githubLogin}</p>
+                <p className="text-zinc-500 text-xs">@{user?.githubLogin}</p>
               </div>
             </div>
             {activePage === 'repos' && (
@@ -211,7 +211,7 @@ export default function DashboardPage() {
                 size="sm"
                 icon={<RefreshCw className={`h-3.5 w-3.5 ${reposLoading ? 'animate-spin' : ''}`} />}
                 onClick={loadRepos}
-                className="text-white/50 hover:text-white"
+                className="text-zinc-500 hover:text-zinc-700"
               >
                 {t('dashboard.refresh')}
               </Button>
@@ -222,8 +222,8 @@ export default function DashboardPage() {
             <div
               className={`mb-6 flex items-center gap-3 rounded-xl border px-4 py-3 text-sm ${
                 installMsgType === 'success'
-                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
-                  : 'border-red-500/30 bg-red-500/10 text-red-400'
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                  : 'border-red-200 bg-red-50 text-red-700'
               }`}
             >
               {installMsgType === 'success' ? (
@@ -278,38 +278,38 @@ function OverviewPage({
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <ProCard className="bg-white/5 backdrop-blur-xl border-white/10" padding="p-4">
+        <ProCard className="bg-white border-zinc-200" padding="p-4">
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-lg bg-purple-500/10 flex items-center justify-center">
-              <Plug className="h-4 w-4 text-purple-400" />
+            <div className="h-9 w-9 rounded-lg bg-zinc-100 flex items-center justify-center">
+              <Plug className="h-4 w-4 text-zinc-500" />
             </div>
             <div>
-              <p className="text-white/40 text-xs">{t('dashboard.activeInstallations')}</p>
-              <p className="text-xl font-bold text-white">
+              <p className="text-zinc-500 text-xs">{t('dashboard.activeInstallations')}</p>
+              <p className="text-xl font-bold text-zinc-900">
                 {reposLoading ? '...' : repos?.installations.length || 0}
               </p>
             </div>
           </div>
         </ProCard>
-        <ProCard className="bg-white/5 backdrop-blur-xl border-white/10" padding="p-4">
+        <ProCard className="bg-white border-zinc-200" padding="p-4">
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-lg bg-blue-500/10 flex items-center justify-center">
-              <FolderGit2 className="h-4 w-4 text-blue-400" />
+            <div className="h-9 w-9 rounded-lg bg-blue-50 flex items-center justify-center">
+              <FolderGit2 className="h-4 w-4 text-blue-500" />
             </div>
             <div>
-              <p className="text-white/40 text-xs">{t('dashboard.totalRepos')}</p>
-              <p className="text-xl font-bold text-white">{reposLoading ? '...' : totalRepos}</p>
+              <p className="text-zinc-500 text-xs">{t('dashboard.totalRepos')}</p>
+              <p className="text-xl font-bold text-zinc-900">{reposLoading ? '...' : totalRepos}</p>
             </div>
           </div>
         </ProCard>
-        <ProCard className="bg-white/5 backdrop-blur-xl border-white/10" padding="p-4">
+        <ProCard className="bg-white border-zinc-200" padding="p-4">
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-              <BarChart3 className="h-4 w-4 text-emerald-400" />
+            <div className="h-9 w-9 rounded-lg bg-emerald-50 flex items-center justify-center">
+              <BarChart3 className="h-4 w-4 text-emerald-500" />
             </div>
             <div>
-              <p className="text-white/40 text-xs">{t('envPage.configured')}</p>
-              <p className="text-xl font-bold text-white">
+              <p className="text-zinc-500 text-xs">{t('envPage.configured')}</p>
+              <p className="text-xl font-bold text-zinc-900">
                 {appConfigured === null ? '...' : appConfigured ? '✓' : '—'}
               </p>
             </div>
@@ -317,29 +317,29 @@ function OverviewPage({
         </ProCard>
       </div>
 
-      <ProCard className="bg-white/5 backdrop-blur-xl border-white/10" padding="p-5">
-        <h3 className="text-sm font-medium text-white/60 mb-4">{t('dashboard.quickActions')}</h3>
+      <ProCard className="bg-white border-zinc-200" padding="p-5">
+        <h3 className="text-sm font-medium text-zinc-500 mb-4">{t('dashboard.quickActions')}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {!hasInstallations && appConfigured !== false ? (
             <button
               onClick={onInstall}
-              className="flex items-center gap-3 p-4 rounded-xl bg-purple-500/10 border border-purple-500/20 hover:border-purple-500/40 transition-all text-left"
+              className="flex items-center gap-3 p-4 rounded-xl bg-blue-50 border border-blue-200 hover:border-blue-300 transition-all text-left"
             >
-              <Plug className="h-5 w-5 text-purple-400 shrink-0" />
+              <Plug className="h-5 w-5 text-blue-500 shrink-0" />
               <div>
-                <p className="text-white text-sm font-medium">{t('home.installApp')}</p>
-                <p className="text-white/40 text-xs">{t('home.installAppDesc')}</p>
+                <p className="text-zinc-900 text-sm font-medium">{t('home.installApp')}</p>
+                <p className="text-zinc-500 text-xs">{t('home.installAppDesc')}</p>
               </div>
             </button>
           ) : (
             <button
               onClick={onNavigateToRepos}
-              className="flex items-center gap-3 p-4 rounded-xl bg-white/5 border border-white/10 hover:border-white/20 transition-all text-left"
+              className="flex items-center gap-3 p-4 rounded-xl bg-white border border-zinc-200 hover:border-zinc-300 hover:shadow-md transition-all text-left"
             >
-              <FolderGit2 className="h-5 w-5 text-blue-400 shrink-0" />
+              <FolderGit2 className="h-5 w-5 text-blue-500 shrink-0" />
               <div>
-                <p className="text-white text-sm font-medium">{t('home.repositories')}</p>
-                <p className="text-white/40 text-xs">
+                <p className="text-zinc-900 text-sm font-medium">{t('home.repositories')}</p>
+                <p className="text-zinc-500 text-xs">
                   {totalRepos} {t('home.repositories')}
                 </p>
               </div>
@@ -347,22 +347,22 @@ function OverviewPage({
           )}
           <button
             onClick={onNavigateToEnv}
-            className="flex items-center gap-3 p-4 rounded-xl bg-white/5 border border-white/10 hover:border-white/20 transition-all text-left"
+            className="flex items-center gap-3 p-4 rounded-xl bg-white border border-zinc-200 hover:border-zinc-300 hover:shadow-md transition-all text-left"
           >
-            <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
+            <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
             <div>
-              <p className="text-white text-sm font-medium">{t('sidebar.envVars')}</p>
-              <p className="text-white/40 text-xs">{t('envPage.subtitle')}</p>
+              <p className="text-zinc-900 text-sm font-medium">{t('sidebar.envVars')}</p>
+              <p className="text-zinc-500 text-xs">{t('envPage.subtitle')}</p>
             </div>
           </button>
           <button
             onClick={() => (window.location.href = '/github-test')}
-            className="flex items-center gap-3 p-4 rounded-xl bg-white/5 border border-white/10 hover:border-white/20 transition-all text-left"
+            className="flex items-center gap-3 p-4 rounded-xl bg-white border border-zinc-200 hover:border-zinc-300 hover:shadow-md transition-all text-left"
           >
-            <BarChart3 className="h-5 w-5 text-amber-400 shrink-0" />
+            <BarChart3 className="h-5 w-5 text-amber-500 shrink-0" />
             <div>
-              <p className="text-white text-sm font-medium">{t('dashboard.testConnection')}</p>
-              <p className="text-white/40 text-xs">{t('dashboard.testConnectionDesc')}</p>
+              <p className="text-zinc-900 text-sm font-medium">{t('dashboard.testConnection')}</p>
+              <p className="text-zinc-500 text-xs">{t('dashboard.testConnectionDesc')}</p>
             </div>
           </button>
         </div>
@@ -379,17 +379,17 @@ function ReposPage({ repos, reposLoading }: { repos: ReposData | null; reposLoad
   if (reposLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-3 border-white/20 border-t-purple-500" />
+        <div className="h-8 w-8 animate-spin rounded-full border-3 border-zinc-200 border-t-blue-500" />
       </div>
     );
   }
 
   if (!hasInstallations) {
     return (
-      <ProCard className="bg-white/5 backdrop-blur-xl border-white/10 border-dashed" padding="p-8">
+      <ProCard className="bg-white border-zinc-200 border-dashed" padding="p-8">
         <div className="text-center">
-          <Plug className="h-10 w-10 text-white/20 mx-auto mb-3" />
-          <p className="text-white/40 text-sm mb-4">{t('home.noInstallations')}</p>
+          <Plug className="h-10 w-10 text-zinc-300 mx-auto mb-3" />
+          <p className="text-zinc-500 text-sm mb-4">{t('home.noInstallations')}</p>
           <Button
             variant="primary"
             size="md"
@@ -407,10 +407,10 @@ function ReposPage({ repos, reposLoading }: { repos: ReposData | null; reposLoad
 
   if (totalRepos === 0) {
     return (
-      <ProCard className="bg-white/5 backdrop-blur-xl border-white/10" padding="p-8">
+      <ProCard className="bg-white border-zinc-200" padding="p-8">
         <div className="text-center">
-          <FolderGit2 className="h-10 w-10 text-white/20 mx-auto mb-3" />
-          <p className="text-white/40 text-sm">{t('home.noRepos')}</p>
+          <FolderGit2 className="h-10 w-10 text-zinc-300 mx-auto mb-3" />
+          <p className="text-zinc-500 text-sm">{t('home.noRepos')}</p>
         </div>
       </ProCard>
     );
@@ -436,18 +436,18 @@ function ReposPage({ repos, reposLoading }: { repos: ReposData | null; reposLoad
     <div className="space-y-4">
       {/* 搜索框 */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder={t('dashboard.searchRepos')}
-          className="w-full h-10 pl-10 pr-10 rounded-xl bg-white/5 border border-white/10 text-white text-sm placeholder:text-white/30 outline-none focus:border-purple-500/50 focus:ring-1 focus:ring-purple-500/30 transition-colors"
+          className="w-full h-10 pl-10 pr-10 rounded-xl bg-white border border-zinc-200 text-zinc-700 text-sm placeholder:text-zinc-400 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-colors"
         />
         {searchQuery && (
           <button
             onClick={() => setSearchQuery('')}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
@@ -456,7 +456,7 @@ function ReposPage({ repos, reposLoading }: { repos: ReposData | null; reposLoad
 
       {/* 搜索结果统计 */}
       {query && (
-        <p className="text-white/40 text-xs">
+        <p className="text-zinc-400 text-xs">
           {filteredTotal === 0
             ? t('dashboard.noResults')
             : t('dashboard.searchResults', { count: String(filteredTotal) })}
@@ -470,10 +470,10 @@ function ReposPage({ repos, reposLoading }: { repos: ReposData | null; reposLoad
         )}
         {filteredOrg.length > 0 && <RepoSection title={t('home.orgRepos')} repos={filteredOrg} />}
         {query && filteredTotal === 0 && (
-          <ProCard className="bg-white/5 backdrop-blur-xl border-white/10" padding="p-8">
+          <ProCard className="bg-white border-zinc-200" padding="p-8">
             <div className="text-center">
-              <Search className="h-10 w-10 text-white/20 mx-auto mb-3" />
-              <p className="text-white/40 text-sm">{t('dashboard.noResults')}</p>
+              <Search className="h-10 w-10 text-zinc-300 mx-auto mb-3" />
+              <p className="text-zinc-500 text-sm">{t('dashboard.noResults')}</p>
             </div>
           </ProCard>
         )}
@@ -526,16 +526,16 @@ function RepoSection({ title, repos }: { title: string; repos: Repo[] }) {
 
   return (
     <div>
-      <h3 className="text-sm font-medium text-white/60 mb-3 flex items-center gap-2">
+      <h3 className="text-sm font-medium text-zinc-500 mb-3 flex items-center gap-2">
         <FolderGit2 className="h-4 w-4" />
         {title}
-        <span className="text-white/30">({repos.length})</span>
+        <span className="text-zinc-400">({repos.length})</span>
       </h3>
       <div className="space-y-2">
         {repos.map((repo) => (
           <ProCard
             key={repo.id}
-            className="bg-white/5 backdrop-blur-xl border-white/10 hover:border-white/20 transition-all"
+            className="bg-white border-zinc-200 hover:border-zinc-300 hover:shadow-md transition-all"
             padding="p-4"
           >
             <div className="flex items-center justify-between gap-4">
@@ -543,15 +543,13 @@ function RepoSection({ title, repos }: { title: string; repos: Repo[] }) {
                 <div className="flex items-center gap-2 mb-1">
                   <button
                     onClick={() => handleDetail(repo)}
-                    className="text-white font-medium text-sm hover:text-purple-400 transition-colors truncate text-left"
+                    className="text-zinc-900 font-medium text-sm hover:text-blue-600 transition-colors truncate text-left"
                   >
                     {repo.name}
                   </button>
                   <span
                     className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                      repo.private
-                        ? 'bg-amber-500/10 text-amber-400'
-                        : 'bg-emerald-500/10 text-emerald-400'
+                      repo.private ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'
                     }`}
                   >
                     {repo.private ? (
@@ -563,16 +561,16 @@ function RepoSection({ title, repos }: { title: string; repos: Repo[] }) {
                   </span>
                 </div>
                 {repo.description && (
-                  <p className="text-white/40 text-xs truncate">{repo.description}</p>
+                  <p className="text-zinc-500 text-xs truncate">{repo.description}</p>
                 )}
               </div>
               <div className="flex items-center gap-3 shrink-0">
-                {repo.language && <span className="text-white/30 text-xs">{repo.language}</span>}
+                {repo.language && <span className="text-zinc-400 text-xs">{repo.language}</span>}
                 <a
                   href={repo.html_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-white/30 hover:text-white/60 transition-colors"
+                  className="text-zinc-400 hover:text-zinc-600 transition-colors"
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
                 </a>
@@ -581,8 +579,8 @@ function RepoSection({ title, repos }: { title: string; repos: Repo[] }) {
                   role="switch"
                   aria-checked={toggleStates[repo.id] ?? false}
                   onClick={() => handleToggle(repo)}
-                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 ${
-                    toggleStates[repo.id] ? 'bg-purple-500' : 'bg-white/20'
+                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
+                    toggleStates[repo.id] ? 'bg-blue-500' : 'bg-zinc-200'
                   }`}
                 >
                   <span
@@ -693,36 +691,36 @@ function SettingsPage() {
     <div className="space-y-4">
       {/* 机器人信息 */}
       {botInfo && botInfo.slug && (
-        <ProCard className="bg-white/5 backdrop-blur-xl border-white/10" padding="p-5">
+        <ProCard className="bg-white border-zinc-200" padding="p-5">
           <div className="flex items-center gap-3 mb-4">
-            <Plug className="h-5 w-5 text-purple-400" />
-            <h3 className="text-white font-medium">{t('settings.botInfo')}</h3>
+            <Plug className="h-5 w-5 text-zinc-500" />
+            <h3 className="text-zinc-900 font-medium">{t('settings.botInfo')}</h3>
           </div>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-white/50 text-sm">{t('settings.botSlug')}</span>
-              <span className="text-white text-sm font-mono">{botInfo.slug}</span>
+              <span className="text-zinc-500 text-sm">{t('settings.botSlug')}</span>
+              <span className="text-zinc-900 text-sm font-mono">{botInfo.slug}</span>
             </div>
             {botInfo.appId && (
               <div className="flex items-center justify-between">
-                <span className="text-white/50 text-sm">{t('settings.botAppId')}</span>
-                <span className="text-white text-sm font-mono">{botInfo.appId}</span>
+                <span className="text-zinc-500 text-sm">{t('settings.botAppId')}</span>
+                <span className="text-zinc-900 text-sm font-mono">{botInfo.appId}</span>
               </div>
             )}
             <div className="flex items-center justify-between">
-              <span className="text-white/50 text-sm">{t('settings.botMention')}</span>
-              <code className="text-purple-400 text-sm bg-purple-500/10 px-2 py-0.5 rounded">
+              <span className="text-zinc-500 text-sm">{t('settings.botMention')}</span>
+              <code className="text-blue-600 text-sm bg-blue-50 px-2 py-0.5 rounded">
                 {botInfo.fixCommand}
               </code>
             </div>
             {botInfo.installUrl && (
               <div className="flex items-center justify-between">
-                <span className="text-white/50 text-sm">{t('settings.botInstall')}</span>
+                <span className="text-zinc-500 text-sm">{t('settings.botInstall')}</span>
                 <a
                   href={botInfo.installUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-purple-400 text-sm hover:text-purple-300 transition-colors"
+                  className="text-blue-600 text-sm hover:text-blue-700 transition-colors"
                 >
                   {t('home.installAppButton')} ↗
                 </a>
@@ -733,21 +731,21 @@ function SettingsPage() {
       )}
 
       {/* 私钥配置状态 */}
-      <ProCard className="bg-white/5 backdrop-blur-xl border-white/10" padding="p-5">
+      <ProCard className="bg-white border-zinc-200" padding="p-5">
         <div className="flex items-center gap-3 mb-4">
-          <Lock className="h-5 w-5 text-purple-400" />
-          <h3 className="text-white font-medium">{t('setup.privateKey')}</h3>
+          <Lock className="h-5 w-5 text-zinc-500" />
+          <h3 className="text-zinc-900 font-medium">{t('setup.privateKey')}</h3>
         </div>
 
         {privateKeyStatus && (
           <div className="mb-4">
             <div className="flex items-center gap-2">
               {privateKeyStatus.configured ? (
-                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
               ) : (
-                <AlertTriangle className="h-4 w-4 text-amber-400" />
+                <AlertTriangle className="h-4 w-4 text-amber-500" />
               )}
-              <span className="text-sm text-white/70">
+              <span className="text-sm text-zinc-600">
                 {privateKeyStatus.configured
                   ? `${t('settings.configured')} (${privateKeyStatus.source === 'file' ? 'File' : 'Database'})`
                   : t('settings.missingLabel')}
@@ -760,12 +758,12 @@ function SettingsPage() {
         <div
           onDrop={handleDrop}
           onDragOver={(e) => e.preventDefault()}
-          className="border-2 border-dashed border-white/10 rounded-xl p-6 text-center hover:border-purple-500/30 transition-colors cursor-pointer"
+          className="border-2 border-dashed border-zinc-200 rounded-xl p-6 text-center hover:border-blue-300 transition-colors cursor-pointer"
           onClick={() => document.getElementById('pem-file-input')?.click()}
         >
-          <Lock className="h-8 w-8 text-white/20 mx-auto mb-2" />
-          <p className="text-white/50 text-sm mb-2">{t('setup.privateKeyPlaceholder')}</p>
-          <p className="text-white/30 text-xs">.pem</p>
+          <Lock className="h-8 w-8 text-zinc-300 mx-auto mb-2" />
+          <p className="text-zinc-500 text-sm mb-2">{t('setup.privateKeyPlaceholder')}</p>
+          <p className="text-zinc-400 text-xs">.pem</p>
           <input
             id="pem-file-input"
             type="file"
@@ -777,8 +775,8 @@ function SettingsPage() {
 
         {uploading && (
           <div className="mt-3 flex items-center gap-2">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-purple-400 border-t-transparent" />
-            <span className="text-xs text-white/50">Uploading...</span>
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
+            <span className="text-xs text-zinc-500">Uploading...</span>
           </div>
         )}
 
@@ -786,8 +784,8 @@ function SettingsPage() {
           <div
             className={`mt-3 text-xs px-3 py-2 rounded-lg ${
               uploadMsgType === 'success'
-                ? 'bg-emerald-500/10 text-emerald-400'
-                : 'bg-red-500/10 text-red-400'
+                ? 'bg-emerald-50 text-emerald-700'
+                : 'bg-red-50 text-red-700'
             }`}
           >
             {uploadMsg}
@@ -796,12 +794,12 @@ function SettingsPage() {
       </ProCard>
 
       {/* App ID 配置提示 */}
-      <ProCard className="bg-white/5 backdrop-blur-xl border-white/10" padding="p-5">
+      <ProCard className="bg-white border-zinc-200" padding="p-5">
         <div className="flex items-center gap-3 mb-3">
-          <Settings className="h-5 w-5 text-blue-400" />
-          <h3 className="text-white font-medium">GitHub App</h3>
+          <Settings className="h-5 w-5 text-blue-500" />
+          <h3 className="text-zinc-900 font-medium">GitHub App</h3>
         </div>
-        <p className="text-white/40 text-xs">
+        <p className="text-zinc-500 text-xs">
           {process.env.GITHUB_APP_ID
             ? `GITHUB_APP_ID: ${process.env.GITHUB_APP_ID}`
             : 'GITHUB_APP_ID not set in environment variables'}

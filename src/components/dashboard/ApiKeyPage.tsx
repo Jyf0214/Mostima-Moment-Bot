@@ -113,12 +113,12 @@ export default function ApiKeyPage() {
       {/* 标题区 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/10">
-            <Key className="h-5 w-5 text-purple-400" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100">
+            <Key className="h-5 w-5 text-zinc-500" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-white">{t('apiKey.title')}</h2>
-            <p className="text-white/40 text-xs">{t('apiKey.subtitle')}</p>
+            <h2 className="text-lg font-bold text-zinc-900">{t('apiKey.title')}</h2>
+            <p className="text-zinc-500 text-xs">{t('apiKey.subtitle')}</p>
           </div>
         </div>
         <Button
@@ -126,7 +126,7 @@ export default function ApiKeyPage() {
           size="sm"
           icon={<RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />}
           onClick={fetchKeys}
-          className="text-white/50 hover:text-white"
+          className="text-zinc-500 hover:text-zinc-700"
         >
           {t('dashboard.refresh')}
         </Button>
@@ -134,7 +134,7 @@ export default function ApiKeyPage() {
 
       {/* 错误提示 */}
       {error && (
-        <ProCard className="bg-red-500/10 border-red-500/20">
+        <ProCard className="bg-red-50 border-red-200">
           <StatusCard
             icon={<X className="h-4 w-4" />}
             title="Error"
@@ -146,14 +146,14 @@ export default function ApiKeyPage() {
 
       {/* 新建密钥成功提示 */}
       {createdKey && (
-        <ProCard className="bg-emerald-500/10 border-emerald-500/20">
+        <ProCard className="bg-emerald-50 border-emerald-200">
           <div className="flex items-start gap-3">
-            <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
+            <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="text-sm font-medium text-emerald-400">{t('apiKey.createdSuccess')}</p>
-              <p className="text-xs text-white/40 mt-1">{t('apiKey.createdHint')}</p>
+              <p className="text-sm font-medium text-emerald-700">{t('apiKey.createdSuccess')}</p>
+              <p className="text-xs text-zinc-500 mt-1">{t('apiKey.createdHint')}</p>
               <div className="mt-3 flex items-center gap-2">
-                <code className="flex-1 px-3 py-2 rounded-lg bg-black/30 text-emerald-300 text-xs font-mono break-all">
+                <code className="flex-1 px-3 py-2 rounded-lg bg-zinc-100 text-zinc-700 text-xs font-mono break-all">
                   {createdKey.key}
                 </code>
                 <Button
@@ -163,7 +163,7 @@ export default function ApiKeyPage() {
                     copied ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />
                   }
                   onClick={handleCopyKey}
-                  className="text-white/50 hover:text-white shrink-0"
+                  className="text-zinc-500 hover:text-zinc-700 shrink-0"
                 >
                   {copied ? t('apiKey.copied') : t('apiKey.copy')}
                 </Button>
@@ -171,7 +171,7 @@ export default function ApiKeyPage() {
             </div>
             <button
               onClick={() => setCreatedKey(null)}
-              className="text-white/30 hover:text-white shrink-0"
+              className="text-zinc-400 hover:text-zinc-600 shrink-0"
             >
               <X className="h-4 w-4" />
             </button>
@@ -187,7 +187,7 @@ export default function ApiKeyPage() {
             value={newKeyName}
             onChange={(e) => setNewKeyName(e.target.value)}
             placeholder={t('apiKey.namePlaceholder')}
-            className="flex-1 h-10 px-4 rounded-lg bg-white/5 border border-white/10 text-white text-sm outline-none focus:border-purple-500/50 transition-colors"
+            className="flex-1 h-10 px-4 rounded-lg bg-white border border-zinc-200 text-zinc-700 text-sm outline-none focus:border-blue-500 transition-colors"
             onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
           />
           <Button
@@ -207,29 +207,29 @@ export default function ApiKeyPage() {
       <ProCard title={`${t('apiKey.existingKeys')} (${keys.length})`}>
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/20 border-t-purple-500" />
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-200 border-t-blue-500" />
           </div>
         ) : keys.length === 0 ? (
           <div className="text-center py-8">
-            <Key className="h-10 w-10 text-white/20 mx-auto mb-3" />
-            <p className="text-white/40 text-sm">{t('apiKey.noKeys')}</p>
+            <Key className="h-10 w-10 text-zinc-300 mx-auto mb-3" />
+            <p className="text-zinc-500 text-sm">{t('apiKey.noKeys')}</p>
           </div>
         ) : (
           <div className="flex flex-col gap-2">
             {keys.map((key) => (
               <div
                 key={key.id}
-                className="flex items-center gap-4 rounded-lg border border-white/10 bg-white/5 p-4"
+                className="flex items-center gap-4 rounded-lg border border-zinc-200 bg-white p-4"
               >
-                <Key className="h-4 w-4 text-purple-400 shrink-0" />
+                <Key className="h-4 w-4 text-zinc-500 shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white truncate">{key.name}</p>
+                  <p className="text-sm font-medium text-zinc-900 truncate">{key.name}</p>
                   <div className="flex items-center gap-3 mt-1">
-                    <span className="text-xs text-white/30">
+                    <span className="text-xs text-zinc-400">
                       {t('apiKey.createdAt')} {timeAgo(key.createdAt)}
                     </span>
                     {key.lastUsedAt && (
-                      <span className="text-xs text-white/30 flex items-center gap-1">
+                      <span className="text-xs text-zinc-400 flex items-center gap-1">
                         <Clock className="h-3 w-3" />
                         {t('apiKey.lastUsed')} {timeAgo(key.lastUsedAt)}
                       </span>
@@ -241,7 +241,7 @@ export default function ApiKeyPage() {
                   size="sm"
                   icon={<Trash2 className="h-4 w-4" />}
                   onClick={() => handleDelete(key.id)}
-                  className="text-white/30 hover:text-red-400"
+                  className="text-zinc-400 hover:text-red-500"
                 >
                   {t('apiKey.delete')}
                 </Button>
@@ -255,14 +255,14 @@ export default function ApiKeyPage() {
       <ProCard title={t('apiKey.usageTitle')}>
         <div className="space-y-3">
           <div>
-            <p className="text-xs font-medium text-white/60 mb-1">{t('apiKey.usageBrowser')}</p>
-            <code className="block px-3 py-2 rounded-lg bg-black/30 text-white/70 text-xs font-mono break-all">
+            <p className="text-xs font-medium text-zinc-600 mb-1">{t('apiKey.usageBrowser')}</p>
+            <code className="block px-3 py-2 rounded-lg bg-zinc-100 text-zinc-700 text-xs font-mono break-all">
               https://your-domain.com/api/auth/api-key-login?key=YOUR_API_KEY
             </code>
           </div>
           <div>
-            <p className="text-xs font-medium text-white/60 mb-1">{t('apiKey.usageApi')}</p>
-            <code className="block px-3 py-2 rounded-lg bg-black/30 text-white/70 text-xs font-mono">
+            <p className="text-xs font-medium text-zinc-600 mb-1">{t('apiKey.usageApi')}</p>
+            <code className="block px-3 py-2 rounded-lg bg-zinc-100 text-zinc-700 text-xs font-mono">
               POST /api/auth/api-key-login{'\n'}
               {'{'}"apiKey": "YOUR_API_KEY"{'}'}
             </code>

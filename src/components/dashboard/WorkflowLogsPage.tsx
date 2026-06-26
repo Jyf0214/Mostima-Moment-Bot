@@ -48,11 +48,11 @@ interface RepoSummary {
 }
 
 const STATUS_CONFIG: Record<string, { icon: React.ElementType; color: string; bg: string }> = {
-  success: { icon: CheckCircle2, color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
-  failure: { icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/10' },
-  running: { icon: Loader2, color: 'text-blue-400', bg: 'bg-blue-500/10' },
-  pending: { icon: Clock, color: 'text-amber-400', bg: 'bg-amber-500/10' },
-  cancelled: { icon: XCircle, color: 'text-white/40', bg: 'bg-white/5' },
+  success: { icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50' },
+  failure: { icon: XCircle, color: 'text-red-500', bg: 'bg-red-50' },
+  running: { icon: Loader2, color: 'text-blue-500', bg: 'bg-blue-50' },
+  pending: { icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50' },
+  cancelled: { icon: XCircle, color: 'text-zinc-400', bg: 'bg-zinc-50' },
 };
 
 const EVENT_LABELS: Record<string, string> = {
@@ -198,17 +198,17 @@ export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string
           <div className="flex items-center gap-4">
             <button
               onClick={handleBack}
-              className="flex items-center gap-2 text-white/50 hover:text-white transition-colors text-sm"
+              className="flex items-center gap-2 text-zinc-500 hover:text-zinc-900 transition-colors text-sm"
             >
               <ArrowLeft className="h-4 w-4" />
               {t('repoDetail.back')}
             </button>
             <div>
-              <h1 className="text-lg font-bold text-white flex items-center gap-2">
+              <h1 className="text-lg font-bold text-zinc-900 flex items-center gap-2">
                 {repoShortName}
-                <span className="text-white/30 text-sm font-normal">{selectedRepo}</span>
+                <span className="text-zinc-400 text-sm font-normal">{selectedRepo}</span>
               </h1>
-              <p className="text-white/40 text-xs mt-0.5">
+              <p className="text-zinc-500 text-xs mt-0.5">
                 {total > 0 ? `${total} ${t('repoDetail.totalRuns')}` : t('repoDetail.noRuns')}
               </p>
             </div>
@@ -218,7 +218,7 @@ export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string
             size="sm"
             icon={<RefreshCw className={`h-3.5 w-3.5 ${detailRefreshing ? 'animate-spin' : ''}`} />}
             onClick={() => fetchRuns(true)}
-            className="text-white/50 hover:text-white"
+            className="text-zinc-500 hover:text-zinc-700"
           >
             {t('dashboard.refresh')}
           </Button>
@@ -232,26 +232,14 @@ export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string
               setFilterStatus(e.target.value);
               setPage(0);
             }}
-            className="h-9 px-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm outline-none focus:border-purple-500/50 transition-colors appearance-none cursor-pointer"
+            className="h-9 px-3 rounded-lg bg-white border border-zinc-200 text-zinc-700 text-sm outline-none focus:border-blue-500 transition-colors appearance-none cursor-pointer"
           >
-            <option value="" className="bg-slate-800">
-              Status
-            </option>
-            <option value="success" className="bg-slate-800">
-              ✓ Success
-            </option>
-            <option value="failure" className="bg-slate-800">
-              ✗ Failure
-            </option>
-            <option value="running" className="bg-slate-800">
-              ⟳ Running
-            </option>
-            <option value="pending" className="bg-slate-800">
-              ⏳ Pending
-            </option>
-            <option value="cancelled" className="bg-slate-800">
-              — Cancelled
-            </option>
+            <option value="">Status</option>
+            <option value="success">✓ Success</option>
+            <option value="failure">✗ Failure</option>
+            <option value="running">⟳ Running</option>
+            <option value="pending">⏳ Pending</option>
+            <option value="cancelled">— Cancelled</option>
           </select>
           <select
             value={filterEvent}
@@ -259,39 +247,28 @@ export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string
               setFilterEvent(e.target.value);
               setPage(0);
             }}
-            className="h-9 px-3 rounded-lg bg-white/5 border border-white/10 text-white text-sm outline-none focus:border-purple-500/50 transition-colors appearance-none cursor-pointer"
+            className="h-9 px-3 rounded-lg bg-white border border-zinc-200 text-zinc-700 text-sm outline-none focus:border-blue-500 transition-colors appearance-none cursor-pointer"
           >
-            <option value="" className="bg-slate-800">
-              Event
-            </option>
-            <option value="issue_labeled" className="bg-slate-800">
-              Issue (Label)
-            </option>
-            <option value="issue_comment" className="bg-slate-800">
-              Issue (Comment)
-            </option>
-            <option value="security_audit" className="bg-slate-800">
-              Security Audit
-            </option>
+            <option value="">Event</option>
+            <option value="issue_labeled">Issue (Label)</option>
+            <option value="issue_comment">Issue (Comment)</option>
+            <option value="security_audit">Security Audit</option>
           </select>
         </div>
 
         {/* 加载中 */}
         {detailLoading && (
           <div className="flex items-center justify-center py-20">
-            <div className="h-8 w-8 animate-spin rounded-full border-3 border-white/20 border-t-purple-500" />
+            <div className="h-8 w-8 animate-spin rounded-full border-3 border-zinc-200 border-t-blue-500" />
           </div>
         )}
 
         {/* 空状态 */}
         {!detailLoading && runs.length === 0 && (
-          <ProCard
-            className="bg-white/5 backdrop-blur-xl border-white/10 border-dashed"
-            padding="p-8"
-          >
+          <ProCard className="bg-white border-zinc-200 border-dashed" padding="p-8">
             <div className="text-center">
-              <Clock className="h-10 w-10 text-white/20 mx-auto mb-3" />
-              <p className="text-white/40 text-sm">{t('repoDetail.noRuns')}</p>
+              <Clock className="h-10 w-10 text-zinc-300 mx-auto mb-3" />
+              <p className="text-zinc-500 text-sm">{t('repoDetail.noRuns')}</p>
             </div>
           </ProCard>
         )}
@@ -306,7 +283,7 @@ export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string
               return (
                 <ProCard
                   key={run.id}
-                  className="bg-white/5 backdrop-blur-xl border-white/10 hover:border-white/20 transition-all"
+                  className="bg-white border-zinc-200 hover:border-zinc-300 hover:shadow-md transition-all"
                   padding="p-4"
                 >
                   <div className="flex items-center gap-3">
@@ -319,41 +296,41 @@ export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="inline-flex items-center rounded-md bg-purple-500/10 px-2 py-0.5 text-[10px] font-medium text-purple-400">
+                        <span className="inline-flex items-center rounded-md bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-600">
                           {eventLabel}
                         </span>
                         {run.branch && (
-                          <span className="inline-flex items-center gap-1 text-xs text-white/50">
+                          <span className="inline-flex items-center gap-1 text-xs text-zinc-500">
                             <GitBranch className="h-3 w-3" />
                             {run.branch}
                           </span>
                         )}
                         {run.prNumber && (
-                          <span className="text-xs text-blue-400">PR #{run.prNumber}</span>
+                          <span className="text-xs text-blue-500">PR #{run.prNumber}</span>
                         )}
                         {run.action && (
-                          <span className="text-[10px] text-white/30">{run.action}</span>
+                          <span className="text-[10px] text-zinc-400">{run.action}</span>
                         )}
                       </div>
                       <div className="flex items-center gap-3 mt-1 flex-wrap">
                         {run.commitSha && (
-                          <span className="inline-flex items-center gap-1 text-xs text-white/40 font-mono">
+                          <span className="inline-flex items-center gap-1 text-xs text-zinc-400 font-mono">
                             <GitCommitHorizontal className="h-3 w-3" />
                             {shaShort(run.commitSha)}
                           </span>
                         )}
                         {run.triggeredBy && (
-                          <span className="text-xs text-white/40">@{run.triggeredBy}</span>
+                          <span className="text-xs text-zinc-400">@{run.triggeredBy}</span>
                         )}
                         {run.duration != null && (
-                          <span className="text-xs text-white/30">
+                          <span className="text-xs text-zinc-400">
                             {formatDuration(run.duration)}
                           </span>
                         )}
                       </div>
                     </div>
                     <div className="text-right shrink-0">
-                      <span className="text-xs text-white/30 block">{timeAgo(run.createdAt)}</span>
+                      <span className="text-xs text-zinc-400 block">{timeAgo(run.createdAt)}</span>
                       <span className={`text-[10px] font-medium ${cfg.color}`}>{run.status}</span>
                     </div>
                   </div>
@@ -371,11 +348,11 @@ export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string
               size="sm"
               onClick={() => setPage((p) => Math.max(0, p - 1))}
               disabled={page === 0}
-              className="text-white/50 hover:text-white"
+              className="text-zinc-500 hover:text-zinc-700"
             >
               ← Prev
             </Button>
-            <span className="text-white/40 text-xs">
+            <span className="text-zinc-400 text-xs">
               {page + 1} / {Math.ceil(total / pageSize)}
             </span>
             <Button
@@ -383,7 +360,7 @@ export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string
               size="sm"
               onClick={() => setPage((p) => p + 1)}
               disabled={(page + 1) * pageSize >= total}
-              className="text-white/50 hover:text-white"
+              className="text-zinc-500 hover:text-zinc-700"
             >
               Next →
             </Button>
@@ -397,7 +374,7 @@ export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-white/40 text-xs">
+        <div className="flex items-center gap-2 text-zinc-400 text-xs">
           {repos.length > 0 && (
             <span>
               {repos.length} {t('home.repositories')}
@@ -409,7 +386,7 @@ export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string
           size="sm"
           icon={<RefreshCw className={`h-3.5 w-3.5 ${listRefreshing ? 'animate-spin' : ''}`} />}
           onClick={() => fetchRepos(true)}
-          className="text-white/50 hover:text-white"
+          className="text-zinc-500 hover:text-zinc-700"
         >
           {t('dashboard.refresh')}
         </Button>
@@ -417,18 +394,15 @@ export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string
 
       {listLoading && (
         <div className="flex items-center justify-center py-20">
-          <div className="h-8 w-8 animate-spin rounded-full border-3 border-white/20 border-t-purple-500" />
+          <div className="h-8 w-8 animate-spin rounded-full border-3 border-zinc-200 border-t-blue-500" />
         </div>
       )}
 
       {!listLoading && repos.length === 0 && (
-        <ProCard
-          className="bg-white/5 backdrop-blur-xl border-white/10 border-dashed"
-          padding="p-8"
-        >
+        <ProCard className="bg-white border-zinc-200 border-dashed" padding="p-8">
           <div className="text-center">
-            <Clock className="h-10 w-10 text-white/20 mx-auto mb-3" />
-            <p className="text-white/40 text-sm">{t('repoDetail.noRuns')}</p>
+            <Clock className="h-10 w-10 text-zinc-300 mx-auto mb-3" />
+            <p className="text-zinc-500 text-sm">{t('repoDetail.noRuns')}</p>
           </div>
         </ProCard>
       )}
@@ -448,29 +422,31 @@ export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string
                 className="w-full text-left"
               >
                 <ProCard
-                  className="bg-white/5 backdrop-blur-xl border-white/10 hover:border-purple-500/30 hover:bg-white/[0.07] transition-all cursor-pointer group"
+                  className="bg-white border-zinc-200 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer group"
                   padding="p-4"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 rounded-lg bg-purple-500/10 flex items-center justify-center shrink-0">
-                      <FolderGit2 className="h-5 w-5 text-purple-400" />
+                    <div className="h-10 w-10 rounded-lg bg-zinc-100 flex items-center justify-center shrink-0">
+                      <FolderGit2 className="h-5 w-5 text-zinc-500" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-white font-medium text-sm truncate">{repoName}</span>
-                        <span className="text-white/30 text-xs truncate">{owner}</span>
+                        <span className="text-zinc-900 font-medium text-sm truncate">
+                          {repoName}
+                        </span>
+                        <span className="text-zinc-400 text-xs truncate">{owner}</span>
                       </div>
                       <div className="flex items-center gap-3 mt-1">
-                        <span className="text-white/40 text-xs">
+                        <span className="text-zinc-500 text-xs">
                           {repo.totalRuns} {t('repoDetail.totalRuns')}
                         </span>
                         {repo.latest.branch && (
-                          <span className="inline-flex items-center gap-1 text-xs text-white/40">
+                          <span className="inline-flex items-center gap-1 text-xs text-zinc-500">
                             <GitBranch className="h-3 w-3" />
                             {repo.latest.branch}
                           </span>
                         )}
-                        <span className="inline-flex items-center rounded-md bg-purple-500/10 px-1.5 py-0.5 text-[10px] font-medium text-purple-400">
+                        <span className="inline-flex items-center rounded-md bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600">
                           {eventLabel}
                         </span>
                       </div>
@@ -485,11 +461,11 @@ export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string
                             {repo.latest.status}
                           </span>
                         </div>
-                        <span className="text-[10px] text-white/30 block mt-0.5">
+                        <span className="text-[10px] text-zinc-400 block mt-0.5">
                           {timeAgo(repo.latest.createdAt)}
                         </span>
                       </div>
-                      <ArrowRight className="h-4 w-4 text-white/20 group-hover:text-purple-400 transition-colors" />
+                      <ArrowRight className="h-4 w-4 text-zinc-300 group-hover:text-blue-500 transition-colors" />
                     </div>
                   </div>
                 </ProCard>

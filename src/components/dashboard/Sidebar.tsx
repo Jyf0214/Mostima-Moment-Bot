@@ -48,22 +48,22 @@ export default function Sidebar({
   return (
     <div
       className={cn(
-        'flex flex-col h-screen bg-white/5 backdrop-blur-xl border-r border-white/10 transition-all duration-200 shrink-0',
+        'flex flex-col h-screen bg-white border-r border-zinc-200 transition-all duration-200 shrink-0',
         collapsed ? 'w-16' : 'w-56'
       )}
     >
       {/* Logo */}
       <div
         className={cn(
-          'flex items-center border-b border-white/10 shrink-0',
+          'flex items-center border-b border-zinc-100 shrink-0',
           collapsed ? 'justify-center h-14 px-0' : 'gap-2 h-14 px-4'
         )}
       >
-        <div className="h-7 w-7 rounded-lg bg-purple-500/20 flex items-center justify-center shrink-0">
-          <Plug className="h-4 w-4 text-purple-400" />
+        <div className="h-7 w-7 rounded-lg bg-zinc-900 flex items-center justify-center shrink-0">
+          <Plug className="h-4 w-4 text-white" />
         </div>
         {!collapsed && (
-          <span className="text-white font-semibold text-sm truncate">Manticore Bot</span>
+          <span className="text-zinc-900 font-semibold text-sm truncate">Manticore Bot</span>
         )}
       </div>
 
@@ -78,11 +78,11 @@ export default function Sidebar({
               onClick={() => onNavigate(item.id)}
               title={collapsed ? t(item.labelKey) : undefined}
               className={cn(
-                'w-full flex items-center rounded-lg text-sm transition-all',
+                'w-full flex items-center rounded-xl text-sm transition-all',
                 collapsed ? 'justify-center h-10' : 'gap-3 px-3 py-2.5',
                 isActive
-                  ? 'bg-white/10 text-white'
-                  : 'text-white/50 hover:text-white/80 hover:bg-white/5'
+                  ? 'bg-gradient-to-r from-zinc-900 to-zinc-800 text-white shadow-sm'
+                  : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
               )}
             >
               <Icon className="h-4 w-4 shrink-0" />
@@ -93,12 +93,12 @@ export default function Sidebar({
       </nav>
 
       {/* Bottom */}
-      <div className="border-t border-white/10 shrink-0">
+      <div className="border-t border-zinc-100 shrink-0">
         {/* Collapse toggle */}
         <button
           onClick={onToggleCollapse}
           className={cn(
-            'w-full flex items-center text-sm text-white/40 hover:text-white/70 hover:bg-white/5 transition-all',
+            'w-full flex items-center text-sm text-zinc-400 hover:text-zinc-600 hover:bg-zinc-50 transition-all',
             collapsed ? 'justify-center h-10' : 'gap-3 px-3 py-2.5'
           )}
         >
@@ -115,14 +115,14 @@ export default function Sidebar({
         {/* User */}
         <div
           className={cn(
-            'border-t border-white/10 flex items-center shrink-0',
+            'border-t border-zinc-100 flex items-center shrink-0',
             collapsed ? 'justify-center h-12' : 'justify-between px-3 py-2'
           )}
         >
-          {!collapsed && <span className="text-white/50 text-xs truncate">@{userLogin}</span>}
+          {!collapsed && <span className="text-zinc-500 text-xs truncate">@{userLogin}</span>}
           <button
             onClick={onLogout}
-            className="text-white/40 hover:text-red-400 transition-colors"
+            className="text-zinc-400 hover:text-red-500 transition-colors"
             title={t('home.logout')}
           >
             <LogOut className="h-3.5 w-3.5" />
