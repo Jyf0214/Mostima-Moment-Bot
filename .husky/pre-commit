@@ -1,5 +1,34 @@
 echo "🔍 Running pre-commit checks..."
 
+# ── 1. 检查 middleware / proxy 文件冲突 ──
+# Next.js 只能有一个入口中间件，src/ 下不能同时存在 proxy.ts 和 middleware.ts
+PROXY_EXISTS=0
+MW_EXISTS=0
+[ -f "src/proxy.ts" ] && PROXY_EXISTS=1
+[ -f "src/middleware.ts" ] && MW_EXISTS=1
+
+if [ "$PROXY_EXISTS" -eq 1 ] && [ "$MW_EXISTS" -eq 1 ]; then
+  echo "❌ 冲突：src/proxy.ts 和 src/middleware.ts 同时存在"
+  echo "   Next.js 只能有一个入口中间件，请删除其中一个"
+  echo "   当前项目使用 src/proxy.ts（next.config.js middleware: './proxy'）"
+  exit 1
+fi
+
+if [ "$PROXY_EXISTS" -eq 0 ] && [ "$MW_EXISTS" -eq 0 ]; then
+  echo "❌ 未找到入口中间件：src/proxy.ts 和 src/middleware.ts 都不存在"
+  echo "   请确保 src/proxy.ts 存在"
+  exit 1
+fi
+
+# ── 2. 检查 next.config.js 是否与实际文件匹配 ──
+if [ "$PROXY_EXISTS" -eq 1 ]; then
+  if ! grep -q "proxy" next.config.js 2>/dev/null; then
+    echo "⚠️  警告：src/proxy.ts 存在但 next.config.js 中未配置 middleware: './proxy'"
+  fi
+fi
+
+echo "✅ Middleware 文件检查通过"
+
 # 运行 lint-staged（检查暂存文件的语法）
 npx lint-staged
 
