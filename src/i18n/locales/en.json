@@ -65,7 +65,7 @@
     "repoPrivate": "Private",
     "repoPublic": "Public",
     "appNotConfigured": "GitHub App not configured",
-    "appNotConfiguredDesc": "Please ask the admin to configure GITHUB_APP_ID and GITHUB_APP_SLUG environment variables"
+    "appNotConfiguredDesc": "Please ask the admin to configure GITHUB_APP_ID environment variable"
   },
   "setup": {
     "title": "Initial Setup",

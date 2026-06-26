@@ -65,7 +65,7 @@
     "repoPrivate": "私有",
     "repoPublic": "公开",
     "appNotConfigured": "GitHub App 未配置",
-    "appNotConfiguredDesc": "请联系管理员配置 GITHUB_APP_ID 和 GITHUB_APP_SLUG 环境变量"
+    "appNotConfiguredDesc": "请联系管理员配置 GITHUB_APP_ID 环境变量"
   },
   "setup": {
     "title": "初始设置",

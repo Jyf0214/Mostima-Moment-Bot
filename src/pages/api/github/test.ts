@@ -38,8 +38,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // ── 1. 环境变量检查 ──
   const envVars = [
     { key: 'GITHUB_APP_ID', required: true },
-    { key: 'GITHUB_APP_SLUG', required: true },
-    { key: 'GITHUB_PRIVATE_KEY_PATH', required: true },
+    { key: 'GITHUB_APP_SLUG', required: false },
+    { key: 'GITHUB_PRIVATE_KEY_PATH', required: false },
     { key: 'GITHUB_CLIENT_ID', required: true },
     { key: 'GITHUB_CLIENT_SECRET', required: true },
     { key: 'APP_URL', required: true },

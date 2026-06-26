@@ -78,9 +78,6 @@ export function getAutoFixRule(): TriggerRule {
   };
 }
 
-/** @deprecated 使用 getAutoFixRule() 代替，此导出仅供测试向后兼容 */
-export const AUTO_FIX_RULE: TriggerRule = getAutoFixRule();
-
 /**
  * 构建检查规则（对应 webpack.yml）
  * 触发条件：push 到 main 或 PR 到 main

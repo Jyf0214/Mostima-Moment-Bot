@@ -105,10 +105,13 @@ export async function listInstallationRepos(
 /**
  * 获取 GitHub App 安装页面 URL
  */
-export function getInstallationUrl(state: string): string {
-  const slug = process.env.GITHUB_APP_SLUG;
+export async function getInstallationUrl(state: string): Promise<string> {
+  const { resolveBotSlug } = await import('@/lib/ci/config');
+  const slug = await resolveBotSlug();
   if (!slug) {
-    throw new Error('GITHUB_APP_SLUG is not configured');
+    throw new Error(
+      'GitHub App slug not available (configure GITHUB_APP_SLUG or ensure App is set up)'
+    );
   }
   return `https://github.com/apps/${slug}/installations/new?state=${state}`;
 }

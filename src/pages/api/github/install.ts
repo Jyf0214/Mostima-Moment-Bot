@@ -20,11 +20,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'Not authenticated' });
   }
 
-  // 检查 GITHUB_APP_SLUG 是否配置
-  if (!process.env.GITHUB_APP_SLUG) {
-    return res.status(500).json({ error: 'GitHub App is not configured' });
-  }
-
   // 生成 CSRF state
   const state = crypto.randomUUID();
 
@@ -32,6 +27,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   res.setHeader('Set-Cookie', setCookie('github_install_state', state, { path: '/api/github' }));
 
   // 重定向到 GitHub 安装页面
-  const url = getInstallationUrl(state);
-  return res.redirect(url);
+  try {
+    const url = await getInstallationUrl(state);
+    return res.redirect(url);
+  } catch {
+    return res.status(500).json({ error: 'GitHub App is not configured' });
+  }
 }

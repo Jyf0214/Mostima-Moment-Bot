@@ -2,6 +2,9 @@ import jwt from 'jsonwebtoken';
 import fs from 'fs';
 import { getDecryptedWebhookConfig, getConfig } from '@/lib/db';
 
+// 缓存 slug，避免重复 API 调用
+let cachedSlug: string | null = null;
+
 /**
  * 获取 GitHub App ID
  * 优先级：环境变量 → AppConfig → WebhookConfig
@@ -86,4 +89,42 @@ export async function generateJWTAuto(): Promise<string> {
   const appId = await getAppId();
   const privateKey = await getPrivateKey();
   return generateJWT(appId, privateKey);
+}
+
+/**
+ * 获取 GitHub App Slug
+ * 优先级：缓存 → 环境变量 → GitHub API 自动获取
+ */
+export async function fetchBotSlug(): Promise<string> {
+  // 1. 返回缓存
+  if (cachedSlug) return cachedSlug;
+
+  // 2. 环境变量
+  const envSlug = process.env.GITHUB_APP_SLUG;
+  if (envSlug) {
+    cachedSlug = envSlug;
+    return envSlug;
+  }
+
+  // 3. 调用 GitHub API 获取
+  try {
+    const appJwt = await generateJWTAuto();
+    const response = await fetch('https://api.github.com/app', {
+      headers: {
+        Authorization: `Bearer ${appJwt}`,
+        Accept: 'application/vnd.github.v3+json',
+      },
+    });
+    if (response.ok) {
+      const app = (await response.json()) as { slug: string };
+      if (app.slug) {
+        cachedSlug = app.slug;
+        return app.slug;
+      }
+    }
+  } catch {
+    // API 调用失败，返回空
+  }
+
+  return '';
 }
