@@ -1,21 +1,48 @@
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { getPRInfo } from '../github/api';
 
 /**
  * 验证分支名是否安全（仅允许 Git refname 合法字符）
+ *
+ * 防御命令注入：恶意分支名可能包含 shell 元字符（; | & ` $() 等），
+ * 即使使用 execFileSync 不经过 shell，分支名仍必须符合 Git 规范。
  */
-function validateBranchName(name: string): void {
-  // Git refname 规则：不允许空格、~^:?*[\\、连续的 ..、以 - 开头、以 .lock 结尾
+export function validateBranchName(name: string): string {
   if (
     !name ||
+    typeof name !== 'string' ||
     name.includes(' ') ||
     name.includes('..') ||
     /[~^:?*[\]\\]/.test(name) ||
     name.startsWith('-') ||
-    name.endsWith('.lock')
+    name.endsWith('.lock') ||
+    name.includes('\n') ||
+    name.includes('\r') ||
+    name.includes('\0')
   ) {
-    throw new Error(`Unsafe branch name: ${name}`);
+    throw new Error(`Unsafe branch name: ${JSON.stringify(name)}`);
   }
+  return name;
+}
+
+/**
+ * 校验 PR 编号（必须为正整数）
+ */
+export function validatePRNumber(prNumber: number): number {
+  if (!Number.isInteger(prNumber) || prNumber <= 0) {
+    throw new Error(`Unsafe PR number: ${prNumber}`);
+  }
+  return prNumber;
+}
+
+/**
+ * 校验 Issue 编号（必须为正整数）
+ */
+export function validateIssueNumber(issueNumber: number): number {
+  if (!Number.isInteger(issueNumber) || issueNumber <= 0) {
+    throw new Error(`Unsafe issue number: ${issueNumber}`);
+  }
+  return issueNumber;
 }
 
 /**
@@ -32,23 +59,21 @@ export async function checkoutPRBranch(prNumber: number): Promise<void> {
 
   // 1. 反查 PR 源头分支
   const pr = await getPRInfo(prNumber);
-  const branchName = pr.head.ref as string;
-
-  validateBranchName(branchName);
+  const branchName = validateBranchName(pr.head.ref as string);
   console.log(`Checking out branch: ${branchName}`);
 
   // 2. 清理工作区
-  execSync('git checkout .', { cwd: workspaceDir, stdio: 'pipe' });
-  execSync('git clean -fd', { cwd: workspaceDir, stdio: 'pipe' });
+  execFileSync('git', ['checkout', '.'], { cwd: workspaceDir });
+  execFileSync('git', ['clean', '-fd'], { cwd: workspaceDir });
 
-  // 3. 切换分支（使用 -- 作为 ref 分隔符防止注入）
-  execSync(`git fetch origin -- ${branchName}`, { cwd: workspaceDir, stdio: 'pipe' });
-  execSync(`git checkout -- ${branchName}`, { cwd: workspaceDir, stdio: 'pipe' });
-  execSync(`git pull origin -- ${branchName}`, { cwd: workspaceDir, stdio: 'pipe' });
+  // 3. 切换分支
+  execFileSync('git', ['fetch', 'origin', branchName], { cwd: workspaceDir });
+  execFileSync('git', ['checkout', branchName], { cwd: workspaceDir });
+  execFileSync('git', ['pull', 'origin', branchName], { cwd: workspaceDir });
 
   // 4. 同步主分支
   try {
-    execSync('git merge origin/main --no-edit', { cwd: workspaceDir, stdio: 'pipe' });
+    execFileSync('git', ['merge', 'origin/main', '--no-edit'], { cwd: workspaceDir });
     console.log('Successfully merged with main branch');
   } catch (error) {
     throw new Error('Merge conflict detected');

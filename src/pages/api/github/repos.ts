@@ -1,18 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import jwt from 'jsonwebtoken';
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 import { getInstallationAccessToken, listInstallationRepos } from '@/lib/github/installation';
-
-const JWT_SECRET = process.env.JWT_SECRET;
-
-interface JwtPayload {
-  githubId: number;
-}
-
-interface RepoConfig {
-  repoId: number;
-  enabled: boolean;
-}
+import { requireAuth } from '@/lib/auth-utils';
 
 /**
  * 列出当前管理员关联的 GitHub App 安装授权仓库
@@ -23,22 +13,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  if (!JWT_SECRET) {
-    return res.status(500).json({ error: 'Server configuration error' });
-  }
+  const payload = await requireAuth(req, res);
+  if (!payload) return;
 
-  const token = req.cookies.auth_token;
-  if (!token) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
-
-  let adminGithubId: number;
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
-    adminGithubId = decoded.githubId;
-  } catch {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
+  const adminGithubId = payload.githubId!;
 
   const admin = await prisma.admin.findUnique({
     where: { githubId: adminGithubId },
@@ -52,7 +30,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json({ personal: [], organization: [], installations: [] });
   }
 
-  // 构建 repoId -> enabled 映射
   const configMap = new Map<number, boolean>();
   for (const cfg of admin.repoConfigs) {
     configMap.set(cfg.repoId, cfg.enabled);
@@ -66,7 +43,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const accessToken = await getInstallationAccessToken(installation.installationId);
       const repos = await listInstallationRepos(accessToken);
 
-      // 附加 config 状态
       allPersonal.push(
         ...repos.personal.map((r) => ({
           ...r,
@@ -80,7 +56,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }))
       );
     } catch (error) {
-      console.error(`Failed to list repos for installation ${installation.installationId}:`, error);
+      logger.error(`Failed to list repos for installation ${installation.installationId}:`, error);
     }
   }
 

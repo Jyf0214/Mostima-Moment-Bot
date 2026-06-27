@@ -1,46 +1,32 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import jwt from 'jsonwebtoken';
 import { prisma } from '@/lib/prisma';
-import { setCookie, clearCookie } from '@/lib/cookie';
 import { logger } from '@/lib/logger';
-
-const JWT_SECRET = process.env.JWT_SECRET;
-
-interface JwtPayload {
-  githubId: number;
-  githubLogin: string;
-}
+import { setCookie, clearCookie } from '@/lib/cookie';
+import { getQueryParam } from '@/lib/api-utils';
+import { verifyAuthToken } from '@/lib/auth-utils';
 
 /**
  * GitHub App 安装回调
  * GET /api/github/callback?installation_id=xxx&state=xxx
- *
- * 校验 CSRF state + 管理员身份，存储 installation 记录
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { installation_id, state } = req.query;
+  const installation_id = getQueryParam(req, 'installation_id');
+  const state = getQueryParam(req, 'state');
 
   if (!installation_id || !state) {
     return res.redirect('/dashboard?install=error&reason=missing_params');
   }
 
-  // 1. 校验 CSRF state
   const cookieState = req.cookies.github_install_state;
   if (!cookieState || cookieState !== state) {
     return res.redirect('/dashboard?install=error&reason=invalid_state');
   }
 
-  // 清除 state cookie
   res.setHeader('Set-Cookie', clearCookie('github_install_state', { path: '/api/github' }));
-
-  // 2. 校验管理员身份
-  if (!JWT_SECRET) {
-    return res.redirect('/dashboard?install=error&reason=server_config');
-  }
 
   const authToken = req.cookies.auth_token;
   if (!authToken) {
@@ -49,13 +35,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   let adminGithubId: number;
   try {
-    const decoded = jwt.verify(authToken, JWT_SECRET) as JwtPayload;
+    const decoded = verifyAuthToken(authToken);
+    if (!decoded.githubId) {
+      return res.redirect('/?install=error&reason=invalid_token');
+    }
     adminGithubId = decoded.githubId;
   } catch {
     return res.redirect('/?install=error&reason=invalid_token');
   }
 
-  // 3. 查找管理员
   const admin = await prisma.admin.findUnique({
     where: { githubId: adminGithubId },
   });
@@ -64,8 +52,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.redirect('/dashboard?install=error&reason=admin_not_found');
   }
 
-  // 4. 检查是否已存在该 installation
-  const installId = parseInt(installation_id as string, 10);
+  const installId = parseInt(installation_id, 10);
   if (isNaN(installId)) {
     return res.redirect('/dashboard?install=error&reason=invalid_installation_id');
   }
@@ -75,18 +62,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   });
 
   if (existing) {
-    // 已存在，更新为活跃状态
     await prisma.gitHubInstallation.update({
       where: { installationId: installId },
       data: { isActive: true, adminId: admin.id },
     });
   } else {
-    // 5. 通过 GitHub API 获取安装详情
     try {
-      const { getInstallationAccessToken } = await import('@/lib/github/installation');
-      // 用 App JWT 获取 installation 信息
       const { generateJWTAuto } = await import('@/lib/github/auth');
-
       try {
         const appJwt = await generateJWTAuto();
         const response = await fetch(`https://api.github.com/app/installations/${installId}`, {
@@ -100,7 +82,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           const installation = (await response.json()) as {
             account: { login: string; type: string; id: number; avatar_url: string };
           };
-
           await prisma.gitHubInstallation.create({
             data: {
               installationId: installId,
@@ -112,40 +93,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             },
           });
         } else {
-          // API 失败，用最小信息存储
           await prisma.gitHubInstallation.create({
-            data: {
-              installationId: installId,
-              accountLogin: 'unknown',
-              accountType: 'Unknown',
-              accountId: 0,
-              adminId: admin.id,
-            },
+            data: { installationId: installId, accountLogin: 'unknown', accountType: 'Unknown', accountId: 0, adminId: admin.id },
           });
         }
       } catch {
-        // JWT 生成失败，用最小信息存储
         await prisma.gitHubInstallation.create({
-          data: {
-            installationId: installId,
-            accountLogin: 'unknown',
-            accountType: 'Unknown',
-            accountId: 0,
-            adminId: admin.id,
-          },
+          data: { installationId: installId, accountLogin: 'unknown', accountType: 'Unknown', accountId: 0, adminId: admin.id },
         });
       }
     } catch (error) {
-      console.error('Failed to fetch installation details:', error);
-      // 仍然存储 installation，只是没有账户详情
+      logger.error('Failed to fetch installation details:', error);
       await prisma.gitHubInstallation.create({
-        data: {
-          installationId: installId,
-          accountLogin: 'unknown',
-          accountType: 'Unknown',
-          accountId: 0,
-          adminId: admin.id,
-        },
+        data: { installationId: installId, accountLogin: 'unknown', accountType: 'Unknown', accountId: 0, adminId: admin.id },
       });
     }
   }

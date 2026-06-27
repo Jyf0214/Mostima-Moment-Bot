@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import jwt from 'jsonwebtoken';
 import { prisma } from '@/lib/prisma';
 import { setConfig, getConfig } from '@/lib/db';
+import { verifyAuthToken } from '@/lib/auth-utils';
 
 /**
  * GitHub App 私钥管理
@@ -10,14 +11,13 @@ import { setConfig, getConfig } from '@/lib/db';
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // 验证管理员身份
-  const JWT_SECRET = process.env.JWT_SECRET;
   const authToken = req.cookies.auth_token;
-  if (!authToken || !JWT_SECRET) {
+  if (!authToken) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
 
   try {
-    jwt.verify(authToken, JWT_SECRET);
+    verifyAuthToken(authToken);
   } catch {
     return res.status(401).json({ error: 'Invalid token' });
   }

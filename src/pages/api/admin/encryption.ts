@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import jwt from 'jsonwebtoken';
 import { resetEncryptionKeyCache } from '@/lib/prisma-encryption';
+import type { JwtPayload } from '@/lib/auth-utils';
 
 /**
  * 加密密钥存储管理
@@ -11,6 +12,9 @@ import { resetEncryptionKeyCache } from '@/lib/prisma-encryption';
  * 加密始终开启。此 API 管理的是密钥是否存储到数据库。
  * - 存储：密钥明文存在 AppConfig，后续启动从 DB 读取，不再需要环境变量
  * - 移除：删除 DB 中的密钥，后续启动必须通过环境变量提供
+ *
+ * 注意：此端点需要在 JWT_SECRET 未配置时仍可工作（从数据库读取密钥），
+ * 因此不能使用 requireAdmin 中间件，必须自行处理 JWT_SECRET 的获取逻辑。
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // JWT_SECRET 从环境变量或数据库获取
@@ -39,7 +43,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const decoded = jwt.verify(token, jwtSecret) as { githubId: number; isAdmin: boolean };
+    const decoded = jwt.verify(token, jwtSecret) as JwtPayload;
     if (!decoded.isAdmin) {
       return res.status(403).json({ error: 'Admin only' });
     }

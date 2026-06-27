@@ -1,8 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import jwt from 'jsonwebtoken';
 import { getConfig, setConfig } from '@/lib/db';
 import { DEFAULT_RULES } from '@/lib/ci/triggers/default-rules';
 import type { TriggerRule } from '@/lib/ci/triggers/types';
+import { requireAuth } from '@/lib/auth-utils';
 
 /**
  * 触发规则管理
@@ -11,17 +11,8 @@ import type { TriggerRule } from '@/lib/ci/triggers/types';
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // 验证管理员身份
-  const JWT_SECRET = process.env.JWT_SECRET;
-  const authToken = req.cookies.auth_token;
-  if (!authToken || !JWT_SECRET) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
-
-  try {
-    jwt.verify(authToken, JWT_SECRET);
-  } catch {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
+  const payload = await requireAuth(req, res);
+  if (!payload) return;
 
   if (req.method === 'GET') {
     const repo = String(req.query.repo || '');

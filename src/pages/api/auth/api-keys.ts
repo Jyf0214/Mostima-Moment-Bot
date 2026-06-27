@@ -1,15 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { prisma } from '@/lib/prisma';
-
-const JWT_SECRET = process.env.JWT_SECRET;
-
-interface JwtPayload {
-  githubId: number;
-  githubLogin: string;
-  isAdmin: boolean;
-}
+import { requireAdmin } from '@/lib/auth-utils';
 
 /**
  * 管理 API 密钥
@@ -18,30 +10,13 @@ interface JwtPayload {
  * DELETE /api/auth/api-keys?id=x - 撤销密钥
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (!JWT_SECRET) {
-    return res.status(500).json({ error: 'Server configuration error' });
-  }
-
-  // 验证身份
-  const token = req.cookies.auth_token;
-  if (!token) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
-
-  let decoded: JwtPayload;
-  try {
-    decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
-  } catch {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
-
-  if (!decoded.isAdmin) {
-    return res.status(403).json({ error: 'Admin only' });
-  }
+  // 验证管理员身份
+  const payload = await requireAdmin(req, res);
+  if (!payload) return;
 
   // 查找管理员
   const admin = await prisma.admin.findUnique({
-    where: { githubId: decoded.githubId },
+    where: { githubId: payload.githubId },
   });
 
   if (!admin) {

@@ -1,5 +1,5 @@
-import { execSync } from 'child_process';
-import { writeFileSync, existsSync, readFileSync } from 'fs';
+import { execFileSync } from 'child_process';
+import { writeFileSync, existsSync, readFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import {
   runQwen,
@@ -13,6 +13,7 @@ import {
   buildAuditFailComment,
   buildAuditCircuitBreakComment,
 } from '../qwen/prompts';
+import { validateBranchName, validatePRNumber } from '../git/workspace';
 
 /**
  * PR 安全审计服务
@@ -25,6 +26,12 @@ import {
  * - 发现漏洞时生成 audit_report.txt
  * - 自动修复循环（最多 5 转，超限触发熔断）
  * - 审计报告作为 PR 评论发布
+ *
+ * 安全措施：
+ * - 所有 git 命令使用 execFileSync（不经过 shell）
+ * - baseBranch 通过 validateBranchName 校验，防止 shell 注入
+ * - prNumber 通过 validatePRNumber 校验
+ * - mkdir 使用 Node.js fs.mkdirSync 替代 shell 命令
  */
 export async function auditPR(
   prNumber: number,
@@ -32,23 +39,27 @@ export async function auditPR(
   headSha: string,
   workspaceDir: string
 ): Promise<void> {
-  console.log(`[Security Auditor] Auditing PR #${prNumber} (base: ${baseBranch})`);
+  // 校验来自 webhook payload 的输入，防止命令注入
+  const safePRNumber = validatePRNumber(prNumber);
+  const safeBranch = validateBranchName(baseBranch);
+
+  console.log(`[Security Auditor] Auditing PR #${safePRNumber} (base: ${safeBranch})`);
 
   // 1. 分支保护 + LSP
   injectBranchProtection(workspaceDir);
   createLspConfig(workspaceDir);
 
   // 2. 会话持久化
-  const { sessionId, isResume } = getOrCreateSessionId(`audit-pr-${prNumber}`);
+  const { sessionId, isResume } = getOrCreateSessionId(`audit-pr-${safePRNumber}`);
 
   // 3. 获取最新代码
   try {
-    execSync(`git fetch origin ${baseBranch}`, { cwd: workspaceDir, stdio: 'pipe' });
-    execSync(`git fetch origin pull/${prNumber}/head:pr-${prNumber}`, {
+    execFileSync('git', ['fetch', 'origin', safeBranch], { cwd: workspaceDir, stdio: 'pipe' });
+    execFileSync('git', ['fetch', 'origin', `pull/${safePRNumber}/head:pr-${safePRNumber}`], {
       cwd: workspaceDir,
       stdio: 'pipe',
     });
-    execSync(`git checkout pr-${prNumber}`, { cwd: workspaceDir, stdio: 'pipe' });
+    execFileSync('git', ['checkout', `pr-${safePRNumber}`], { cwd: workspaceDir, stdio: 'pipe' });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error(`[Security Auditor] Failed to checkout PR: ${msg}`);
@@ -59,7 +70,7 @@ export async function auditPR(
   let cycleCount = 0;
   const cycleFile = join(workspaceDir, '.qwen', 'audit_count.txt');
   try {
-    const lastAuthor = execSync('git log -1 --pretty=format:%an', {
+    const lastAuthor = execFileSync('git', ['log', '-1', '--pretty=format:%an'], {
       cwd: workspaceDir,
       encoding: 'utf-8',
     });
@@ -74,17 +85,18 @@ export async function auditPR(
       cycleCount = 0;
     }
 
+    // 使用 Node.js fs 替代 shell mkdir -p，避免命令注入
     const qwenDir = join(workspaceDir, '.qwen');
     if (!existsSync(qwenDir)) {
-      execSync(`mkdir -p ${qwenDir}`, { cwd: workspaceDir, stdio: 'pipe' });
+      mkdirSync(qwenDir, { recursive: true });
     }
     writeFileSync(cycleFile, String(cycleCount), 'utf-8');
-  } catch {
-    // 忽略
+  } catch (error) {
+    console.warn('[SecurityAuditor] 读写循环计数文件失败:', error);
   }
 
   // 5. 构建审计 Prompt
-  const prompt = buildAuditPrompt(baseBranch, prNumber);
+  const prompt = buildAuditPrompt(safeBranch, safePRNumber);
 
   // 6. 执行审计
   const result = await runQwen(prompt, {
@@ -96,17 +108,17 @@ export async function auditPR(
   // 7. 判定结果
   const reportFile = join(workspaceDir, 'audit_report.txt');
   if (result.success && existsSync(reportFile)) {
-    console.error(`[Security Auditor] Security vulnerabilities detected in PR #${prNumber}!`);
+    console.error(`[Security Auditor] Security vulnerabilities detected in PR #${safePRNumber}!`);
     const reportContent = readFileSync(reportFile, 'utf-8');
 
     if (cycleCount < 5) {
       const commentBody = buildAuditFailComment(cycleCount, reportContent);
-      postPRComment(prNumber, commentBody);
+      await postPRComment(safePRNumber, commentBody);
     } else {
       const commentBody = buildAuditCircuitBreakComment(reportContent);
-      postPRComment(prNumber, commentBody);
+      await postPRComment(safePRNumber, commentBody);
     }
   } else {
-    console.log(`[Security Auditor] PR #${prNumber} security audit passed.`);
+    console.log(`[Security Auditor] PR #${safePRNumber} security audit passed.`);
   }
 }

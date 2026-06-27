@@ -1,13 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import jwt from 'jsonwebtoken';
 import { prisma } from '@/lib/prisma';
-
-const JWT_SECRET = process.env.JWT_SECRET;
-
-interface JwtPayload {
-  githubId: number;
-  isAdmin: boolean;
-}
+import { requireAdmin } from '@/lib/auth-utils';
+import { getQueryParam } from '@/lib/api-utils';
 
 /**
  * 站点配置 API
@@ -18,7 +12,7 @@ interface JwtPayload {
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // GET 请求无需认证（首页需要公开读取）
   if (req.method === 'GET') {
-    const key = req.query.key as string | undefined;
+    const key = getQueryParam(req, 'key');
 
     if (key) {
       const config = await prisma.appConfig.findUnique({
@@ -40,23 +34,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // PUT 请求需要管理员认证
   if (req.method === 'PUT') {
-    if (!JWT_SECRET) {
-      return res.status(500).json({ error: 'Server configuration error' });
-    }
-
-    const token = req.cookies.auth_token;
-    if (!token) {
-      return res.status(401).json({ error: 'Not authenticated' });
-    }
-
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
-      if (!decoded.isAdmin) {
-        return res.status(403).json({ error: 'Admin only' });
-      }
-    } catch {
-      return res.status(401).json({ error: 'Invalid token' });
-    }
+    const payload = await requireAdmin(req, res);
+    if (!payload) return;
 
     const { key, value } = req.body;
     if (!key || typeof key !== 'string') {

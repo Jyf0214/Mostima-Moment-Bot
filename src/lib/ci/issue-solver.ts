@@ -1,4 +1,4 @@
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { writeFileSync, existsSync, readFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import {
@@ -13,6 +13,7 @@ import {
   buildIssueFixReply,
 } from '../qwen/prompts';
 import { getFixCommand, getBotMention } from './config';
+import { validateBranchName, validateIssueNumber } from '../git/workspace';
 
 interface IssuePayload {
   issue: {
@@ -58,13 +59,19 @@ export function shouldTriggerIssueFix(eventName: string, payload: IssuePayload):
  * - todo_checklist.md 清单销项
  * - 自愈重试 + 压缩机制
  * - 生动回复 Issue
+ *
+ * 安全措施：
+ * - 所有 git/gh 命令使用 execFileSync（不经过 shell）
+ * - 分支名通过 validateBranchName 校验
+ * - Issue 编号通过 validateIssueNumber 校验
+ * - gh issue comment 的 --body 使用 execFileSync 数组参数传递，避免 shell 注入
  */
 export async function solveIssue(
   eventName: string,
   payload: IssuePayload,
   workspaceDir: string
 ): Promise<void> {
-  const issueNumber = payload.issue.number;
+  const issueNumber = validateIssueNumber(payload.issue.number);
   const issueTitle = payload.issue.title;
   const issueBody = payload.issue.body || '';
   const commentBody = payload.comment?.body || '';
@@ -83,29 +90,36 @@ export async function solveIssue(
 
   if (eventName === 'issue_comment') {
     try {
-      const prView = execSync(`gh pr view ${issueNumber} --json headRefName --jq .headRefName`, {
-        cwd: workspaceDir,
-        encoding: 'utf-8',
-        stdio: ['pipe', 'pipe', 'pipe'],
-      }).trim();
-      if (prView) prBranch = prView;
-    } catch {
-      // 使用默认分支名
+      // gh pr view 返回的分支名来自 GitHub API，必须校验
+      const prView = execFileSync(
+        'gh',
+        ['pr', 'view', String(issueNumber), '--json', 'headRefName', '--jq', '.headRefName'],
+        {
+          cwd: workspaceDir,
+          encoding: 'utf-8',
+          stdio: ['pipe', 'pipe', 'pipe'],
+        }
+      ).trim();
+      if (prView) {
+        prBranch = validateBranchName(prView);
+      }
+    } catch (error) {
+      console.warn(`[IssueSolver] 获取 PR 分支名失败 (issue #${issueNumber})，使用默认分支名:`, error);
     }
 
     try {
-      execSync(`git fetch origin ${prBranch}`, { cwd: workspaceDir, stdio: 'pipe' });
-      execSync(`git checkout ${prBranch}`, { cwd: workspaceDir, stdio: 'pipe' });
-      execSync('git fetch origin main', { cwd: workspaceDir, stdio: 'pipe' });
-      execSync('git merge origin/main --no-edit', { cwd: workspaceDir, stdio: 'pipe' });
+      execFileSync('git', ['fetch', 'origin', prBranch], { cwd: workspaceDir, stdio: 'pipe' });
+      execFileSync('git', ['checkout', prBranch], { cwd: workspaceDir, stdio: 'pipe' });
+      execFileSync('git', ['fetch', 'origin', 'main'], { cwd: workspaceDir, stdio: 'pipe' });
+      execFileSync('git', ['merge', 'origin/main', '--no-edit'], { cwd: workspaceDir, stdio: 'pipe' });
     } catch {
       console.warn('[Issue Solver] Merge conflict detected, leaving for Qwen to resolve');
     }
   } else {
     try {
-      execSync(`git checkout -b ${prBranch}`, { cwd: workspaceDir, stdio: 'pipe' });
+      execFileSync('git', ['checkout', '-b', prBranch], { cwd: workspaceDir, stdio: 'pipe' });
     } catch {
-      execSync(`git checkout ${prBranch}`, { cwd: workspaceDir, stdio: 'pipe' });
+      execFileSync('git', ['checkout', prBranch], { cwd: workspaceDir, stdio: 'pipe' });
     }
   }
 
@@ -139,18 +153,25 @@ export async function solveIssue(
 
   // 7. 提交并推送
   try {
-    execSync('git add -A', { cwd: workspaceDir, stdio: 'pipe' });
-    execSync(`git commit -m "fix: auto-fix Issue #${issueNumber}"`, {
+    execFileSync('git', ['add', '-A'], { cwd: workspaceDir, stdio: 'pipe' });
+    execFileSync('git', ['commit', '-m', `fix: auto-fix Issue #${issueNumber}`], {
       cwd: workspaceDir,
       stdio: 'pipe',
     });
-    execSync(`git push origin ${prBranch}`, { cwd: workspaceDir, stdio: 'pipe' });
+    execFileSync('git', ['push', 'origin', prBranch], { cwd: workspaceDir, stdio: 'pipe' });
 
     // 8. 创建或更新 PR
     if (!isResume || eventName === 'issues') {
       try {
-        execSync(
-          `gh pr create --title "fix: Issue #${issueNumber}" --body "Automated fix for Issue #${issueNumber}" --head ${prBranch} --base main`,
+        execFileSync(
+          'gh',
+          [
+            'pr', 'create',
+            '--title', `fix: Issue #${issueNumber}`,
+            '--body', `Automated fix for Issue #${issueNumber}`,
+            '--head', prBranch,
+            '--base', 'main',
+          ],
           { cwd: workspaceDir, stdio: 'pipe' }
         );
       } catch {
@@ -158,13 +179,14 @@ export async function solveIssue(
       }
     }
 
-    // 9. 回复 Issue
+    // 9. 回复 Issue — 使用 execFileSync 避免 shell 注入
     const replyBody = buildIssueFixReply(issueNumber, prBranch);
     try {
-      execSync(`gh issue comment ${issueNumber} --body "${replyBody.replace(/"/g, '\\"')}"`, {
-        cwd: workspaceDir,
-        stdio: 'pipe',
-      });
+      execFileSync(
+        'gh',
+        ['issue', 'comment', String(issueNumber), '--body', replyBody],
+        { cwd: workspaceDir, stdio: 'pipe' }
+      );
     } catch {
       console.warn('[Issue Solver] Failed to post issue comment');
     }

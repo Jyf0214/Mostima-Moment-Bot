@@ -1,4 +1,4 @@
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import { writeFileSync, existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import {
@@ -9,6 +9,7 @@ import {
 } from '../qwen/runner';
 import { postPRComment } from '../github/api';
 import { buildScanPrompt, SCAN_RESUME_PROMPT, DEEP_SCAN_PROMPT } from '../qwen/prompts';
+import { validateBranchName } from '../git/workspace';
 
 /**
  * 定时安全扫描服务
@@ -20,6 +21,11 @@ import { buildScanPrompt, SCAN_RESUME_PROMPT, DEEP_SCAN_PROMPT } from '../qwen/p
  * - 极深度底层漏洞会诊（首轮耗时 < 20 分钟时触发）
  * - 自愈断点续传 + 压缩机制
  * - LLM Judge 终态硬红线判定
+ *
+ * 安全措施：
+ * - 所有 git/gh 命令使用 execFileSync（不经过 shell）
+ * - scanBranch 通过 validateBranchName 校验
+ * - gh pr create 的 --body 使用 execFileSync 数组参数传递，避免 shell 注入
  */
 export async function runScheduledScan(workspaceDir: string): Promise<void> {
   console.log('[Scheduled Scanner] Starting weekly deep scan...');
@@ -33,9 +39,9 @@ export async function runScheduledScan(workspaceDir: string): Promise<void> {
 
   // 3. 获取最新代码
   try {
-    execSync('git fetch origin main', { cwd: workspaceDir, stdio: 'pipe' });
-    execSync('git checkout main', { cwd: workspaceDir, stdio: 'pipe' });
-    execSync('git pull origin main', { cwd: workspaceDir, stdio: 'pipe' });
+    execFileSync('git', ['fetch', 'origin', 'main'], { cwd: workspaceDir, stdio: 'pipe' });
+    execFileSync('git', ['checkout', 'main'], { cwd: workspaceDir, stdio: 'pipe' });
+    execFileSync('git', ['pull', 'origin', 'main'], { cwd: workspaceDir, stdio: 'pipe' });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     console.error(`[Scheduled Scanner] Failed to update main: ${msg}`);
@@ -44,12 +50,12 @@ export async function runScheduledScan(workspaceDir: string): Promise<void> {
 
   // 4. 创建巡检分支
   const currentDate = new Date().toISOString().split('T')[0].replace(/-/g, '');
-  const scanBranch = `scheduled/audit-patch-${currentDate}`;
+  const scanBranch = validateBranchName(`scheduled/audit-patch-${currentDate}`);
 
   try {
-    execSync(`git checkout -b ${scanBranch}`, { cwd: workspaceDir, stdio: 'pipe' });
+    execFileSync('git', ['checkout', '-b', scanBranch], { cwd: workspaceDir, stdio: 'pipe' });
   } catch {
-    execSync(`git checkout ${scanBranch}`, { cwd: workspaceDir, stdio: 'pipe' });
+    execFileSync('git', ['checkout', scanBranch], { cwd: workspaceDir, stdio: 'pipe' });
   }
 
   // 5. 构建 Prompt
@@ -84,14 +90,14 @@ export async function runScheduledScan(workspaceDir: string): Promise<void> {
 
   // 8. 提交并推送
   try {
-    execSync('git add -A', { cwd: workspaceDir, stdio: 'pipe' });
-    execSync(`git commit -m "chore: scheduled security scan ${currentDate}" --allow-empty`, {
+    execFileSync('git', ['add', '-A'], { cwd: workspaceDir, stdio: 'pipe' });
+    execFileSync('git', ['commit', '-m', `chore: scheduled security scan ${currentDate}`, '--allow-empty'], {
       cwd: workspaceDir,
       stdio: 'pipe',
     });
-    execSync(`git push origin ${scanBranch}`, { cwd: workspaceDir, stdio: 'pipe' });
+    execFileSync('git', ['push', 'origin', scanBranch], { cwd: workspaceDir, stdio: 'pipe' });
 
-    // 9. 创建 PR
+    // 9. 创建 PR — 使用 execFileSync 数组参数避免 shell 注入
     const checklistFile = join(workspaceDir, 'todo_checklist.md');
     let prBody = `## Scheduled Security Scan Report (${currentDate})\n\n`;
     prBody += `> Automated scan by Qwen Code multi-agent system\n\n`;
@@ -102,8 +108,15 @@ export async function runScheduledScan(workspaceDir: string): Promise<void> {
     }
 
     try {
-      execSync(
-        `gh pr create --title "chore: scheduled scan ${currentDate}" --body "${prBody.replace(/"/g, '\\"')}" --head ${scanBranch} --base main`,
+      execFileSync(
+        'gh',
+        [
+          'pr', 'create',
+          '--title', `chore: scheduled scan ${currentDate}`,
+          '--body', prBody,
+          '--head', scanBranch,
+          '--base', 'main',
+        ],
         { cwd: workspaceDir, stdio: 'pipe' }
       );
     } catch {

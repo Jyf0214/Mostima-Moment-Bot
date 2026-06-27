@@ -1,12 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import jwt from 'jsonwebtoken';
 import { prisma } from '@/lib/prisma';
-
-const JWT_SECRET = process.env.JWT_SECRET;
-
-interface JwtPayload {
-  githubId: number;
-}
+import { requireAuth } from '@/lib/auth-utils';
 
 /**
  * 切换仓库 CI/CD 启用状态
@@ -18,22 +12,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  if (!JWT_SECRET) {
-    return res.status(500).json({ error: 'Server configuration error' });
-  }
+  const payload = await requireAuth(req, res);
+  if (!payload) return;
 
-  const token = req.cookies.auth_token;
-  if (!token) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
-
-  let adminGithubId: number;
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
-    adminGithubId = decoded.githubId;
-  } catch {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
+  const adminGithubId = payload.githubId!;
 
   const admin = await prisma.admin.findUnique({
     where: { githubId: adminGithubId },

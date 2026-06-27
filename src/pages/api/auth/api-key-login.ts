@@ -1,10 +1,9 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { setCookie } from '@/lib/cookie';
 import { prisma } from '@/lib/prisma';
-
-const JWT_SECRET = process.env.JWT_SECRET;
+import { getJwtSecret } from '@/lib/auth-utils';
+import { setCookie } from '@/lib/cookie';
 
 /**
  * API 密钥登录
@@ -12,10 +11,6 @@ const JWT_SECRET = process.env.JWT_SECRET;
  * GET  /api/auth/api-key-login?key=xxx （浏览器直接访问）
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (!JWT_SECRET) {
-    return res.status(500).json({ error: 'Server configuration error' });
-  }
-
   // 从 body 或 query 获取 apiKey
   const apiKey = req.method === 'POST' ? req.body?.apiKey : req.query?.key;
 
@@ -43,6 +38,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   });
 
   // 签发 JWT
+  let JWT_SECRET: string;
+  try {
+    JWT_SECRET = getJwtSecret();
+  } catch {
+    return res.status(500).json({ error: 'Server configuration error' });
+  }
+
   const token = jwt.sign(
     {
       githubId: apiKeyRecord.admin.githubId,

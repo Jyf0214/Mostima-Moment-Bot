@@ -1,8 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import jwt from 'jsonwebtoken';
 import i18n from '@/i18n';
-
-const JWT_SECRET = process.env.JWT_SECRET;
+import { requireAuth } from '@/lib/auth-utils';
 
 interface EnvVarDef {
   key: string;
@@ -11,10 +9,6 @@ interface EnvVarDef {
   descriptionKey: string;
   usageKey: string;
   hintKey: string;
-}
-
-interface JwtPayload {
-  githubId: number;
 }
 
 const ENV_VARS: EnvVarDef[] = [
@@ -100,20 +94,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  if (!JWT_SECRET) {
-    return res.status(500).json({ error: 'Server configuration error' });
-  }
-
-  const token = req.cookies.auth_token;
-  if (!token) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
-
-  try {
-    jwt.verify(token, JWT_SECRET) as JwtPayload;
-  } catch {
-    return res.status(401).json({ error: 'Invalid token' });
-  }
+  const payload = await requireAuth(req, res);
+  if (!payload) return;
 
   const categoryMap = new Map<string, typeof ENV_VARS>();
   for (const v of ENV_VARS) {

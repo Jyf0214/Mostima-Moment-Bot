@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { prisma } from '@/lib/prisma';
 import { generateJWT, getAppId, getPrivateKey } from '@/lib/github/auth';
 import i18n from '@/i18n';
+import { verifyAuthToken } from '@/lib/auth-utils';
 
 interface TestResult {
   name: string;
@@ -20,14 +21,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const JWT_SECRET = process.env.JWT_SECRET;
   const authToken = req.cookies.auth_token;
-  if (!authToken || !JWT_SECRET) {
+  if (!authToken) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
 
   try {
-    jwt.verify(authToken, JWT_SECRET);
+    verifyAuthToken(authToken);
   } catch {
     return res.status(401).json({ error: 'Invalid token' });
   }
@@ -149,11 +149,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
   } catch (err) {
+    console.error('[GitHub Test] JWT generate failed:', err);
     results.push({
       name: t('githubTest.jwtGenerate'),
       status: 'fail',
       message: t('githubTest.jwtError', {
-        error: err instanceof Error ? err.message : String(err),
+        error: 'JWT generation failed',
       }),
     });
   }
@@ -187,6 +188,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     } else {
       const body = await response.text();
+      console.error(`[GitHub Test] API responded with ${response.status}:`, body.slice(0, 500));
       results.push({
         name: t('githubTest.apiComm'),
         status: 'fail',
@@ -194,15 +196,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           status: String(response.status),
           statusText: response.statusText,
         }),
-        detail: body.slice(0, 200),
       });
     }
   } catch (err) {
+    console.error('[GitHub Test] API communication failed:', err);
     results.push({
       name: t('githubTest.apiComm'),
       status: 'fail',
       message: t('githubTest.apiCommError', {
-        error: err instanceof Error ? err.message : String(err),
+        error: 'API communication failed',
       }),
     });
   }
@@ -253,22 +255,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               }),
             });
           } catch (err) {
+            console.error('[GitHub Test] Repo list failed:', err);
             results.push({
               name: t('githubTest.repoList'),
               status: 'warn',
               message: t('githubTest.repoListWarn', {
-                error: err instanceof Error ? err.message : String(err),
+                error: 'Failed to list repositories',
               }),
               detail: t('githubTest.repoListWarnDetail'),
             });
           }
         }
       } catch (err) {
+        console.error('[GitHub Test] Access token failed:', err);
         results.push({
           name: t('githubTest.accessToken'),
           status: 'fail',
           message: t('githubTest.accessTokenFail', {
-            error: err instanceof Error ? err.message : String(err),
+            error: 'Failed to obtain access token',
           }),
           detail: t('githubTest.accessTokenFailDetail'),
         });
@@ -282,11 +286,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
   } catch (err) {
+    console.error('[GitHub Test] Installation check failed:', err);
     results.push({
       name: t('githubTest.installation'),
       status: 'fail',
       message: t('githubTest.installationError', {
-        error: err instanceof Error ? err.message : String(err),
+        error: 'Installation check failed',
       }),
     });
   }

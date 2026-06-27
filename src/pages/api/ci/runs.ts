@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import jwt from 'jsonwebtoken';
 import { prisma } from '@/lib/prisma';
+import { verifyAuthToken } from '@/lib/auth-utils';
 
 // Prisma Client 类型在 db push 前可能不包含 CiRun
 const db = prisma as unknown as {
@@ -29,13 +30,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
 async function handleGet(req: NextApiRequest, res: NextApiResponse) {
   // 验证管理员身份
-  const JWT_SECRET = process.env.JWT_SECRET;
   const authToken = req.cookies.auth_token;
-  if (!authToken || !JWT_SECRET) {
+  if (!authToken) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
+
   try {
-    jwt.verify(authToken, JWT_SECRET);
+    verifyAuthToken(authToken);
   } catch {
     return res.status(401).json({ error: 'Invalid token' });
   }
@@ -172,19 +173,20 @@ async function handleGetRepos(req: NextApiRequest, res: NextApiResponse) {
 }
 
 async function handlePost(req: NextApiRequest, res: NextApiResponse) {
-  // 内部调用，通过 API key 或 webhook 签名验证
+  // 认证逻辑：优先使用 INTERNAL_API_KEY，否则要求 JWT 管理员认证
   const authHeader = req.headers.authorization;
   const internalKey = process.env.INTERNAL_API_KEY;
 
-  if (internalKey && authHeader !== `Bearer ${internalKey}`) {
-    // 如果设置了内部密钥，则需要验证
-    const JWT_SECRET = process.env.JWT_SECRET;
+  if (internalKey && authHeader === `Bearer ${internalKey}`) {
+    // 内部密钥认证通过，允许写入
+  } else {
+    // 未匹配内部密钥或未设置密钥时，一律要求 JWT 管理员认证
     const authToken = req.cookies.auth_token;
-    if (!authToken || !JWT_SECRET) {
+    if (!authToken) {
       return res.status(401).json({ error: 'Not authenticated' });
     }
     try {
-      jwt.verify(authToken, JWT_SECRET);
+      verifyAuthToken(authToken);
     } catch {
       return res.status(401).json({ error: 'Invalid token' });
     }
