@@ -1,6 +1,6 @@
-import { logger } from '@/lib/logger';
-('use client');
+'use client';
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { HeroBanner } from '@/components/ui/HeroBanner';
