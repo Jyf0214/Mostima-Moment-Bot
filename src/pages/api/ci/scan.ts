@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { NextApiRequest, NextApiResponse } from 'next';
 import { runScheduledScan } from '@/lib/ci/scheduled-scanner';
 
@@ -28,11 +29,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const workspaceDir = process.env.WORKSPACE_DIR || '.';
 
-  console.log('[API] Scheduled scan triggered');
+  logger.info('[API] Scheduled scan triggered');
 
   // 异步执行扫描（不阻塞响应）
   runScheduledScan(workspaceDir).catch((err) => {
-    console.error('[API] Scheduled scan failed:', err);
+    logger.error('[API] Scheduled scan failed:', err);
   });
 
   return res.status(202).json({

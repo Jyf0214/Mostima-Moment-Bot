@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { NextApiRequest, NextApiResponse } from 'next';
 import i18n from '@/i18n';
 import { prisma } from '@/lib/prisma';
@@ -21,7 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const adminCount = await prisma.admin.count();
     const elapsed = Date.now() - startTime;
-    console.log(`[DB Init] Done in ${elapsed}ms, admin count: ${adminCount}`);
+    logger.info(`[DB Init] Done in ${elapsed}ms, admin count: ${adminCount}`);
 
     return res.status(200).json({
       success: true,
@@ -31,7 +32,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } catch (error) {
     const elapsed = Date.now() - startTime;
     const message = error instanceof Error ? error.message : String(error);
-    console.error(`[DB Init] Failed after ${elapsed}ms:`, message);
+    logger.error(`[DB Init] Failed after ${elapsed}ms:`, message);
     return res.status(500).json({
       error: i18n.t('api.dbInitFailed'),
       message,

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { NextApiRequest, NextApiResponse } from 'next';
 import jwt from 'jsonwebtoken';
 import { prisma } from '@/lib/prisma';
@@ -68,7 +69,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         message: 'Private key saved and verified',
       });
     } catch (error) {
-      console.error('Failed to save private key:', error);
+      logger.error('Failed to save private key:', error);
       return res.status(500).json({
         error: `Failed to save private key: ${error instanceof Error ? error.message : 'Unknown error'}`,
       });

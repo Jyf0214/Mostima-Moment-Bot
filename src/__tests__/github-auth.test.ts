@@ -12,13 +12,11 @@ vi.mock('fs', () => ({
 
 // Mock db
 vi.mock('@/lib/db', () => ({
-  getDecryptedWebhookConfig: vi.fn(),
   getConfig: vi.fn(),
 }));
 
 const mockFs = vi.mocked(fs);
-const { getDecryptedWebhookConfig, getConfig } = await import('@/lib/db');
-const mockGetDecryptedWebhookConfig = vi.mocked(getDecryptedWebhookConfig);
+const { getConfig } = await import('@/lib/db');
 const mockGetConfig = vi.mocked(getConfig);
 
 // 测试用私钥（RSA 2048）
@@ -51,30 +49,9 @@ describe('GitHub Auth 模块', () => {
       expect(mockGetConfig).toHaveBeenCalledWith('github_app_id');
     });
 
-    it('AppConfig 不存在时应该从 WebhookConfig 读取', async () => {
-      delete process.env.GITHUB_APP_ID;
-      mockGetConfig.mockResolvedValueOnce(null);
-      mockGetDecryptedWebhookConfig.mockResolvedValueOnce({
-        appId: '11111',
-        privateKey: 'key',
-        webhookSecret: 'secret',
-        repoOwner: 'owner',
-        repoName: 'repo',
-        isActive: true,
-        id: 1,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        webhookSecretEncrypted: '',
-        privateKeyEncrypted: '',
-      });
-      const result = await getAppId();
-      expect(result).toBe('11111');
-    });
-
     it('所有来源都没有时应该抛出错误', async () => {
       delete process.env.GITHUB_APP_ID;
       mockGetConfig.mockResolvedValueOnce(null);
-      mockGetDecryptedWebhookConfig.mockResolvedValueOnce(null);
       await expect(getAppId()).rejects.toThrow('GITHUB_APP_ID not configured');
     });
   });
@@ -98,36 +75,12 @@ describe('GitHub Auth 模块', () => {
       expect(result).toBe('db-private-key');
     });
 
-    it('AppConfig 不存在时应该从 WebhookConfig 读取', async () => {
-      process.env.GITHUB_PRIVATE_KEY_PATH = '/nonexistent/path.pem';
-      mockFs.readFileSync.mockImplementationOnce(() => {
-        throw new Error('ENOENT');
-      });
-      mockGetConfig.mockResolvedValueOnce(null);
-      mockGetDecryptedWebhookConfig.mockResolvedValueOnce({
-        appId: '12345',
-        privateKey: 'webhook-private-key',
-        webhookSecret: 'secret',
-        repoOwner: 'owner',
-        repoName: 'repo',
-        isActive: true,
-        id: 1,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        webhookSecretEncrypted: '',
-        privateKeyEncrypted: '',
-      });
-      const result = await getPrivateKey();
-      expect(result).toBe('webhook-private-key');
-    });
-
     it('所有来源都没有时应该抛出错误', async () => {
       process.env.GITHUB_PRIVATE_KEY_PATH = '/nonexistent/path.pem';
       mockFs.readFileSync.mockImplementationOnce(() => {
         throw new Error('ENOENT');
       });
       mockGetConfig.mockResolvedValueOnce(null);
-      mockGetDecryptedWebhookConfig.mockResolvedValueOnce(null);
       await expect(getPrivateKey()).rejects.toThrow('private key not configured');
     });
 
@@ -142,7 +95,6 @@ describe('GitHub Auth 模块', () => {
 
   describe('generateJWT', () => {
     it('应该使用私钥字符串生成有效的 JWT', () => {
-      // 注意：这里使用真实的 RSA 密钥对来测试
       const { privateKey, publicKey } = require('crypto').generateKeyPairSync('rsa', {
         modulusLength: 2048,
         privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
@@ -155,12 +107,11 @@ describe('GitHub Auth 模块', () => {
       expect(token).toBeTruthy();
       expect(token.split('.')).toHaveLength(3);
 
-      // 验证 JWT 结构
       const decoded = jwt.decode(token) as any;
       expect(decoded.iss).toBe(appId);
       expect(decoded.iat).toBeDefined();
       expect(decoded.exp).toBeDefined();
-      expect(decoded.exp - decoded.iat).toBe(660); // iat = now-60, exp = now+600, 差值 660
+      expect(decoded.exp - decoded.iat).toBe(660);
     });
 
     it('应该拒绝使用错误私钥验证的 JWT', () => {
@@ -193,10 +144,8 @@ describe('GitHub Auth 模块', () => {
       const after = Math.floor(Date.now() / 1000);
 
       const decoded = jwt.decode(token) as any;
-      // iat 应该在 before-60 和 after-60 之间
       expect(decoded.iat).toBeGreaterThanOrEqual(before - 61);
       expect(decoded.iat).toBeLessThanOrEqual(after - 59);
-      // exp 应该比 iat 多 660 秒（iat=now-60, exp=now+600）
       expect(decoded.exp - decoded.iat).toBe(660);
     });
   });

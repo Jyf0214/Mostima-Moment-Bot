@@ -1,10 +1,11 @@
+import { logger } from './logger';
 import { PrismaClient } from '@prisma/client';
 import { encrypt, decrypt } from './crypto';
 
 /**
  * 加密中间件
  *
- * 加密始终开启，所有 AppConfig 和 WebhookConfig 的敏感字段自动加解密。
+ * 加密始终开启，所有 AppConfig 的敏感字段自动加解密。
  *
  * ENCRYPTION_KEY 来源优先级：
  *   1. 环境变量 ENCRYPTION_KEY
@@ -16,7 +17,6 @@ import { encrypt, decrypt } from './crypto';
 // 需要加密的字段配置
 const ENCRYPTED_FIELDS: Record<string, string[]> = {
   AppConfig: ['configValue'],
-  WebhookConfig: ['webhookSecretEncrypted', 'privateKeyEncrypted'],
 };
 
 let cachedEncryptionKey: string | null = null;
@@ -97,7 +97,7 @@ function decryptObject(
       try {
         result[k] = decrypt(value, key);
       } catch {
-        console.error(`Failed to decrypt ${model}.${k}`);
+        logger.error(`Failed to decrypt ${model}.${k}`);
       }
     }
   }
@@ -110,7 +110,7 @@ function processResult(result: unknown, model: string, key: string | null): unkn
   if (Array.isArray(result)) return result.map((item) => processResult(item, model, key));
   if (typeof result === 'object') {
     const obj = result as Record<string, unknown>;
-    if ('id' in obj || 'configKey' in obj || 'appId' in obj) {
+    if ('id' in obj || 'configKey' in obj) {
       if (key) return decryptObject(obj, model, key);
       return obj;
     }

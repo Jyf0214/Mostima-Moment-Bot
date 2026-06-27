@@ -1,3 +1,4 @@
+import { logger } from '../logger';
 import { execFileSync } from 'child_process';
 import { writeFileSync, existsSync, readFileSync } from 'fs';
 import { join } from 'path';
@@ -28,7 +29,7 @@ import { validateBranchName } from '../git/workspace';
  * - gh pr create 的 --body 使用 execFileSync 数组参数传递，避免 shell 注入
  */
 export async function runScheduledScan(workspaceDir: string): Promise<void> {
-  console.log('[Scheduled Scanner] Starting weekly deep scan...');
+  logger.info('[Scheduled Scanner] Starting weekly deep scan...');
 
   // 1. 分支保护 + LSP
   injectBranchProtection(workspaceDir);
@@ -44,7 +45,7 @@ export async function runScheduledScan(workspaceDir: string): Promise<void> {
     execFileSync('git', ['pull', 'origin', 'main'], { cwd: workspaceDir, stdio: 'pipe' });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    console.error(`[Scheduled Scanner] Failed to update main: ${msg}`);
+    logger.error(`[Scheduled Scanner] Failed to update main: ${msg}`);
     return;
   }
 
@@ -70,16 +71,16 @@ export async function runScheduledScan(workspaceDir: string): Promise<void> {
   });
 
   if (!result.success) {
-    console.error(`[Scheduled Scanner] First round failed after ${result.attempts} attempts`);
+    logger.error(`[Scheduled Scanner] First round failed after ${result.attempts} attempts`);
     return;
   }
 
   const firstDuration = Date.now() - startTime;
-  console.log(`[Scheduled Scanner] First round completed in ${firstDuration}ms`);
+  logger.info(`[Scheduled Scanner] First round completed in ${firstDuration}ms`);
 
   // 7. 极深度会诊（首轮耗时 < 20 分钟时触发）
   if (firstDuration < 1_200_000) {
-    console.log('[Scheduled Scanner] First round too fast, triggering deep scan...');
+    logger.info('[Scheduled Scanner] First round too fast, triggering deep scan...');
 
     await runQwen(DEEP_SCAN_PROMPT, {
       sessionId,
@@ -91,10 +92,14 @@ export async function runScheduledScan(workspaceDir: string): Promise<void> {
   // 8. 提交并推送
   try {
     execFileSync('git', ['add', '-A'], { cwd: workspaceDir, stdio: 'pipe' });
-    execFileSync('git', ['commit', '-m', `chore: scheduled security scan ${currentDate}`, '--allow-empty'], {
-      cwd: workspaceDir,
-      stdio: 'pipe',
-    });
+    execFileSync(
+      'git',
+      ['commit', '-m', `chore: scheduled security scan ${currentDate}`, '--allow-empty'],
+      {
+        cwd: workspaceDir,
+        stdio: 'pipe',
+      }
+    );
     execFileSync('git', ['push', 'origin', scanBranch], { cwd: workspaceDir, stdio: 'pipe' });
 
     // 9. 创建 PR — 使用 execFileSync 数组参数避免 shell 注入
@@ -111,11 +116,16 @@ export async function runScheduledScan(workspaceDir: string): Promise<void> {
       execFileSync(
         'gh',
         [
-          'pr', 'create',
-          '--title', `chore: scheduled scan ${currentDate}`,
-          '--body', prBody,
-          '--head', scanBranch,
-          '--base', 'main',
+          'pr',
+          'create',
+          '--title',
+          `chore: scheduled scan ${currentDate}`,
+          '--body',
+          prBody,
+          '--head',
+          scanBranch,
+          '--base',
+          'main',
         ],
         { cwd: workspaceDir, stdio: 'pipe' }
       );
@@ -123,9 +133,9 @@ export async function runScheduledScan(workspaceDir: string): Promise<void> {
       // PR 已存在
     }
 
-    console.log(`[Scheduled Scanner] Scan completed. Branch: ${scanBranch}`);
+    logger.info(`[Scheduled Scanner] Scan completed. Branch: ${scanBranch}`);
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    console.error(`[Scheduled Scanner] Push failed: ${msg}`);
+    logger.error(`[Scheduled Scanner] Push failed: ${msg}`);
   }
 }

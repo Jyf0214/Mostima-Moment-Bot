@@ -70,60 +70,6 @@ export async function setConfig(key: string, value: string, encrypted: boolean =
 }
 
 /**
- * 获取 Webhook 配置
- */
-export async function getWebhookConfig() {
-  return prisma.webhookConfig.findFirst({
-    where: { isActive: true },
-  });
-}
-
-/**
- * 设置 Webhook 配置（自动加密敏感字段）
- */
-export async function setWebhookConfig(
-  appId: string,
-  webhookSecret: string,
-  privateKey: string,
-  repoOwner: string,
-  repoName: string
-) {
-  // 先停用旧配置
-  await prisma.webhookConfig.updateMany({
-    where: { isActive: true },
-    data: { isActive: false },
-  });
-
-  // 插入新配置（中间件自动加密 webhookSecretEncrypted 和 privateKeyEncrypted）
-  return prisma.webhookConfig.create({
-    data: {
-      appId,
-      webhookSecretEncrypted: webhookSecret,
-      privateKeyEncrypted: privateKey,
-      repoOwner,
-      repoName,
-    },
-  });
-}
-
-/**
- * 获取解密后的 Webhook 配置
- */
-export async function getDecryptedWebhookConfig() {
-  const config = await getWebhookConfig();
-  if (!config) {
-    return null;
-  }
-
-  // 中间件已自动解密 webhookSecretEncrypted 和 privateKeyEncrypted
-  return {
-    ...config,
-    webhookSecret: config.webhookSecretEncrypted,
-    privateKey: config.privateKeyEncrypted,
-  };
-}
-
-/**
  * 创建构建记录
  */
 export async function createBuild(prNumber: number, branchName: string, triggerUser: string) {

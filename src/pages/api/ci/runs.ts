@@ -1,16 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import jwt from 'jsonwebtoken';
 import { prisma } from '@/lib/prisma';
 import { verifyAuthToken } from '@/lib/auth-utils';
-
-// Prisma Client 类型在 db push 前可能不包含 CiRun
-const db = prisma as unknown as {
-  ciRun: {
-    findMany: (args: unknown) => Promise<unknown[]>;
-    count: (args: unknown) => Promise<number>;
-    create: (args: unknown) => Promise<{ id: number }>;
-  };
-};
+import { getQueryParam, getQueryParamNumber, getQueryParamBoolean } from '@/lib/api-utils';
 
 /**
  * CI 运行日志
@@ -41,23 +32,23 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
     return res.status(401).json({ error: 'Invalid token' });
   }
 
-  const repo = String(req.query.repo || '');
+  const repo = getQueryParam(req, 'repo') || '';
 
   // 没有 repo 参数时，返回所有仓库摘要
   if (!repo) {
     return handleGetRepos(req, res);
   }
 
-  const limit = Math.min(Number(req.query.limit) || 50, 200);
-  const offset = Math.max(Number(req.query.offset) || 0, 0);
-  const botOnly = req.query.botOnly === 'true';
+  const limit = getQueryParamNumber(req, 'limit', 50, 1, 200);
+  const offset = getQueryParamNumber(req, 'offset', 0, 0);
+  const botOnly = getQueryParamBoolean(req, 'botOnly');
 
   const where: Record<string, unknown> = { repoFullName: repo };
   if (botOnly) where.isBotInitiated = true;
 
   try {
     const [runs, total] = await Promise.all([
-      db.ciRun.findMany({
+      prisma.ciRun.findMany({
         where,
         orderBy: { createdAt: 'desc' },
         take: limit,
@@ -82,7 +73,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
           logs: false,
         },
       }),
-      db.ciRun.count({ where }),
+      prisma.ciRun.count({ where }),
     ]);
 
     return res.status(200).json({ runs, total, limit, offset });
@@ -100,7 +91,7 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
 async function handleGetRepos(req: NextApiRequest, res: NextApiResponse) {
   try {
     // 获取最近 500 条 bot 触发的运行记录，按仓库分组统计
-    const recentRuns = (await db.ciRun.findMany({
+    const recentRuns = (await prisma.ciRun.findMany({
       where: { isBotInitiated: true },
       orderBy: { createdAt: 'desc' },
       take: 500,
@@ -149,7 +140,7 @@ async function handleGetRepos(req: NextApiRequest, res: NextApiResponse) {
     const repoNames = Array.from(repoMap.keys());
     const countResults = await Promise.all(
       repoNames.map((name) =>
-        db.ciRun.count({ where: { repoFullName: name, isBotInitiated: true } })
+        prisma.ciRun.count({ where: { repoFullName: name, isBotInitiated: true } })
       )
     );
 
@@ -221,7 +212,7 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
   const runStatus = validStatuses.includes(status) ? status : 'pending';
 
   try {
-    const run = await db.ciRun.create({
+    const run = await prisma.ciRun.create({
       data: {
         repoFullName: repo,
         event,

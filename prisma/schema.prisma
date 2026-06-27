@@ -39,21 +39,6 @@ model AppConfig {
   @@map("app_config")
 }
 
-// Webhook 配置表（deprecated，使用 GitHubInstallation 替代）
-model WebhookConfig {
-  id                    Int      @id @default(autoincrement())
-  appId                 String   @map("app_id")
-  webhookSecretEncrypted String @map("webhook_secret_encrypted")
-  privateKeyEncrypted   String   @map("private_key_encrypted")
-  repoOwner             String   @map("repo_owner")
-  repoName              String   @map("repo_name")
-  isActive              Boolean  @default(true) @map("is_active")
-  createdAt             DateTime @default(now()) @map("created_at")
-  updatedAt             DateTime @updatedAt @map("updated_at")
-
-  @@map("webhook_config")
-}
-
 // CI 运行日志表
 model CiRun {
   id              Int       @id @default(autoincrement())

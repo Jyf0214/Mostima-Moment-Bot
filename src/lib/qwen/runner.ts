@@ -1,3 +1,4 @@
+import { logger } from '../logger';
 import { execSync, spawn, type ChildProcess } from 'child_process';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
@@ -185,7 +186,7 @@ export async function runQwen(prompt: string, options: RunOptions = {}): Promise
   }
 
   // 首次执行
-  console.log(`[Qwen Runner] Starting (session: ${sessionId}, resume: ${isResume})...`);
+  logger.info(`[Qwen Runner] Starting (session: ${sessionId}, resume: ${isResume})...`);
   let result = executeQwen(buildArgs(sessionId, prompt, isResume));
   output = result.output;
 
@@ -193,7 +194,7 @@ export async function runQwen(prompt: string, options: RunOptions = {}): Promise
     success = true;
   } else {
     const duration = Date.now() - startTime;
-    console.warn(`[Qwen Runner] Initial run failed. Duration: ${duration}ms`);
+    logger.warn(`[Qwen Runner] Initial run failed. Duration: ${duration}ms`);
     if (duration >= MAX_DURATION_MS || /524|terminated|closed/i.test(output)) {
       triggerCompression = true;
     }
@@ -202,16 +203,16 @@ export async function runQwen(prompt: string, options: RunOptions = {}): Promise
   // 自愈重试循环
   while (!success && attempt < MAX_ATTEMPTS) {
     attempt++;
-    console.log(`[Qwen Runner] Self-healing attempt ${attempt}/${MAX_ATTEMPTS}...`);
+    logger.info(`[Qwen Runner] Self-healing attempt ${attempt}/${MAX_ATTEMPTS}...`);
     await sleep(15_000);
 
     // 压缩机制
     if (triggerCompression) {
       if (attempt === 2) {
-        console.log('[Qwen Runner] Attempt 2: running /compress-fast...');
+        logger.info('[Qwen Runner] Attempt 2: running /compress-fast...');
         executeQwen(buildArgs(sessionId, '/compress-fast', true));
       } else if (attempt >= 3) {
-        console.log(`[Qwen Runner] Attempt ${attempt}: running /compress-fast + /compress...`);
+        logger.info(`[Qwen Runner] Attempt ${attempt}: running /compress-fast + /compress...`);
         executeQwen(buildArgs(sessionId, '/compress-fast', true));
         await sleep(5_000);
         executeQwen(buildArgs(sessionId, '/compress', true));
@@ -227,10 +228,10 @@ export async function runQwen(prompt: string, options: RunOptions = {}): Promise
 
     if (result.ok) {
       success = true;
-      console.log('[Qwen Runner] Self-healing succeeded.');
+      logger.info('[Qwen Runner] Self-healing succeeded.');
     } else {
       const duration = Date.now() - retryStart;
-      console.warn(`[Qwen Runner] Attempt ${attempt} failed. Duration: ${duration}ms`);
+      logger.warn(`[Qwen Runner] Attempt ${attempt} failed. Duration: ${duration}ms`);
       if (duration >= MAX_DURATION_MS || /524|terminated|closed/i.test(output)) {
         triggerCompression = true;
       }

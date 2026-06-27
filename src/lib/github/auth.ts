@@ -1,13 +1,13 @@
 import jwt from 'jsonwebtoken';
 import fs from 'fs';
-import { getDecryptedWebhookConfig, getConfig } from '@/lib/db';
+import { getConfig } from '@/lib/db';
 
 // 缓存 slug，避免重复 API 调用
 let cachedSlug: string | null = null;
 
 /**
  * 获取 GitHub App ID
- * 优先级：环境变量 → AppConfig → WebhookConfig
+ * 优先级：环境变量 → AppConfig
  */
 export async function getAppId(): Promise<string> {
   const envAppId = process.env.GITHUB_APP_ID;
@@ -17,16 +17,12 @@ export async function getAppId(): Promise<string> {
   const configAppId = await getConfig('github_app_id');
   if (configAppId) return configAppId;
 
-  // 从 WebhookConfig 读取
-  const whConfig = await getDecryptedWebhookConfig();
-  if (whConfig?.appId) return whConfig.appId;
-
   throw new Error('GITHUB_APP_ID not configured (neither env nor database)');
 }
 
 /**
  * 获取 GitHub App 私钥
- * 优先级：环境变量文件 → AppConfig → WebhookConfig
+ * 优先级：环境变量文件 → AppConfig
  */
 export async function getPrivateKey(): Promise<string> {
   // 1. 尝试从文件读取
@@ -42,10 +38,6 @@ export async function getPrivateKey(): Promise<string> {
   // 2. 从 AppConfig 读取（网页上传的私钥）
   const appConfigKey = await getConfig('github_private_key');
   if (appConfigKey) return appConfigKey;
-
-  // 3. 从 WebhookConfig 读取
-  const whConfig = await getDecryptedWebhookConfig();
-  if (whConfig?.privateKey) return whConfig.privateKey;
 
   throw new Error(
     'GitHub App private key not configured (neither GITHUB_PRIVATE_KEY_PATH nor database)'

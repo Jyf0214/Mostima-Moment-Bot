@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { AppProps } from 'next/app';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
@@ -29,7 +30,7 @@ export default function App({ Component, pageProps }: AppProps) {
           }
         }
       } catch (err) {
-        console.error('Failed to check environment variables:', err);
+        logger.error('Failed to check environment variables:', err);
       } finally {
         setChecking(false);
       }

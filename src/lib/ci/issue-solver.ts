@@ -1,3 +1,4 @@
+import { logger } from '../logger';
 import { execFileSync } from 'child_process';
 import { writeFileSync, existsSync, readFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
@@ -76,7 +77,7 @@ export async function solveIssue(
   const issueBody = payload.issue.body || '';
   const commentBody = payload.comment?.body || '';
 
-  console.log(`[Issue Solver] Processing Issue #${issueNumber}: ${issueTitle}`);
+  logger.info(`[Issue Solver] Processing Issue #${issueNumber}: ${issueTitle}`);
 
   // 1. 分支保护
   injectBranchProtection(workspaceDir);
@@ -104,16 +105,22 @@ export async function solveIssue(
         prBranch = validateBranchName(prView);
       }
     } catch (error) {
-      console.warn(`[IssueSolver] 获取 PR 分支名失败 (issue #${issueNumber})，使用默认分支名:`, error);
+      logger.warn(
+        `[IssueSolver] 获取 PR 分支名失败 (issue #${issueNumber})，使用默认分支名:`,
+        error
+      );
     }
 
     try {
       execFileSync('git', ['fetch', 'origin', prBranch], { cwd: workspaceDir, stdio: 'pipe' });
       execFileSync('git', ['checkout', prBranch], { cwd: workspaceDir, stdio: 'pipe' });
       execFileSync('git', ['fetch', 'origin', 'main'], { cwd: workspaceDir, stdio: 'pipe' });
-      execFileSync('git', ['merge', 'origin/main', '--no-edit'], { cwd: workspaceDir, stdio: 'pipe' });
+      execFileSync('git', ['merge', 'origin/main', '--no-edit'], {
+        cwd: workspaceDir,
+        stdio: 'pipe',
+      });
     } catch {
-      console.warn('[Issue Solver] Merge conflict detected, leaving for Qwen to resolve');
+      logger.warn('[Issue Solver] Merge conflict detected, leaving for Qwen to resolve');
     }
   } else {
     try {
@@ -147,7 +154,7 @@ export async function solveIssue(
   });
 
   if (!result.success) {
-    console.error(`[Issue Solver] Failed after ${result.attempts} attempts`);
+    logger.error(`[Issue Solver] Failed after ${result.attempts} attempts`);
     return;
   }
 
@@ -166,11 +173,16 @@ export async function solveIssue(
         execFileSync(
           'gh',
           [
-            'pr', 'create',
-            '--title', `fix: Issue #${issueNumber}`,
-            '--body', `Automated fix for Issue #${issueNumber}`,
-            '--head', prBranch,
-            '--base', 'main',
+            'pr',
+            'create',
+            '--title',
+            `fix: Issue #${issueNumber}`,
+            '--body',
+            `Automated fix for Issue #${issueNumber}`,
+            '--head',
+            prBranch,
+            '--base',
+            'main',
           ],
           { cwd: workspaceDir, stdio: 'pipe' }
         );
@@ -182,18 +194,17 @@ export async function solveIssue(
     // 9. 回复 Issue — 使用 execFileSync 避免 shell 注入
     const replyBody = buildIssueFixReply(issueNumber, prBranch);
     try {
-      execFileSync(
-        'gh',
-        ['issue', 'comment', String(issueNumber), '--body', replyBody],
-        { cwd: workspaceDir, stdio: 'pipe' }
-      );
+      execFileSync('gh', ['issue', 'comment', String(issueNumber), '--body', replyBody], {
+        cwd: workspaceDir,
+        stdio: 'pipe',
+      });
     } catch {
-      console.warn('[Issue Solver] Failed to post issue comment');
+      logger.warn('[Issue Solver] Failed to post issue comment');
     }
 
-    console.log(`[Issue Solver] Issue #${issueNumber} fixed successfully.`);
+    logger.info(`[Issue Solver] Issue #${issueNumber} fixed successfully.`);
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    console.error(`[Issue Solver] Git push failed: ${msg}`);
+    logger.error(`[Issue Solver] Git push failed: ${msg}`);
   }
 }

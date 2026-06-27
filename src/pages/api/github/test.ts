@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { NextApiRequest, NextApiResponse } from 'next';
 import jwt from 'jsonwebtoken';
 import { prisma } from '@/lib/prisma';
@@ -149,7 +150,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
   } catch (err) {
-    console.error('[GitHub Test] JWT generate failed:', err);
+    logger.error('[GitHub Test] JWT generate failed:', err);
     results.push({
       name: t('githubTest.jwtGenerate'),
       status: 'fail',
@@ -188,7 +189,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     } else {
       const body = await response.text();
-      console.error(`[GitHub Test] API responded with ${response.status}:`, body.slice(0, 500));
+      logger.error(`[GitHub Test] API responded with ${response.status}:`, body.slice(0, 500));
       results.push({
         name: t('githubTest.apiComm'),
         status: 'fail',
@@ -199,7 +200,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
   } catch (err) {
-    console.error('[GitHub Test] API communication failed:', err);
+    logger.error('[GitHub Test] API communication failed:', err);
     results.push({
       name: t('githubTest.apiComm'),
       status: 'fail',
@@ -255,7 +256,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               }),
             });
           } catch (err) {
-            console.error('[GitHub Test] Repo list failed:', err);
+            logger.error('[GitHub Test] Repo list failed:', err);
             results.push({
               name: t('githubTest.repoList'),
               status: 'warn',
@@ -267,7 +268,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }
         }
       } catch (err) {
-        console.error('[GitHub Test] Access token failed:', err);
+        logger.error('[GitHub Test] Access token failed:', err);
         results.push({
           name: t('githubTest.accessToken'),
           status: 'fail',
@@ -286,7 +287,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
   } catch (err) {
-    console.error('[GitHub Test] Installation check failed:', err);
+    logger.error('[GitHub Test] Installation check failed:', err);
     results.push({
       name: t('githubTest.installation'),
       status: 'fail',

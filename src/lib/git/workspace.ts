@@ -1,3 +1,4 @@
+import { logger } from '../logger';
 import { execFileSync } from 'child_process';
 import { getPRInfo } from '../github/api';
 
@@ -60,7 +61,7 @@ export async function checkoutPRBranch(prNumber: number): Promise<void> {
   // 1. 反查 PR 源头分支
   const pr = await getPRInfo(prNumber);
   const branchName = validateBranchName(pr.head.ref as string);
-  console.log(`Checking out branch: ${branchName}`);
+  logger.info(`Checking out branch: ${branchName}`);
 
   // 2. 清理工作区
   execFileSync('git', ['checkout', '.'], { cwd: workspaceDir });
@@ -74,7 +75,7 @@ export async function checkoutPRBranch(prNumber: number): Promise<void> {
   // 4. 同步主分支
   try {
     execFileSync('git', ['merge', 'origin/main', '--no-edit'], { cwd: workspaceDir });
-    console.log('Successfully merged with main branch');
+    logger.info('Successfully merged with main branch');
   } catch (error) {
     throw new Error('Merge conflict detected');
   }

@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { verifyWebhookSignature } from '@/lib/github/webhook';
 import { prisma } from '@/lib/prisma';
+import { logger } from '@/lib/logger';
 import {
   handlePullRequest,
   handleIssueComment,
@@ -83,19 +84,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const secret = process.env.ENCRYPTION_KEY;
 
   if (!secret) {
-    console.error('ENCRYPTION_KEY is not configured');
+    logger.error('ENCRYPTION_KEY is not configured');
     return res.status(500).json({ error: 'Server configuration error: ENCRYPTION_KEY not set' });
   }
 
   if (!verifyWebhookSignature(rawBody, signature, secret)) {
-    console.error('Invalid webhook signature');
+    logger.error('Invalid webhook signature');
     return res.status(401).json({ error: 'Invalid signature' });
   }
 
   // 2. 解析事件
   const event = req.headers['x-github-event'] as string;
 
-  console.log(`[Webhook] Received: event=${event}`);
+  logger.info(`[Webhook] Received: event=${event}`);
   let payload: Record<string, unknown>;
 
   try {
@@ -114,7 +115,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         // fire-and-forget：不阻塞 webhook 响应
         handlePullRequest(prPayload as unknown as PRPayload).catch((err) => {
-          console.error(
+          logger.error(
             `[Webhook] CI pipeline failed for PR #${prPayload.pull_request.number}:`,
             err
           );
@@ -151,7 +152,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               }
             })
             .catch((err) => {
-              console.error(`Security audit failed for PR #${prNumber}:`, err);
+              logger.error(`Security audit failed for PR #${prNumber}:`, err);
               if (auditRunId) {
                 updateCiRun(auditRunId, {
                   status: 'failure',
@@ -168,7 +169,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       case 'issue_comment': {
         const issuePayload = payload as unknown as IssueEventPayload;
 
-        console.log(
+        logger.info(
           `[Webhook] Issue event: ${event}, action=${issuePayload.action}, ` +
             `issue=#${issuePayload.issue.number}, ` +
             `label=${issuePayload.label?.name || 'none'}, ` +
@@ -178,9 +179,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         // Issue 自动修复
         const shouldFix = shouldTriggerIssueFix(event, issuePayload);
-        console.log(`[Webhook] shouldTriggerIssueFix=${shouldFix}, fixCmd="${getFixCommand()}"`);
+        logger.info(`[Webhook] shouldTriggerIssueFix=${shouldFix}, fixCmd="${getFixCommand()}"`);
         if (shouldFix) {
-          console.log(`[Webhook] Issue auto-fix triggered for Issue #${issuePayload.issue.number}`);
+          logger.info(`[Webhook] Issue auto-fix triggered for Issue #${issuePayload.issue.number}`);
 
           // 记录 bot 触发的工作流日志
           const issueRepo = String(
@@ -206,7 +207,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               }
             })
             .catch((err) => {
-              console.error(`Issue solver failed:`, err);
+              logger.error(`Issue solver failed:`, err);
               if (issueRunId) {
                 updateCiRun(issueRunId, {
                   status: 'failure',
@@ -232,7 +233,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const pushPayload = payload as unknown as PushPayload;
         const commitMsg = pushPayload.head_commit?.message?.slice(0, 80) || 'no message';
         const pushBranch = String(pushPayload.ref || '').replace('refs/heads/', '');
-        console.log(
+        logger.info(
           `[Webhook] Push to ${pushPayload.ref}: ${pushPayload.head_commit?.id?.slice(0, 7) || 'unknown'} — ${commitMsg}`
         );
         // 不记录 push 事件到 CiRun（禁止存储 GitHub Actions 记录）
@@ -242,7 +243,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       case 'workflow_job': {
         const jobPayload = payload as unknown as WorkflowJobPayload;
         const job = jobPayload.workflow_job;
-        console.log(
+        logger.info(
           `[Webhook] Workflow job ${jobPayload.action}: ${job.name} — status=${job.status}, conclusion=${job.conclusion || 'pending'}`
         );
         // 不记录 workflow_job 事件到 CiRun（禁止存储 GitHub Actions 记录）
@@ -254,14 +255,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const { action, installation } = installPayload;
 
         if (action === 'created' || action === 'reopened') {
-          console.log(
+          logger.info(
             `[Webhook] Installation ${action}: ID=${installation.id}, account=${installation.account.login}`
           );
 
           // 查找管理员（取第一个管理员）
           const admin = await prisma.admin.findFirst();
           if (!admin) {
-            console.error('[Webhook] No admin found, cannot store installation');
+            logger.error('[Webhook] No admin found, cannot store installation');
             break;
           }
 
@@ -287,9 +288,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               },
             });
           }
-          console.log(`[Webhook] Installation record saved: ${installation.account.login}`);
+          logger.info(`[Webhook] Installation record saved: ${installation.account.login}`);
         } else if (action === 'deleted' || action === 'suspend') {
-          console.log(`[Webhook] Installation ${action}: ID=${installation.id}`);
+          logger.info(`[Webhook] Installation ${action}: ID=${installation.id}`);
           await prisma.gitHubInstallation.updateMany({
             where: { installationId: installation.id },
             data: { isActive: false },
@@ -299,12 +300,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       default:
-        console.log(`Unhandled event: ${event}`);
+        logger.info(`Unhandled event: ${event}`);
     }
 
     return res.status(200).json({ received: true });
   } catch (error) {
-    console.error('Webhook error:', error);
+    logger.error('Webhook error:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

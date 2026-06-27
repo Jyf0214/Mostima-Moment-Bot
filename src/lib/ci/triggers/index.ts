@@ -13,6 +13,7 @@ import type { TriggerRule, WebhookPayload, TriggerMatchResult, AuthorAssociation
 import { evaluateAllRules, findFirstMatch } from './rule-evaluator';
 import { ConcurrencyManager, renderConcurrencyGroup } from './concurrency';
 import type { ConcurrencyCheckResult } from './types';
+import type { PRPayload } from '../types';
 
 /** 分支名安全字符白名单 */
 const SAFE_BRANCH_CHARS = /^[a-zA-Z0-9._\-\/]+$/;
@@ -33,17 +34,6 @@ interface PushPayload {
   repository?: { full_name?: string };
 }
 
-interface PRPayload {
-  action?: string;
-  pull_request?: {
-    number?: number;
-    head?: { ref?: string; sha?: string };
-    base?: { ref?: string };
-    user?: { login?: string };
-  };
-  repository?: { full_name?: string };
-}
-
 interface IssuePayload {
   action?: string;
   issue?: {
@@ -56,7 +46,7 @@ interface IssuePayload {
   repository?: { full_name?: string };
 }
 
-interface CommentPayload {
+interface CommentTriggerPayload {
   action?: string;
   issue?: {
     number?: number;
@@ -129,7 +119,7 @@ export function normalizePayload(
     }
 
     case 'issue_comment': {
-      const p = payload as unknown as CommentPayload;
+      const p = payload as unknown as CommentTriggerPayload;
       const issue = p.issue;
       const comment = p.comment;
       const action = String(p.action || '');

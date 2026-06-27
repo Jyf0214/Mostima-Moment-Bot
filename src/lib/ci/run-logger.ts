@@ -1,3 +1,4 @@
+import { logger } from '../logger';
 /**
  * CI 运行日志记录器
  *
@@ -11,15 +12,6 @@
  */
 
 import { prisma } from '@/lib/prisma';
-
-// Prisma Client 类型在 db push 前可能不包含 CiRun
-// 使用类型断言确保编译通过，运行时 Prisma 会正确处理
-const db = prisma as unknown as {
-  ciRun: {
-    create: (args: unknown) => Promise<{ id: number }>;
-    update: (args: unknown) => Promise<unknown>;
-  };
-};
 
 /** 日志最大长度 */
 const MAX_LOG_LENGTH = 50000;
@@ -44,7 +36,7 @@ export async function recordCiRun(params: {
   isBotInitiated?: boolean;
 }): Promise<number | null> {
   try {
-    const run = await db.ciRun.create({
+    const run = await prisma.ciRun.create({
       data: {
         repoFullName: params.repo.slice(0, 255),
         event: params.event,
@@ -69,7 +61,7 @@ export async function recordCiRun(params: {
     });
     return run.id;
   } catch (err) {
-    console.error('[RunLogger] Failed to record CI run:', err);
+    logger.error('[RunLogger] Failed to record CI run:', err);
     return null;
   }
 }
@@ -101,11 +93,11 @@ export async function updateCiRun(
     if (params.logs) updateData.logs = params.logs.slice(0, MAX_LOG_LENGTH);
     if (typeof params.duration === 'number') updateData.duration = params.duration;
 
-    await db.ciRun.update({
+    await prisma.ciRun.update({
       where: { id: runId },
       data: updateData,
     });
   } catch (err) {
-    console.error('[RunLogger] Failed to update CI run:', err);
+    logger.error('[RunLogger] Failed to update CI run:', err);
   }
 }

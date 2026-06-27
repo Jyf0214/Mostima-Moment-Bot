@@ -1,3 +1,4 @@
+import { logger } from './logger';
 import { prisma } from '@/lib/prisma';
 
 /**
@@ -17,7 +18,7 @@ export async function autoSaveEnvVars(): Promise<void> {
       return;
     }
 
-    console.log('[Bootstrap] Empty database detected, auto-saving env vars...');
+    logger.info('[Bootstrap] Empty database detected, auto-saving env vars...');
 
     const varsToSave: Array<{ key: string; value: string; encrypted: boolean }> = [];
 
@@ -63,8 +64,8 @@ export async function autoSaveEnvVars(): Promise<void> {
       }
     }
 
-    console.log(`[Bootstrap] Saved ${varsToSave.length} env vars to database`);
+    logger.info(`[Bootstrap] Saved ${varsToSave.length} env vars to database`);
   } catch (error) {
-    console.error('[Bootstrap] Failed to auto-save env vars:', error);
+    logger.error('[Bootstrap] Failed to auto-save env vars:', error);
   }
 }

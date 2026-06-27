@@ -1,4 +1,5 @@
-'use client';
+import { logger } from '@/lib/logger';
+('use client');
 
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -76,7 +77,7 @@ export default function HomePage() {
         }
       }
     } catch (err) {
-      console.error('Failed to check status:', err);
+      logger.error('Failed to check status:', err);
     } finally {
       setLoading(false);
     }

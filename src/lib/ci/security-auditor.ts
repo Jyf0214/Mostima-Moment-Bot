@@ -1,3 +1,4 @@
+import { logger } from '../logger';
 import { execFileSync } from 'child_process';
 import { writeFileSync, existsSync, readFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
@@ -43,7 +44,7 @@ export async function auditPR(
   const safePRNumber = validatePRNumber(prNumber);
   const safeBranch = validateBranchName(baseBranch);
 
-  console.log(`[Security Auditor] Auditing PR #${safePRNumber} (base: ${safeBranch})`);
+  logger.info(`[Security Auditor] Auditing PR #${safePRNumber} (base: ${safeBranch})`);
 
   // 1. 分支保护 + LSP
   injectBranchProtection(workspaceDir);
@@ -62,7 +63,7 @@ export async function auditPR(
     execFileSync('git', ['checkout', `pr-${safePRNumber}`], { cwd: workspaceDir, stdio: 'pipe' });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    console.error(`[Security Auditor] Failed to checkout PR: ${msg}`);
+    logger.error(`[Security Auditor] Failed to checkout PR: ${msg}`);
     return;
   }
 
@@ -92,7 +93,7 @@ export async function auditPR(
     }
     writeFileSync(cycleFile, String(cycleCount), 'utf-8');
   } catch (error) {
-    console.warn('[SecurityAuditor] 读写循环计数文件失败:', error);
+    logger.warn('[SecurityAuditor] 读写循环计数文件失败:', error);
   }
 
   // 5. 构建审计 Prompt
@@ -108,7 +109,7 @@ export async function auditPR(
   // 7. 判定结果
   const reportFile = join(workspaceDir, 'audit_report.txt');
   if (result.success && existsSync(reportFile)) {
-    console.error(`[Security Auditor] Security vulnerabilities detected in PR #${safePRNumber}!`);
+    logger.error(`[Security Auditor] Security vulnerabilities detected in PR #${safePRNumber}!`);
     const reportContent = readFileSync(reportFile, 'utf-8');
 
     if (cycleCount < 5) {
@@ -119,6 +120,6 @@ export async function auditPR(
       await postPRComment(safePRNumber, commentBody);
     }
   } else {
-    console.log(`[Security Auditor] PR #${safePRNumber} security audit passed.`);
+    logger.info(`[Security Auditor] PR #${safePRNumber} security audit passed.`);
   }
 }

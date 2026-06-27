@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { NextApiRequest, NextApiResponse } from 'next';
 import { isNewApplication } from '@/lib/db';
 
@@ -15,7 +16,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json({ isNew });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error('[Auth Status] Failed:', message);
+    logger.error('[Auth Status] Failed:', message);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
