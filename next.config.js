@@ -2,6 +2,9 @@
 const nextConfig = {
   reactStrictMode: true,
 
+  // 自定义中间件文件名（默认是 middleware.ts）
+  middleware: './proxy',
+
   experimental: {
     // tree-shaking 图标库，减少打包体积
     optimizePackageImports: ['lucide-react'],
