@@ -21,6 +21,7 @@ function mockReqRes(
     query?: Record<string, string>;
     body?: Record<string, unknown>;
     cookies?: Record<string, string>;
+    headers?: Record<string, string>;
   } = {}
 ) {
   const query = opts.query || {};
@@ -35,7 +36,7 @@ function mockReqRes(
     query,
     body,
     cookies,
-    headers: {},
+    headers: opts.headers || {},
     [Symbol.asyncIterator]: async function* () {
       yield Buffer.from(JSON.stringify(body));
     },
@@ -60,6 +61,7 @@ function mockReqRes(
 describe('/api/ci/runs API', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.INTERNAL_API_KEY = 'test-internal-key';
   });
 
   describe('GET /api/ci/runs', () => {
@@ -254,6 +256,7 @@ describe('/api/ci/runs API', () => {
           event: 'push',
           status: 'success',
         },
+        headers: { authorization: 'Bearer test-internal-key' },
       });
 
       await handler(req, res);
@@ -267,6 +270,7 @@ describe('/api/ci/runs API', () => {
     it('缺少必要字段时应返回 400', async () => {
       const { req, res } = mockReqRes('POST', {
         body: { repo: 'owner/repo' },
+        headers: { authorization: 'Bearer test-internal-key' },
       });
 
       await handler(req, res);
@@ -280,6 +284,7 @@ describe('/api/ci/runs API', () => {
     it('repo 无效类型应返回 400', async () => {
       const { req, res } = mockReqRes('POST', {
         body: { repo: 123, event: 'push' },
+        headers: { authorization: 'Bearer test-internal-key' },
       });
 
       await handler(req, res);
@@ -291,6 +296,7 @@ describe('/api/ci/runs API', () => {
     it('repo 超长应返回 400', async () => {
       const { req, res } = mockReqRes('POST', {
         body: { repo: 'a'.repeat(256), event: 'push' },
+        headers: { authorization: 'Bearer test-internal-key' },
       });
 
       await handler(req, res);
@@ -308,6 +314,7 @@ describe('/api/ci/runs API', () => {
           event: 'push',
           status: 'invalid-status',
         },
+        headers: { authorization: 'Bearer test-internal-key' },
       });
 
       await handler(req, res);
@@ -325,6 +332,7 @@ describe('/api/ci/runs API', () => {
           event: 'push',
           logs: 'x'.repeat(60000),
         },
+        headers: { authorization: 'Bearer test-internal-key' },
       });
 
       await handler(req, res);
@@ -342,6 +350,7 @@ describe('/api/ci/runs API', () => {
           event: 'pull_request',
           checksRan: ['lint', 'build'],
         },
+        headers: { authorization: 'Bearer test-internal-key' },
       });
 
       await handler(req, res);
@@ -359,6 +368,7 @@ describe('/api/ci/runs API', () => {
           event: 'push',
           checksRan: 'not-an-array',
         },
+        headers: { authorization: 'Bearer test-internal-key' },
       });
 
       await handler(req, res);
@@ -376,6 +386,7 @@ describe('/api/ci/runs API', () => {
           event: 'push',
           status: 'running',
         },
+        headers: { authorization: 'Bearer test-internal-key' },
       });
 
       await handler(req, res);
@@ -394,6 +405,7 @@ describe('/api/ci/runs API', () => {
           event: 'push',
           status: 'success',
         },
+        headers: { authorization: 'Bearer test-internal-key' },
       });
 
       await handler(req, res);

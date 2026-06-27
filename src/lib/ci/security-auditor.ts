@@ -93,7 +93,7 @@ export async function auditPR(
     }
     writeFileSync(cycleFile, String(cycleCount), 'utf-8');
   } catch (error) {
-    logger.warn('[SecurityAuditor] 读写循环计数文件失败:', error);
+    logger.warn('[SecurityAuditor] Failed to read/write cycle count file:', error);
   }
 
   // 5. 构建审计 Prompt

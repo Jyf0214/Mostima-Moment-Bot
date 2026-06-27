@@ -106,7 +106,7 @@ export async function solveIssue(
       }
     } catch (error) {
       logger.warn(
-        `[IssueSolver] 获取 PR 分支名失败 (issue #${issueNumber})，使用默认分支名:`,
+        `[IssueSolver] Failed to get PR branch (issue #${issueNumber}), using default branch:`,
         error
       );
     }
