@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import jwt from 'jsonwebtoken';
 import { prisma } from '@/lib/prisma';
 import { setCookie, clearCookie } from '@/lib/cookie';
+import { logger } from '@/lib/logger';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
