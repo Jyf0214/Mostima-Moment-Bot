@@ -206,6 +206,9 @@ export default function RepoDetailPage() {
                       <div className="flex items-center gap-3">
                         <button
                           onClick={() => toggleRule(rule.id)}
+                          role="switch"
+                          aria-checked={rule.enabled}
+                          aria-label={rule.name}
                           className={`relative h-5 w-9 rounded-full transition-colors ${
                             rule.enabled ? 'bg-purple-500' : 'bg-zinc-100'
                           }`}
@@ -282,6 +285,9 @@ export default function RepoDetailPage() {
                       <div className="flex items-center gap-3">
                         <button
                           onClick={() => toggleRule(rule.id)}
+                          role="switch"
+                          aria-checked={rule.enabled}
+                          aria-label={rule.name}
                           className={`relative h-5 w-9 rounded-full transition-colors ${
                             rule.enabled ? 'bg-purple-500' : 'bg-zinc-100'
                           }`}
