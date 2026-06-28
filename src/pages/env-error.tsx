@@ -60,7 +60,7 @@ export default function EnvErrorPage() {
   const isNewDb = envStatus !== null && !envStatus.dbHasData;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className="min-h-screen bg-zinc-50">
       <PageContainer maxWidth="4xl" padding="default">
         <div className="flex flex-col gap-6">
           {/* 标题区 */}

@@ -58,7 +58,7 @@ export default function GitHubTestPage() {
   const warnCount = results.filter((r) => r.status === 'warn').length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className="min-h-screen bg-zinc-50">
       <PageContainer maxWidth="4xl" padding="default">
         <div className="flex flex-col gap-6">
           <div className="flex items-center gap-3">

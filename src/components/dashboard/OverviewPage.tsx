@@ -23,7 +23,7 @@ export default function OverviewPage({
   onNavigateToEnv,
 }: OverviewPageProps) {
   const { t } = useTranslation();
-  const hasInstallations = repos && repos.installations.length > 0;
+  const hasInstallations = repos && repos.installations && repos.installations.length > 0;
   const totalRepos = repos ? repos.personal.length + repos.organization.length : 0;
 
   return (

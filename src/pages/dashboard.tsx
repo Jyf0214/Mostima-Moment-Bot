@@ -57,17 +57,29 @@ export default function DashboardPage() {
     try {
       const response = await fetch('/api/auth/me');
       if (!response.ok) {
-        window.location.href = '/';
+        setInstallMsg(t('home.checkStatusFailed'));
+        setInstallMsgType('error');
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 1500);
         return;
       }
       const data = await response.json();
       if (!data.githubId) {
-        window.location.href = '/';
+        setInstallMsg(t('home.checkStatusFailed'));
+        setInstallMsgType('error');
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 1500);
         return;
       }
       setUser(data);
     } catch {
-      window.location.href = '/';
+      setInstallMsg(t('home.checkStatusFailed'));
+      setInstallMsgType('error');
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 1500);
     } finally {
       setLoading(false);
     }
@@ -88,7 +100,8 @@ export default function DashboardPage() {
       const res = await fetch('/api/github/repos');
       if (res.ok) setRepos(await res.json());
     } catch {
-      /* 静默处理 */
+      setInstallMsg(t('home.checkStatusFailed'));
+      setInstallMsgType('error');
     } finally {
       setReposLoading(false);
     }

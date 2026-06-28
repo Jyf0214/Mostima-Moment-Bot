@@ -102,34 +102,42 @@ export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string
   const [repos, setRepos] = useState<RepoSummary[]>([]);
   const [listLoading, setListLoading] = useState(true);
   const [listRefreshing, setListRefreshing] = useState(false);
+  const [listError, setListError] = useState<string | null>(null);
 
   // === 详情视图状态 ===
   const [runs, setRuns] = useState<CiRun[]>([]);
   const [total, setTotal] = useState(0);
   const [detailLoading, setDetailLoading] = useState(true);
   const [detailRefreshing, setDetailRefreshing] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState('');
   const [filterEvent, setFilterEvent] = useState('');
   const [page, setPage] = useState(0);
   const pageSize = 30;
 
   // === 列表数据 ===
-  const fetchRepos = useCallback(async (showRefresh = false) => {
-    if (showRefresh) setListRefreshing(true);
-    else setListLoading(true);
-    try {
-      const res = await fetch('/api/ci/runs');
-      if (res.ok) {
-        const data = await res.json();
-        setRepos(data.repos || []);
+  const fetchRepos = useCallback(
+    async (showRefresh = false) => {
+      if (showRefresh) setListRefreshing(true);
+      else setListLoading(true);
+      setListError(null);
+      try {
+        const res = await fetch('/api/ci/runs');
+        if (res.ok) {
+          const data = await res.json();
+          setRepos(data.repos || []);
+        } else {
+          setListError(t('home.checkStatusFailed'));
+        }
+      } catch {
+        setListError(t('home.checkStatusFailed'));
+      } finally {
+        setListLoading(false);
+        setListRefreshing(false);
       }
-    } catch {
-      /* 静默 */
-    } finally {
-      setListLoading(false);
-      setListRefreshing(false);
-    }
-  }, []);
+    },
+    [t]
+  );
 
   // === 详情数据 ===
   const fetchRuns = useCallback(
@@ -137,6 +145,7 @@ export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string
       if (!selectedRepo) return;
       if (showRefresh) setDetailRefreshing(true);
       else setDetailLoading(true);
+      setDetailError(null);
       try {
         const params = new URLSearchParams({
           repo: selectedRepo,
@@ -152,15 +161,17 @@ export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string
           if (filterEvent) filtered = filtered.filter((r: CiRun) => r.event === filterEvent);
           setRuns(filtered);
           setTotal(data.total || 0);
+        } else {
+          setDetailError(t('home.checkStatusFailed'));
         }
       } catch {
-        /* 静默 */
+        setDetailError(t('home.checkStatusFailed'));
       } finally {
         setDetailLoading(false);
         setDetailRefreshing(false);
       }
     },
-    [selectedRepo, filterStatus, filterEvent, page]
+    [selectedRepo, filterStatus, filterEvent, page, t]
   );
 
   useEffect(() => {
@@ -270,8 +281,26 @@ export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string
           </div>
         )}
 
+        {/* 加载错误 */}
+        {!detailLoading && detailError && (
+          <ProCard className="bg-red-50 border-red-200" padding="p-6">
+            <div className="text-center">
+              <XCircle className="h-8 w-8 text-red-400 mx-auto mb-2" />
+              <p className="text-red-600 text-sm">{detailError}</p>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => fetchRuns(true)}
+                className="mt-2 text-red-500"
+              >
+                {t('dashboard.refresh')}
+              </Button>
+            </div>
+          </ProCard>
+        )}
+
         {/* 空状态 */}
-        {!detailLoading && runs.length === 0 && (
+        {!detailLoading && !detailError && runs.length === 0 && (
           <ProCard className="bg-white border-zinc-200 border-dashed" padding="p-8">
             <div className="text-center">
               <Clock className="h-10 w-10 text-zinc-300 mx-auto mb-3" />
@@ -407,7 +436,24 @@ export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string
         </div>
       )}
 
-      {!listLoading && repos.length === 0 && (
+      {!listLoading && listError && (
+        <ProCard className="bg-red-50 border-red-200" padding="p-6">
+          <div className="text-center">
+            <XCircle className="h-8 w-8 text-red-400 mx-auto mb-2" />
+            <p className="text-red-600 text-sm">{listError}</p>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => fetchRepos(true)}
+              className="mt-2 text-red-500"
+            >
+              {t('dashboard.refresh')}
+            </Button>
+          </div>
+        </ProCard>
+      )}
+
+      {!listLoading && !listError && repos.length === 0 && (
         <ProCard className="bg-white border-zinc-200 border-dashed" padding="p-8">
           <div className="text-center">
             <Clock className="h-10 w-10 text-zinc-300 mx-auto mb-3" />
