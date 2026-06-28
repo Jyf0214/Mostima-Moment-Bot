@@ -1,4 +1,5 @@
 import { generateJWT, getAppId, getPrivateKey } from './auth';
+import { logger } from '@/lib/logger';
 
 let accessToken: string | null = null;
 let tokenExpiry: number = 0;
@@ -90,6 +91,30 @@ export async function postPRComment(prNumber: number, body: string): Promise<voi
     }
   );
 
+  // 401 时清除缓存并重试一次（token 可能被 GitHub 侧撤销）
+  if (response.status === 401) {
+    logger.warn('[GitHub API] Post comment returned 401, clearing token cache and retrying');
+    accessToken = null;
+    tokenExpiry = 0;
+    const retryToken = await getAccessToken();
+    const retryResponse = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/issues/${prNumber}/comments`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${retryToken}`,
+          Accept: 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ body }),
+      }
+    );
+    if (!retryResponse.ok) {
+      throw new Error(`Failed to post comment after retry: ${retryResponse.statusText}`);
+    }
+    return;
+  }
+
   if (!response.ok) {
     throw new Error(`Failed to post comment: ${response.statusText}`);
   }
@@ -111,12 +136,26 @@ export async function getPRInfo(prNumber: number): Promise<PRInfo> {
     throw new Error('REPO_OWNER and REPO_NAME must be set');
   }
 
-  const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}`, {
+  let response = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}`, {
     headers: {
       Authorization: `Bearer ${token}`,
       Accept: 'application/vnd.github.v3+json',
     },
   });
+
+  // 401 时清除缓存并重试一次
+  if (response.status === 401) {
+    logger.warn('[GitHub API] Get PR info returned 401, clearing token cache and retrying');
+    accessToken = null;
+    tokenExpiry = 0;
+    const retryToken = await getAccessToken();
+    response = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}`, {
+      headers: {
+        Authorization: `Bearer ${retryToken}`,
+        Accept: 'application/vnd.github.v3+json',
+      },
+    });
+  }
 
   if (!response.ok) {
     throw new Error(`Failed to get PR info: ${response.statusText}`);

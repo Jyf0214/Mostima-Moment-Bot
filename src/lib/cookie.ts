@@ -13,6 +13,8 @@ function isSecureProtocol(): boolean {
  * @param name - cookie 名称
  * @param value - cookie 值
  * @param options - 可选配置
+ * @param options.maxAge - 过期时间（秒），默认 600（10 分钟），适用于 CSRF state cookie。
+ *       auth_token 调用方应显式指定 7 天（604800 秒）。
  */
 export function setCookie(
   name: string,

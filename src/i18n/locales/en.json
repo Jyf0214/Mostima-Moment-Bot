@@ -114,7 +114,12 @@
     "configSaved": "Configuration saved successfully",
     "configSavedDesc": "You can now login with GitHub to access the dashboard",
     "repoInfo": "Repository Info",
-    "appInfo": "App Info"
+    "appInfo": "App Info",
+    "privateKeySaved": "Private key saved successfully",
+    "privateKeySaveFailed": "Failed to save private key",
+    "privateKeyConfigured": "Private key is configured",
+    "privateKeyNotConfigured": "Private key is not configured",
+    "uploading": "Uploading..."
   },
   "dashboard": {
     "refresh": "Refresh",
@@ -146,7 +151,12 @@
     "secondsAgo": "{{count}}s ago",
     "minutesAgo": "{{count}}m ago",
     "hoursAgo": "{{count}}h ago",
-    "daysAgo": "{{count}}d ago"
+    "daysAgo": "{{count}}d ago",
+    "close": "Close"
+  },
+  "repos": {
+    "noData": "Unable to load repository data",
+    "noRepos": "No authorized repositories"
   },
   "sidebar": {
     "overview": "Overview",
@@ -189,7 +199,8 @@
     "optional": "Optional",
     "configuredLabel": "Configured",
     "missingLabel": "Missing",
-    "search": "Search variable name or usage..."
+    "search": "Search variable name or usage...",
+    "howToGet": "How to get"
   },
   "apiKey": {
     "title": "API Keys",

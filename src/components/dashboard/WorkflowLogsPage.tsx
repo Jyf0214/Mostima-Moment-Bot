@@ -203,6 +203,7 @@ export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string
             <button
               onClick={handleBack}
               className="flex items-center gap-2 text-zinc-500 hover:text-zinc-900 transition-colors text-sm"
+              aria-label={t('repoDetail.back')}
             >
               <ArrowLeft className="h-4 w-4" />
               {t('repoDetail.back')}

@@ -1,4 +1,5 @@
 import { prisma } from './prisma';
+import { logger } from './logger';
 
 /**
  * Check if this is a fresh application (no admins)
@@ -129,17 +130,23 @@ export async function discardNonAdminData(githubId: number, githubLogin: string)
   const admin = await getAdmin(githubId);
   if (!admin) {
     // 非管理员，删除相关构建数据
-    await prisma.buildStep.deleteMany({
+    logger.info(
+      `[DB] Discarding build data for non-admin user: ${githubLogin} (githubId: ${githubId})`
+    );
+    const deletedSteps = await prisma.buildStep.deleteMany({
       where: {
         build: {
           triggerUser: githubLogin,
         },
       },
     });
-    await prisma.build.deleteMany({
+    const deletedBuilds = await prisma.build.deleteMany({
       where: {
         triggerUser: githubLogin,
       },
     });
+    logger.info(
+      `[DB] Discarded ${deletedBuilds.count} builds and ${deletedSteps.count} build steps for ${githubLogin}`
+    );
   }
 }

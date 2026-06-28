@@ -38,6 +38,10 @@ async function getEncryptionKey(): Promise<string> {
   }
 
   // 2. 数据库 AppConfig（用户在设置页面存储的密钥，明文）
+  // 注意：这是有意为之的设计。加密中间件需要密钥才能解密数据库中的数据，
+  // 但密钥本身可能存储在数据库中（鸡生蛋问题）。此处创建独立 PrismaClient
+  // 绕过加密中间件直接读取明文密钥，读取后立即断开连接。
+  // 生产环境中优先使用 ENCRYPTION_KEY 环境变量以避免此路径。
   try {
     const rawClient = new PrismaClient();
     const config = await rawClient.appConfig.findUnique({

@@ -124,6 +124,7 @@ export default function Sidebar({
             onClick={onLogout}
             className="text-zinc-400 hover:text-red-500 transition-colors"
             title={t('home.logout')}
+            aria-label={t('home.logout')}
           >
             <LogOut className="h-3.5 w-3.5" />
           </button>

@@ -114,7 +114,12 @@
     "configSaved": "配置保存成功",
     "configSavedDesc": "你现在可以使用 GitHub 登录以访问仪表盘",
     "repoInfo": "仓库信息",
-    "appInfo": "应用信息"
+    "appInfo": "应用信息",
+    "privateKeySaved": "私钥保存成功",
+    "privateKeySaveFailed": "私钥保存失败",
+    "privateKeyConfigured": "私钥已配置",
+    "privateKeyNotConfigured": "私钥未配置",
+    "uploading": "上传中..."
   },
   "dashboard": {
     "refresh": "刷新",
@@ -146,7 +151,12 @@
     "secondsAgo": "{{count}}秒前",
     "minutesAgo": "{{count}}分钟前",
     "hoursAgo": "{{count}}小时前",
-    "daysAgo": "{{count}}天前"
+    "daysAgo": "{{count}}天前",
+    "close": "关闭"
+  },
+  "repos": {
+    "noData": "无法加载仓库数据",
+    "noRepos": "暂无授权仓库"
   },
   "sidebar": {
     "overview": "概览",
@@ -189,7 +199,8 @@
     "optional": "可选",
     "configuredLabel": "已配置",
     "missingLabel": "未配置",
-    "search": "搜索变量名或用途..."
+    "search": "搜索变量名或用途...",
+    "howToGet": "获取方式"
   },
   "apiKey": {
     "title": "API 密钥",

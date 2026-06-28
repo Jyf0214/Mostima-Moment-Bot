@@ -35,7 +35,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     logger.error(`[DB Init] Failed after ${elapsed}ms:`, message);
     return res.status(500).json({
       error: i18n.t('api.dbInitFailed'),
-      message,
+      // 仅返回通用错误消息，不泄露数据库连接字符串等内部细节
     });
   }
 }

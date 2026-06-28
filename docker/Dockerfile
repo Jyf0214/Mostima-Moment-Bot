@@ -1,4 +1,7 @@
-FROM node:20-alpine
+# ============================================
+# 构建阶段：安装依赖、生成 Prisma、构建 Next.js
+# ============================================
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
@@ -18,6 +21,21 @@ RUN npm run build
 
 # 移除开发依赖
 RUN npm prune --omit=dev
+
+# ============================================
+# 运行阶段：仅包含运行时必要的文件
+# ============================================
+FROM node:20-alpine
+
+WORKDIR /app
+
+# 从构建阶段复制必要文件
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/next.config.js ./next.config.js
 
 # 创建非 root 用户
 RUN addgroup --system --gid 1001 nodejs \

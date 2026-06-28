@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { getConfig, setConfig } from '@/lib/db';
-import { DEFAULT_RULES } from '@/lib/ci/triggers/default-rules';
+import { getDefaultRules } from '@/lib/ci/triggers/default-rules';
 import type { TriggerRule } from '@/lib/ci/triggers/types';
 import { requireAuth } from '@/lib/auth-utils';
 import { logger } from '@/lib/logger';
@@ -25,7 +25,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // 读取仓库专属配置，没有则使用默认规则
       const configKey = `trigger_rules_${repo.replace('/', '_')}`;
       const saved = await getConfig(configKey);
-      const rules: TriggerRule[] = saved ? JSON.parse(saved) : DEFAULT_RULES;
+      const rules: TriggerRule[] = saved ? JSON.parse(saved) : getDefaultRules();
 
       return res.status(200).json({
         repo,
@@ -36,7 +36,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       logger.warn(`[Trigger Rules] Failed to read rules for ${repo}, using defaults:`, err);
       return res.status(200).json({
         repo,
-        rules: DEFAULT_RULES,
+        rules: getDefaultRules(),
         isCustom: false,
       });
     }
@@ -51,6 +51,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (!Array.isArray(rules)) {
       return res.status(400).json({ error: 'rules must be an array' });
+    }
+
+    // 限制规则数量上限，防止滥用
+    if (rules.length > 20) {
+      return res.status(400).json({ error: 'Maximum 20 rules allowed' });
     }
 
     // 验证每条规则的结构

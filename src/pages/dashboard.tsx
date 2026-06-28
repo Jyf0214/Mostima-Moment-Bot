@@ -26,7 +26,9 @@ export default function DashboardPage() {
   const [installMsg, setInstallMsg] = useState<string | null>(null);
   const [installMsgType, setInstallMsgType] = useState<'success' | 'error'>('success');
 
-  useEffect(() => { checkAuth(); }, []);
+  useEffect(() => {
+    checkAuth();
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -41,33 +43,63 @@ export default function DashboardPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const install = params.get('install');
-    if (install === 'success') { setInstallMsg(t('home.installSuccess')); setInstallMsgType('success'); }
-    else if (install === 'error') { setInstallMsg(t('home.installError')); setInstallMsgType('error'); }
+    if (install === 'success') {
+      setInstallMsg(t('home.installSuccess'));
+      setInstallMsgType('success');
+    } else if (install === 'error') {
+      setInstallMsg(t('home.installError'));
+      setInstallMsgType('error');
+    }
     if (install) window.history.replaceState({}, '', '/dashboard');
   }, [user]);
 
   const checkAuth = async () => {
     try {
       const response = await fetch('/api/auth/me');
-      if (!response.ok) { window.location.href = '/'; return; }
+      if (!response.ok) {
+        window.location.href = '/';
+        return;
+      }
       const data = await response.json();
-      if (!data.githubId) { window.location.href = '/'; return; }
+      if (!data.githubId) {
+        window.location.href = '/';
+        return;
+      }
       setUser(data);
-    } catch { window.location.href = '/'; } finally { setLoading(false); }
+    } catch {
+      window.location.href = '/';
+    } finally {
+      setLoading(false);
+    }
   };
 
   const checkAppConfig = async () => {
-    try { const res = await fetch('/api/github/install'); setAppConfigured(res.status !== 500); }
-    catch { setAppConfigured(false); }
+    try {
+      const res = await fetch('/api/github/install');
+      setAppConfigured(res.status !== 500);
+    } catch {
+      setAppConfigured(false);
+    }
   };
 
   const loadRepos = async () => {
     setReposLoading(true);
-    try { const res = await fetch('/api/github/repos'); if (res.ok) setRepos(await res.json()); }
-    catch { /* 静默处理 */ } finally { setReposLoading(false); }
+    try {
+      const res = await fetch('/api/github/repos');
+      if (res.ok) setRepos(await res.json());
+    } catch {
+      /* 静默处理 */
+    } finally {
+      setReposLoading(false);
+    }
   };
 
-  useEffect(() => { if (user) { checkAppConfig(); loadRepos(); } }, [user]);
+  useEffect(() => {
+    if (user) {
+      checkAppConfig();
+      loadRepos();
+    }
+  }, [user]);
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -86,7 +118,10 @@ export default function DashboardPage() {
     <div className="h-screen bg-zinc-50 flex overflow-hidden">
       <Sidebar
         activePage={activePage}
-        onNavigate={(page) => { setActivePage(page); setLogsRepo(null); }}
+        onNavigate={(page) => {
+          setActivePage(page);
+          setLogsRepo(null);
+        }}
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         userLogin={user?.githubLogin || ''}
@@ -97,7 +132,11 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               {user?.avatarUrl && (
-                <img src={user.avatarUrl} alt="" className="h-10 w-10 rounded-full ring-2 ring-zinc-200" />
+                <img
+                  src={user.avatarUrl}
+                  alt={user.githubLogin}
+                  className="h-10 w-10 rounded-full ring-2 ring-zinc-200"
+                />
               )}
               <div>
                 <h1 className="text-xl font-bold text-zinc-900">
@@ -113,26 +152,43 @@ export default function DashboardPage() {
             </div>
             {activePage === 'repos' && (
               <Button
-                variant="ghost" size="sm"
+                variant="ghost"
+                size="sm"
                 icon={<RefreshCw className={`h-3.5 w-3.5 ${reposLoading ? 'animate-spin' : ''}`} />}
-                onClick={loadRepos} className="text-zinc-500 hover:text-zinc-700"
-              >{t('dashboard.refresh')}</Button>
+                onClick={loadRepos}
+                className="text-zinc-500 hover:text-zinc-700"
+              >
+                {t('dashboard.refresh')}
+              </Button>
             )}
           </div>
 
           {installMsg && (
-            <div className={`mb-6 flex items-center gap-3 rounded-xl border px-4 py-3 text-sm ${
-              installMsgType === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-red-200 bg-red-50 text-red-700'
-            }`}>
-              {installMsgType === 'success' ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <AlertTriangle className="h-4 w-4 shrink-0" />}
+            <div
+              className={`mb-6 flex items-center gap-3 rounded-xl border px-4 py-3 text-sm ${
+                installMsgType === 'success'
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                  : 'border-red-200 bg-red-50 text-red-700'
+              }`}
+            >
+              {installMsgType === 'success' ? (
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+              ) : (
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+              )}
               {installMsg}
             </div>
           )}
 
           {activePage === 'overview' && (
-            <OverviewPage repos={repos} reposLoading={reposLoading} appConfigured={appConfigured}
+            <OverviewPage
+              repos={repos}
+              reposLoading={reposLoading}
+              appConfigured={appConfigured}
               onInstall={() => (window.location.href = '/api/github/install')}
-              onNavigateToRepos={() => setActivePage('repos')} onNavigateToEnv={() => setActivePage('env')} />
+              onNavigateToRepos={() => setActivePage('repos')}
+              onNavigateToEnv={() => setActivePage('env')}
+            />
           )}
           {activePage === 'repos' && <ReposPage repos={repos} reposLoading={reposLoading} />}
           {activePage === 'logs' && <WorkflowLogsPage initialRepo={logsRepo} />}

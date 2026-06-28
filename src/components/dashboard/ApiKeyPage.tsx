@@ -173,6 +173,7 @@ export default function ApiKeyPage() {
             <button
               onClick={() => setCreatedKey(null)}
               className="text-zinc-400 hover:text-zinc-600 shrink-0"
+              aria-label={t('common.close')}
             >
               <X className="h-4 w-4" />
             </button>

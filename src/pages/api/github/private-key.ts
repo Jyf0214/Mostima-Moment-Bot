@@ -1,6 +1,7 @@
 import { logger } from '@/lib/logger';
 import { NextApiRequest, NextApiResponse } from 'next';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { setConfig, getConfig } from '@/lib/db';
 import { verifyAuthToken } from '@/lib/auth-utils';
@@ -44,9 +45,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Missing or invalid privateKey' });
     }
 
-    // 验证 PEM 格式
+    // 验证 PEM 格式（使用 crypto.createPrivateKey 验证是否为有效私钥）
     if (!privateKey.includes('-----BEGIN') || !privateKey.includes('-----END')) {
       return res.status(400).json({ error: 'Invalid PEM format' });
+    }
+    try {
+      crypto.createPrivateKey(privateKey);
+    } catch {
+      return res.status(400).json({ error: 'Invalid private key: not a valid RSA/EC private key' });
     }
 
     try {
