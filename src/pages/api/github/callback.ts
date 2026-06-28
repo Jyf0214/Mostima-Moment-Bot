@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
 import { logger } from '@/lib/logger';
-import { setCookie, clearCookie } from '@/lib/cookie';
+import { clearCookie } from '@/lib/cookie';
 import { getQueryParam } from '@/lib/api-utils';
 import { verifyAuthToken } from '@/lib/auth-utils';
 
@@ -68,12 +68,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       data: { isActive: true, adminId: admin.id },
     });
   } else {
-    // 尝试从 GitHub API 获取安装详情，失败则用占位值创建记录
-    let accountLogin = 'unknown';
-    let accountType = 'Unknown';
-    let accountId = 0;
-    let avatarUrl = '';
-
+    // 尝试从 GitHub API 获取安装详情
+    // 如果 API 不可达，不创建 unknown 记录，等待 webhook installation 事件补全
     try {
       const { generateJWTAuto } = await import('@/lib/github/auth');
       const appJwt = await generateJWTAuto();
@@ -88,27 +84,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const installation = (await response.json()) as {
           account: { login: string; type: string; id: number; avatar_url: string };
         };
-        accountLogin = installation.account.login;
-        accountType = installation.account.type;
-        accountId = installation.account.id;
-        avatarUrl = installation.account.avatar_url;
+        await prisma.gitHubInstallation.create({
+          data: {
+            installationId: installId,
+            accountLogin: installation.account.login,
+            accountType: installation.account.type,
+            accountId: installation.account.id,
+            avatarUrl: installation.account.avatar_url,
+            adminId: admin.id,
+          },
+        });
       } else {
-        logger.warn(`[GitHub Callback] GitHub API returned ${response.status} for installation ${installId}`);
+        logger.warn(`[GitHub Callback] GitHub API returned ${response.status} for installation ${installId}, deferring to webhook`);
       }
     } catch (err) {
-      logger.warn(`[GitHub Callback] Failed to fetch installation ${installId} from API:`, err);
+      logger.warn(`[GitHub Callback] Failed to fetch installation ${installId} from API, deferring to webhook:`, err);
     }
-
-    await prisma.gitHubInstallation.create({
-      data: {
-        installationId: installId,
-        accountLogin,
-        accountType,
-        accountId,
-        avatarUrl,
-        adminId: admin.id,
-      },
-    });
   }
 
   return res.redirect('/dashboard?install=success');

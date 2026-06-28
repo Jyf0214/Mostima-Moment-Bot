@@ -79,7 +79,11 @@ export default function ApiKeyPage() {
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: number, name: string) => {
+    // API 密钥一旦删除无法恢复，需要二次确认
+    if (!window.confirm(t('apiKey.deleteConfirm', { name }))) {
+      return;
+    }
     try {
       const res = await fetch(`/api/auth/api-keys?id=${id}`, {
         method: 'DELETE',
@@ -242,7 +246,7 @@ export default function ApiKeyPage() {
                   variant="ghost"
                   size="sm"
                   icon={<Trash2 className="h-4 w-4" />}
-                  onClick={() => handleDelete(key.id)}
+                  onClick={() => handleDelete(key.id, key.name)}
                   className="text-zinc-400 hover:text-red-500"
                 >
                   {t('apiKey.delete')}

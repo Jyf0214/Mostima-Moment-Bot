@@ -217,6 +217,7 @@
     "existingKeys": "已有的密钥",
     "noKeys": "暂无 API 密钥",
     "delete": "删除",
+    "deleteConfirm": "确定要删除 API 密钥「{{name}}」吗？此操作无法撤销。",
     "createdAt": "创建于",
     "lastUsed": "最后使用",
     "usageTitle": "使用方式",

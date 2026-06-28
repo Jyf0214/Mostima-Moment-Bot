@@ -15,7 +15,6 @@ import {
   RefreshCw,
   Save,
   Zap,
-  Clock,
   ScrollText,
   AlertTriangle,
 } from 'lucide-react';
@@ -116,17 +115,24 @@ export default function RepoDetailPage() {
 
   const resetToDefaults = async () => {
     try {
-      const res = await fetch(`/api/ci/trigger-rules?repo=${encodeURIComponent(repoName)}`);
-      if (res.ok) {
-        const data = await res.json();
-        // 删除自定义配置（通过保存空标记）
-        await fetch('/api/ci/trigger-rules', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ repo: repoName, rules: data.rules }),
-        });
+      // 先获取默认规则
+      const getRes = await fetch(`/api/ci/trigger-rules?repo=${encodeURIComponent(repoName)}`);
+      if (!getRes.ok) {
+        setSaveMsg(t('repoDetail.saveFailed'));
+        return;
+      }
+      const data = await getRes.json();
+      // 保存默认规则（POST 成功后才更新 UI，避免竞态）
+      const postRes = await fetch('/api/ci/trigger-rules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ repo: repoName, rules: data.rules }),
+      });
+      if (postRes.ok) {
         setRules(data.rules);
         setSaveMsg(t('repoDetail.resetSuccess'));
+      } else {
+        setSaveMsg(t('repoDetail.saveFailed'));
       }
     } catch {
       setSaveMsg(t('repoDetail.saveFailed'));

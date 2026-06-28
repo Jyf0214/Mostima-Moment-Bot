@@ -217,6 +217,7 @@
     "existingKeys": "Existing Keys",
     "noKeys": "No API keys yet",
     "delete": "Delete",
+    "deleteConfirm": "Are you sure you want to delete API key \"{{name}}\"? This action cannot be undone.",
     "createdAt": "Created",
     "lastUsed": "Last used",
     "usageTitle": "Usage",

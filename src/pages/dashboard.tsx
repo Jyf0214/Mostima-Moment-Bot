@@ -117,7 +117,11 @@ export default function DashboardPage() {
   }, [user]);
 
   const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch {
+      logger.error('Logout request failed, redirecting anyway');
+    }
     window.location.href = '/';
   };
 
