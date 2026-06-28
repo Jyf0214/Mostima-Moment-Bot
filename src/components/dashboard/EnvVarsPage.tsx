@@ -13,6 +13,7 @@ import {
   Shield,
   ChevronDown,
   BookOpen,
+  AlertTriangle,
 } from 'lucide-react';
 
 interface EnvVarDetail {
@@ -35,6 +36,7 @@ export default function EnvVarsPage() {
   const { t } = useTranslation();
   const [groups, setGroups] = useState<EnvGroup[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedVar, setExpandedVar] = useState<string | null>(null);
 
@@ -44,14 +46,17 @@ export default function EnvVarsPage() {
 
   const loadEnvStatus = async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const res = await fetch('/api/env-status');
       if (res.ok) {
         const data = await res.json();
         setGroups(data.groups);
+      } else {
+        setLoadError(t('envPage.loadFailed'));
       }
     } catch {
-      // 静默处理
+      setLoadError(t('envPage.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -77,6 +82,35 @@ export default function EnvVarsPage() {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="h-8 w-8 animate-spin rounded-full border-3 border-zinc-200 border-t-blue-500" />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-zinc-900 flex items-center gap-2">
+              <Shield className="h-5 w-5 text-zinc-500" />
+              {t('envPage.title')}
+            </h2>
+            <p className="text-zinc-500 text-sm mt-1">{t('envPage.subtitle')}</p>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<RefreshCw className="h-3.5 w-3.5" />}
+            onClick={loadEnvStatus}
+            className="text-zinc-500 hover:text-zinc-700"
+          >
+            {t('dashboard.refresh')}
+          </Button>
+        </div>
+        <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          {loadError}
+        </div>
       </div>
     );
   }

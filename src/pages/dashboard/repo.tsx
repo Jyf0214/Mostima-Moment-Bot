@@ -17,6 +17,7 @@ import {
   Zap,
   Clock,
   ScrollText,
+  AlertTriangle,
 } from 'lucide-react';
 
 interface TriggerRule {
@@ -42,6 +43,7 @@ export default function RepoDetailPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -52,18 +54,21 @@ export default function RepoDetailPage() {
   const loadRules = useCallback(async () => {
     if (!repoName) return;
     setLoading(true);
+    setLoadError(null);
     try {
       const res = await fetch(`/api/ci/trigger-rules?repo=${encodeURIComponent(repoName)}`);
       if (res.ok) {
         const data = await res.json();
         setRules(data.rules);
+      } else {
+        setLoadError(t('repoDetail.loadFailed'));
       }
     } catch {
-      // 使用默认规则
+      setLoadError(t('repoDetail.loadFailed'));
     } finally {
       setLoading(false);
     }
-  }, [repoName]);
+  }, [repoName, t]);
 
   const loadRuns = useCallback(async () => {
     if (!repoName) return;
@@ -74,7 +79,7 @@ export default function RepoDetailPage() {
         setRunsTotal(data.total || 0);
       }
     } catch {
-      // 静默失败
+      // 运行日志加载失败不阻断主流程
     }
   }, [repoName]);
 
@@ -182,6 +187,11 @@ export default function RepoDetailPage() {
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-200 border-t-blue-500" />
+            </div>
+          ) : loadError ? (
+            <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 mb-6">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              {loadError}
             </div>
           ) : (
             <>

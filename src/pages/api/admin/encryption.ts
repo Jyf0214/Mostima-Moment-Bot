@@ -81,13 +81,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // 使用原始 Prisma 客户端明文写入（绕过加密中间件）
+    // 注意：此密钥必须以可恢复形式存储，因为后续启动需要读取它进行加解密操作
+    // hashed 存储会导致密钥不可用，encrypted: false 是有意为之的设计
     const rawClient = new (await import('@prisma/client')).PrismaClient();
-    await rawClient.appConfig.upsert({
-      where: { configKey: 'encryption_key' },
-      update: { configValue: encryptionKey, encrypted: false },
-      create: { configKey: 'encryption_key', configValue: encryptionKey, encrypted: false },
-    });
-    await rawClient.$disconnect();
+    try {
+      await rawClient.appConfig.upsert({
+        where: { configKey: 'encryption_key' },
+        update: { configValue: encryptionKey, encrypted: false },
+        create: { configKey: 'encryption_key', configValue: encryptionKey, encrypted: false },
+      });
+    } finally {
+      await rawClient.$disconnect();
+    }
 
     // 重置密钥缓存
     resetEncryptionKeyCache();
@@ -95,7 +100,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json({
       success: true,
       warning:
-        'Encryption key stored in database as plaintext. You can now start without ENCRYPTION_KEY environment variable.',
+        'Encryption key stored in database. You can now start without ENCRYPTION_KEY environment variable.',
     });
   }
 
@@ -110,10 +115,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const rawClient = new (await import('@prisma/client')).PrismaClient();
-    await rawClient.appConfig.deleteMany({
-      where: { configKey: 'encryption_key' },
-    });
-    await rawClient.$disconnect();
+    try {
+      await rawClient.appConfig.deleteMany({
+        where: { configKey: 'encryption_key' },
+      });
+    } finally {
+      await rawClient.$disconnect();
+    }
 
     // 重置密钥缓存，下次使用环境变量
     resetEncryptionKeyCache();

@@ -25,8 +25,9 @@ export default function App({ Component, pageProps }: AppProps) {
         if (data.isConfigured) {
           try {
             await fetch('/api/init', { method: 'POST' });
-          } catch {
-            // 初始化失败不阻断页面渲染
+          } catch (initErr) {
+            // 初始化失败不阻断页面渲染，但记录错误以便排查
+            logger.error('Database initialization failed:', initErr);
           }
         }
       } catch (err) {

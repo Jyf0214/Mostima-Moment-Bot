@@ -68,66 +68,47 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       data: { isActive: true, adminId: admin.id },
     });
   } else {
+    // 尝试从 GitHub API 获取安装详情，失败则用占位值创建记录
+    let accountLogin = 'unknown';
+    let accountType = 'Unknown';
+    let accountId = 0;
+    let avatarUrl = '';
+
     try {
       const { generateJWTAuto } = await import('@/lib/github/auth');
-      try {
-        const appJwt = await generateJWTAuto();
-        const response = await fetch(`https://api.github.com/app/installations/${installId}`, {
-          headers: {
-            Authorization: `Bearer ${appJwt}`,
-            Accept: 'application/vnd.github.v3+json',
-          },
-        });
-
-        if (response.ok) {
-          const installation = (await response.json()) as {
-            account: { login: string; type: string; id: number; avatar_url: string };
-          };
-          await prisma.gitHubInstallation.create({
-            data: {
-              installationId: installId,
-              accountLogin: installation.account.login,
-              accountType: installation.account.type,
-              accountId: installation.account.id,
-              avatarUrl: installation.account.avatar_url,
-              adminId: admin.id,
-            },
-          });
-        } else {
-          await prisma.gitHubInstallation.create({
-            data: {
-              installationId: installId,
-              accountLogin: 'unknown',
-              accountType: 'Unknown',
-              accountId: 0,
-              adminId: admin.id,
-            },
-          });
-        }
-      } catch (err) {
-        logger.warn(`[GitHub Callback] Failed to fetch installation ${installId} from API:`, err);
-        await prisma.gitHubInstallation.create({
-          data: {
-            installationId: installId,
-            accountLogin: 'unknown',
-            accountType: 'Unknown',
-            accountId: 0,
-            adminId: admin.id,
-          },
-        });
-      }
-    } catch (error) {
-      logger.error('Failed to fetch installation details:', error);
-      await prisma.gitHubInstallation.create({
-        data: {
-          installationId: installId,
-          accountLogin: 'unknown',
-          accountType: 'Unknown',
-          accountId: 0,
-          adminId: admin.id,
+      const appJwt = await generateJWTAuto();
+      const response = await fetch(`https://api.github.com/app/installations/${installId}`, {
+        headers: {
+          Authorization: `Bearer ${appJwt}`,
+          Accept: 'application/vnd.github.v3+json',
         },
       });
+
+      if (response.ok) {
+        const installation = (await response.json()) as {
+          account: { login: string; type: string; id: number; avatar_url: string };
+        };
+        accountLogin = installation.account.login;
+        accountType = installation.account.type;
+        accountId = installation.account.id;
+        avatarUrl = installation.account.avatar_url;
+      } else {
+        logger.warn(`[GitHub Callback] GitHub API returned ${response.status} for installation ${installId}`);
+      }
+    } catch (err) {
+      logger.warn(`[GitHub Callback] Failed to fetch installation ${installId} from API:`, err);
     }
+
+    await prisma.gitHubInstallation.create({
+      data: {
+        installationId: installId,
+        accountLogin,
+        accountType,
+        accountId,
+        avatarUrl,
+        adminId: admin.id,
+      },
+    });
   }
 
   return res.redirect('/dashboard?install=success');

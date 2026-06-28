@@ -122,12 +122,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const prPayload = payload as unknown as PREventPayload;
 
         // fire-and-forget：不阻塞 webhook 响应
-        handlePullRequest(prPayload as unknown as PRPayload).catch((err) => {
-          logger.error(
-            `[Webhook] CI pipeline failed for PR #${prPayload.pull_request.number}:`,
-            err
-          );
-        });
+        handlePullRequest(prPayload as unknown as PRPayload)
+          .then(() => {
+            logger.info(`[Webhook] CI pipeline completed for PR #${prPayload.pull_request.number}`);
+          })
+          .catch((err) => {
+            logger.error(
+              `[Webhook] CI pipeline failed for PR #${prPayload.pull_request.number}:`,
+              err
+            );
+          });
 
         // PR 安全审计（bot 自身的工作流）
         if (prPayload.action === 'opened' || prPayload.action === 'synchronize') {
@@ -150,6 +154,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
           auditPR(prNumber, baseBranch, headSha, workspaceDir)
             .then(() => {
+              logger.info(`[Webhook] Security audit completed for PR #${prNumber}`);
               if (auditRunId) {
                 updateCiRun(auditRunId, { status: 'success', conclusion: 'success' });
               }
@@ -200,6 +205,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
           solveIssue(event, issuePayload, workspaceDir)
             .then(() => {
+              logger.info(`[Webhook] Issue solver completed for issue #${issuePayload.issue.number}`);
               if (issueRunId) {
                 updateCiRun(issueRunId, { status: 'success', conclusion: 'success' });
               }

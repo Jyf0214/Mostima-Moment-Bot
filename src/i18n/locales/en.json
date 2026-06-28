@@ -183,6 +183,7 @@
     "resetDefaults": "Reset Defaults",
     "saveSuccess": "Configuration saved successfully",
     "saveFailed": "Save failed",
+    "loadFailed": "Failed to load configuration",
     "resetSuccess": "Reset to defaults",
     "runLogs": "Run Logs",
     "totalRuns": "runs",
@@ -200,7 +201,8 @@
     "configuredLabel": "Configured",
     "missingLabel": "Missing",
     "search": "Search variable name or usage...",
-    "howToGet": "How to get"
+    "howToGet": "How to get",
+    "loadFailed": "Failed to load environment variable status"
   },
   "apiKey": {
     "title": "API Keys",

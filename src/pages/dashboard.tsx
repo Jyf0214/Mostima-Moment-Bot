@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { logger } from '@/lib/logger';
 import { Button } from '@/components/ui/Button';
 import Sidebar, { type SidebarPage } from '@/components/dashboard/Sidebar';
 import OverviewPage from '@/components/dashboard/OverviewPage';
@@ -90,6 +91,7 @@ export default function DashboardPage() {
       const res = await fetch('/api/github/install');
       setAppConfigured(res.status !== 500);
     } catch {
+      logger.error('Failed to check app configuration');
       setAppConfigured(false);
     }
   };

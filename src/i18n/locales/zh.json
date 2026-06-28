@@ -183,6 +183,7 @@
     "resetDefaults": "恢复默认",
     "saveSuccess": "配置保存成功",
     "saveFailed": "保存失败",
+    "loadFailed": "加载配置失败",
     "resetSuccess": "已恢复默认配置",
     "runLogs": "运行日志",
     "totalRuns": "次运行",
@@ -200,7 +201,8 @@
     "configuredLabel": "已配置",
     "missingLabel": "未配置",
     "search": "搜索变量名或用途...",
-    "howToGet": "获取方式"
+    "howToGet": "获取方式",
+    "loadFailed": "加载环境变量状态失败"
   },
   "apiKey": {
     "title": "API 密钥",

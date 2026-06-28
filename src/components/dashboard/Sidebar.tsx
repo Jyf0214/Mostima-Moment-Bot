@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/ui';
 import {
@@ -44,6 +44,18 @@ export default function Sidebar({
   onLogout,
 }: SidebarProps) {
   const { t } = useTranslation();
+  const [botName, setBotName] = useState('Bot');
+
+  useEffect(() => {
+    fetch('/api/bot/info')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.slug) setBotName(data.slug);
+      })
+      .catch(() => {
+        /* 使用默认值 */
+      });
+  }, []);
 
   return (
     <div
@@ -63,7 +75,7 @@ export default function Sidebar({
           <Plug className="h-4 w-4 text-white" />
         </div>
         {!collapsed && (
-          <span className="text-zinc-900 font-semibold text-sm truncate">Manticore Bot</span>
+          <span className="text-zinc-900 font-semibold text-sm truncate">{botName}</span>
         )}
       </div>
 

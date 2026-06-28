@@ -60,17 +60,25 @@ export default function SettingsPage() {
     setHeroSaving(true);
     setHeroMsg(null);
     try {
-      await fetch('/api/site-config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key: 'hero_gradient', value: heroGradient }),
-      });
-      await fetch('/api/site-config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key: 'hero_image_url', value: heroImageUrl }),
-      });
-      setHeroMsg(t('settings.configSaved'));
+      // 使用 Promise.allSettled 并行保存，确保两个配置都尝试写入
+      const results = await Promise.allSettled([
+        fetch('/api/site-config', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: 'hero_gradient', value: heroGradient }),
+        }),
+        fetch('/api/site-config', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: 'hero_image_url', value: heroImageUrl }),
+        }),
+      ]);
+      const failures = results.filter((r) => r.status === 'rejected');
+      if (failures.length > 0) {
+        setHeroMsg(t('settings.configSaveFailed'));
+      } else {
+        setHeroMsg(t('settings.configSaved'));
+      }
     } catch {
       setHeroMsg(t('settings.configSaveFailed'));
     } finally {
