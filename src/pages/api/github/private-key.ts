@@ -19,7 +19,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     verifyAuthToken(authToken);
-  } catch {
+  } catch (err) {
+    logger.warn('[GitHub Private Key] JWT verification failed:', err);
     return res.status(401).json({ error: 'Invalid token' });
   }
 
@@ -30,7 +31,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         configured: !!privateKey,
         source: process.env.GITHUB_PRIVATE_KEY_PATH ? 'file' : privateKey ? 'database' : 'none',
       });
-    } catch {
+    } catch (err) {
+      logger.warn('[GitHub Private Key] Failed to check private key status:', err);
       return res.status(200).json({ configured: false, source: 'none' });
     }
   }

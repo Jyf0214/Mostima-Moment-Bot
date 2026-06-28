@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { getJwtSecret } from '@/lib/auth-utils';
 import { setCookie } from '@/lib/cookie';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 /**
  * API 密钥登录
@@ -11,11 +12,22 @@ import { setCookie } from '@/lib/cookie';
  * GET  /api/auth/api-key-login?key=xxx （浏览器直接访问）
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // IP 级别速率限制：每 IP 每分钟最多 10 次尝试
+  const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || 'unknown';
+  if (!checkRateLimit(`auth-apikey:${clientIp}`, 10, 60_000)) {
+    return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+  }
+
   // 从 body 或 query 获取 apiKey
   const apiKey = req.method === 'POST' ? req.body?.apiKey : req.query?.key;
 
   if (!apiKey || typeof apiKey !== 'string') {
     return res.status(401).json({ error: 'API key required' });
+  }
+
+  // 输入长度验证（manticore_ + 64 hex = 75 字符，加上合理余量）
+  if (apiKey.length > 200) {
+    return res.status(400).json({ error: 'API key too long' });
   }
 
   // 计算密钥的 SHA-256 哈希

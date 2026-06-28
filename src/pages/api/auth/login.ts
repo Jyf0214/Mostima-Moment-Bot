@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import crypto from 'crypto';
 import { setCookie } from '@/lib/cookie';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 /**
  * GitHub OAuth 登录
@@ -9,6 +10,12 @@ import { setCookie } from '@/lib/cookie';
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // IP 级别速率限制：每 IP 每分钟最多 20 次登录请求
+  const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || 'unknown';
+  if (!checkRateLimit(`auth-login:${clientIp}`, 20, 60_000)) {
+    return res.status(429).json({ error: 'Too many requests. Please try again later.' });
   }
 
   const clientId = process.env.GITHUB_CLIENT_ID;

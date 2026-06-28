@@ -101,7 +101,7 @@ export default function GitHubTestPage() {
             <ProCard>
               <StatusCard
                 icon={<XCircle className="h-4 w-4" />}
-                title="Error"
+                title={t('dashboard.error')}
                 status={error}
                 statusType="error"
               />

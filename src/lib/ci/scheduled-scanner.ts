@@ -1,6 +1,6 @@
 import { logger } from '../logger';
 import { execFileSync } from 'child_process';
-import { writeFileSync, existsSync, readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import {
   runQwen,
@@ -8,7 +8,6 @@ import {
   injectBranchProtection,
   createLspConfig,
 } from '../qwen/runner';
-import { postPRComment } from '../github/api';
 import { buildScanPrompt, SCAN_RESUME_PROMPT, DEEP_SCAN_PROMPT } from '../qwen/prompts';
 import { validateBranchName } from '../git/workspace';
 

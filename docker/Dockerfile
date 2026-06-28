@@ -2,30 +2,38 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install dependencies
+# 安装依赖
 COPY package*.json ./
 RUN npm ci
 
-# Copy Prisma schema and generate client
+# 复制 Prisma schema 并生成客户端
 COPY prisma/ ./prisma/
 RUN npx prisma generate
 
-# Install TypeScript LSP and Qwen Code CLI
-RUN npm install -g typescript-language-server typescript @qwen-code/qwen-code@latest
-
-# Copy source code
+# 复制源代码
 COPY . .
 
-# Build Next.js
+# 构建 Next.js
 RUN npm run build
 
-# Remove dev dependencies
+# 移除开发依赖
 RUN npm prune --omit=dev
+
+# 创建非 root 用户
+RUN addgroup --system --gid 1001 nodejs \
+    && adduser --system --uid 1001 nextjs \
+    && chown -R nextjs:nodejs /app
+
+USER nextjs
 
 ENV PORT=3001
 ENV HOSTNAME="0.0.0.0"
 
 EXPOSE ${PORT}
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT}/api/health || exit 1
 
 # npm start = prisma db push --skip-generate && next start
 CMD ["npm", "start"]

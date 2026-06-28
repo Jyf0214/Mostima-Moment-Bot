@@ -1,3 +1,4 @@
+import { vi, describe, it, expect, afterEach } from 'vitest';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'test-secret';
@@ -9,6 +10,10 @@ describe('JWT 认证', () => {
     avatarUrl: 'https://example.com/avatar.jpg',
     isAdmin: true,
   };
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   it('应该正确生成和验证 JWT', () => {
     const token = jwt.sign(testUser, JWT_SECRET, { expiresIn: '7d' });
@@ -27,12 +32,15 @@ describe('JWT 认证', () => {
   });
 
   it('应该拒绝过期的 JWT', () => {
-    const token = jwt.sign(testUser, JWT_SECRET, { expiresIn: '0s' });
+    vi.useFakeTimers();
 
-    // 等待一下确保过期
-    setTimeout(() => {
-      expect(() => jwt.verify(token, JWT_SECRET)).toThrow('jwt expired');
-    }, 100);
+    // 签发时设置过期时间为 1 秒
+    const token = jwt.sign(testUser, JWT_SECRET, { expiresIn: '1s' });
+
+    // 模拟时间前进 2 秒，确保 token 已过期
+    vi.advanceTimersByTime(2000);
+
+    expect(() => jwt.verify(token, JWT_SECRET)).toThrow('jwt expired');
   });
 
   it('应该包含正确的过期时间', () => {

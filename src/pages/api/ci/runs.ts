@@ -1,4 +1,6 @@
 import { NextApiRequest, NextApiResponse } from 'next';
+import crypto from 'crypto';
+import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
 import { verifyAuthToken } from '@/lib/auth-utils';
 import { getQueryParam, getQueryParamNumber, getQueryParamBoolean } from '@/lib/api-utils';
@@ -28,7 +30,8 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
 
   try {
     verifyAuthToken(authToken);
-  } catch {
+  } catch (err) {
+    logger.warn('[CI Runs] JWT verification failed:', err);
     return res.status(401).json({ error: 'Invalid token' });
   }
 
@@ -168,8 +171,25 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
   const authHeader = req.headers.authorization;
   const internalKey = process.env.INTERNAL_API_KEY;
 
-  if (internalKey && authHeader === `Bearer ${internalKey}`) {
-    // 内部密钥认证通过，允许写入
+  if (internalKey && authHeader) {
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
+    // 使用 timing-safe 比较防止时序攻击
+    const keyBuf = Buffer.from(internalKey, 'utf-8');
+    const tokenBuf = Buffer.from(token, 'utf-8');
+    if (keyBuf.length === tokenBuf.length && crypto.timingSafeEqual(keyBuf, tokenBuf)) {
+      // 内部密钥认证通过，允许写入
+    } else {
+      // 未匹配内部密钥时，要求 JWT 管理员认证
+      const authToken = req.cookies.auth_token;
+      if (!authToken) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+      try {
+        verifyAuthToken(authToken);
+      } catch {
+        return res.status(401).json({ error: 'Invalid token' });
+      }
+    }
   } else {
     // 未匹配内部密钥或未设置密钥时，一律要求 JWT 管理员认证
     const authToken = req.cookies.auth_token;

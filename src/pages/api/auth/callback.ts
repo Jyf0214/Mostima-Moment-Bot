@@ -12,6 +12,7 @@ import {
 import { setCookie, clearCookie } from '@/lib/cookie';
 import { autoSaveEnvVars } from '@/lib/bootstrap';
 import { getJwtSecret } from '@/lib/auth-utils';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
@@ -35,6 +36,12 @@ interface GitHubUser {
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // IP 级别速率限制：每 IP 每分钟最多 30 次回调请求
+  const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || 'unknown';
+  if (!checkRateLimit(`auth-callback:${clientIp}`, 30, 60_000)) {
+    return res.status(429).json({ error: 'Too many requests. Please try again later.' });
   }
 
   const { code, state, installation_id, setup_action } = req.query;

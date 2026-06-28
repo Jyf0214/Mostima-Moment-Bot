@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { ProCard } from '@/components/ui/ProCard';
 import { StatusCard } from '@/components/ui/StatusCard';
 import { RefreshCw, Plus, Trash2, Key, Clock, CheckCircle2, Copy, X } from 'lucide-react';
@@ -102,10 +103,10 @@ export default function ApiKeyPage() {
 
   const timeAgo = (dateStr: string) => {
     const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-    if (diff < 60) return `${diff}s ago`;
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    return `${Math.floor(diff / 86400)}d ago`;
+    if (diff < 60) return t('common.secondsAgo', { count: String(diff) });
+    if (diff < 3600) return t('common.minutesAgo', { count: String(Math.floor(diff / 60)) });
+    if (diff < 86400) return t('common.hoursAgo', { count: String(Math.floor(diff / 3600)) });
+    return t('common.daysAgo', { count: String(Math.floor(diff / 86400)) });
   };
 
   return (
@@ -137,7 +138,7 @@ export default function ApiKeyPage() {
         <ProCard className="bg-red-50 border-red-200">
           <StatusCard
             icon={<X className="h-4 w-4" />}
-            title="Error"
+            title={t('dashboard.error')}
             status={error}
             statusType="error"
           />
@@ -182,12 +183,12 @@ export default function ApiKeyPage() {
       {/* 创建新密钥 */}
       <ProCard title={t('apiKey.createTitle')}>
         <div className="flex items-center gap-3">
-          <input
+          <Input
             type="text"
             value={newKeyName}
             onChange={(e) => setNewKeyName(e.target.value)}
             placeholder={t('apiKey.namePlaceholder')}
-            className="flex-1 h-10 px-4 rounded-lg bg-white border border-zinc-200 text-zinc-700 text-sm outline-none focus:border-blue-500 transition-colors"
+            size="sm"
             onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
           />
           <Button

@@ -125,7 +125,28 @@
     "testConnectionDesc": "检查 GitHub App 配置与通信状态",
     "searchRepos": "搜索仓库名称或描述...",
     "searchResults": "找到 {{count}} 个仓库",
-    "noResults": "没有找到匹配的仓库"
+    "noResults": "没有找到匹配的仓库",
+    "error": "错误",
+    "prev": "上一页",
+    "next": "下一页"
+  },
+  "workflowLogs": {
+    "statusFilter": "状态",
+    "eventFilter": "事件",
+    "statusSuccess": "成功",
+    "statusFailure": "失败",
+    "statusRunning": "运行中",
+    "statusPending": "等待中",
+    "statusCancelled": "已取消",
+    "eventIssueLabel": "Issue（标签）",
+    "eventIssueComment": "Issue（评论）",
+    "eventSecurityAudit": "安全审计"
+  },
+  "common": {
+    "secondsAgo": "{{count}}秒前",
+    "minutesAgo": "{{count}}分钟前",
+    "hoursAgo": "{{count}}小时前",
+    "daysAgo": "{{count}}天前"
   },
   "sidebar": {
     "overview": "概览",
@@ -340,7 +361,13 @@
     "gradientSunset": "暖阳橙光",
     "gradientRose": "玫瑰柔粉",
     "gradientIndigo": "深邃靛蓝",
-    "gradientWhite": "纯净白"
+    "gradientWhite": "纯净白",
+    "saveConfig": "保存配置",
+    "saving": "保存中...",
+    "configSaveFailed": "保存配置失败",
+    "githubAppSection": "GitHub App",
+    "githubAppIdLabel": "GITHUB_APP_ID: {{appId}}",
+    "githubAppIdNotSet": "GITHUB_APP_ID 未在环境变量中配置"
   },
   "api": {
     "methodNotAllowed": "Method not allowed",

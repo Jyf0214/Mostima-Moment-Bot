@@ -1,4 +1,5 @@
 import { logger } from '@/lib/logger';
+import crypto from 'crypto';
 import { NextApiRequest, NextApiResponse } from 'next';
 import { runScheduledScan } from '@/lib/ci/scheduled-scanner';
 
@@ -13,7 +14,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // 验证请求来源（简单 token 验证）
+  // 验证请求来源（简单 token 验证，使用 timing-safe 比较）
   const authHeader = req.headers.authorization;
   const scanToken = process.env.SCAN_TRIGGER_TOKEN;
 
@@ -23,7 +24,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .json({ error: 'Server configuration error: SCAN_TRIGGER_TOKEN not set' });
   }
 
-  if (authHeader !== `Bearer ${scanToken}`) {
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : authHeader || '';
+  const tokenBuf = Buffer.from(token, 'utf-8');
+  const expectedBuf = Buffer.from(scanToken, 'utf-8');
+
+  if (tokenBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(tokenBuf, expectedBuf)) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 

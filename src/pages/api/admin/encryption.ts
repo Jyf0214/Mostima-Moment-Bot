@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import jwt from 'jsonwebtoken';
 import { resetEncryptionKeyCache } from '@/lib/prisma-encryption';
+import { logger } from '@/lib/logger';
 import type { JwtPayload } from '@/lib/auth-utils';
 
 /**
@@ -27,7 +28,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
       // jwt_secret 已通过加密中间件解密
       jwtSecret = config?.configValue || '';
-    } catch {
+    } catch (err) {
+      logger.warn('[Admin Encryption] Failed to read JWT_SECRET from database:', err);
       return res.status(500).json({ error: 'Server configuration error' });
     }
   }
@@ -47,7 +49,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!decoded.isAdmin) {
       return res.status(403).json({ error: 'Admin only' });
     }
-  } catch {
+  } catch (err) {
+    logger.warn('[Admin Encryption] JWT verification failed:', err);
     return res.status(401).json({ error: 'Invalid token' });
   }
 

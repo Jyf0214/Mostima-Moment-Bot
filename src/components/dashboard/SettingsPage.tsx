@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ProCard } from '@/components/ui/ProCard';
+import { Input } from '@/components/ui/Input';
 import { Plug, CheckCircle2, AlertTriangle, Lock, Settings, Paintbrush } from 'lucide-react';
 
 export default function SettingsPage() {
@@ -215,12 +216,12 @@ export default function SettingsPage() {
       <ProCard className="bg-white border-zinc-200" padding="p-5">
         <div className="flex items-center gap-3 mb-3">
           <Settings className="h-5 w-5 text-blue-500" />
-          <h3 className="text-zinc-900 font-medium">GitHub App</h3>
+          <h3 className="text-zinc-900 font-medium">{t('settings.githubAppSection')}</h3>
         </div>
         <p className="text-zinc-500 text-xs">
           {botInfo?.appId
-            ? `GITHUB_APP_ID: ${botInfo.appId}`
-            : 'GITHUB_APP_ID not set in environment variables'}
+            ? t('settings.githubAppIdLabel', { appId: botInfo.appId })
+            : t('settings.githubAppIdNotSet')}
         </p>
       </ProCard>
 
@@ -251,7 +252,7 @@ export default function SettingsPage() {
         </div>
         <div className="mb-4">
           <p className="text-xs font-medium text-zinc-600 mb-2">{t('settings.customImageUrl')}</p>
-          <input
+          <Input
             type="url"
             value={heroImageUrl}
             onChange={(e) => {
@@ -259,7 +260,7 @@ export default function SettingsPage() {
               setHeroGradient('');
             }}
             placeholder="https://example.com/image.jpg"
-            className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            size="sm"
           />
         </div>
         <button

@@ -50,8 +50,9 @@ async function getEncryptionKey(): Promise<string> {
       encryptionKeyLoaded = true;
       return config.configValue;
     }
-  } catch {
-    // 数据库不可用
+  } catch (err) {
+    // 数据库不可用，降级为仅环境变量模式
+    logger.warn('[Encryption] Failed to read key from database:', err);
   }
 
   throw new Error(

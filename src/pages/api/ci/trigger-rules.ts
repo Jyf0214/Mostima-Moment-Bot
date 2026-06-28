@@ -3,6 +3,7 @@ import { getConfig, setConfig } from '@/lib/db';
 import { DEFAULT_RULES } from '@/lib/ci/triggers/default-rules';
 import type { TriggerRule } from '@/lib/ci/triggers/types';
 import { requireAuth } from '@/lib/auth-utils';
+import { logger } from '@/lib/logger';
 
 /**
  * 触发规则管理
@@ -31,7 +32,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         rules,
         isCustom: !!saved,
       });
-    } catch {
+    } catch (err) {
+      logger.warn(`[Trigger Rules] Failed to read rules for ${repo}, using defaults:`, err);
       return res.status(200).json({
         repo,
         rules: DEFAULT_RULES,

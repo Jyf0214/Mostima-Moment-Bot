@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { ProCard } from '@/components/ui/ProCard';
+import { Select } from '@/components/ui/Select';
 import {
   RefreshCw,
   CheckCircle2,
@@ -73,14 +74,17 @@ function formatDuration(duration: number): string {
   return `${m}m ${s % 60}s`;
 }
 
-function timeAgo(dateStr: string): string {
+function timeAgo(
+  dateStr: string,
+  t: (key: string, opts?: Record<string, string>) => string
+): string {
   const now = Date.now();
   const then = new Date(dateStr).getTime();
   const diff = Math.floor((now - then) / 1000);
-  if (diff < 60) return `${diff}s ago`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return `${Math.floor(diff / 86400)}d ago`;
+  if (diff < 60) return t('common.secondsAgo', { count: String(diff) });
+  if (diff < 3600) return t('common.minutesAgo', { count: String(Math.floor(diff / 60)) });
+  if (diff < 86400) return t('common.hoursAgo', { count: String(Math.floor(diff / 3600)) });
+  return t('common.daysAgo', { count: String(Math.floor(diff / 86400)) });
 }
 
 function shaShort(sha: string | null): string {
@@ -226,34 +230,36 @@ export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string
 
         {/* 过滤器 */}
         <div className="flex flex-wrap items-center gap-3">
-          <select
+          <Select
             value={filterStatus}
             onChange={(e) => {
               setFilterStatus(e.target.value);
               setPage(0);
             }}
-            className="h-9 px-3 rounded-lg bg-white border border-zinc-200 text-zinc-700 text-sm outline-none focus:border-blue-500 transition-colors appearance-none cursor-pointer"
+            size="sm"
+            className="w-auto"
           >
-            <option value="">Status</option>
-            <option value="success">✓ Success</option>
-            <option value="failure">✗ Failure</option>
-            <option value="running">⟳ Running</option>
-            <option value="pending">⏳ Pending</option>
-            <option value="cancelled">— Cancelled</option>
-          </select>
-          <select
+            <option value="">{t('workflowLogs.statusFilter')}</option>
+            <option value="success">✓ {t('workflowLogs.statusSuccess')}</option>
+            <option value="failure">✗ {t('workflowLogs.statusFailure')}</option>
+            <option value="running">⟳ {t('workflowLogs.statusRunning')}</option>
+            <option value="pending">⏳ {t('workflowLogs.statusPending')}</option>
+            <option value="cancelled">— {t('workflowLogs.statusCancelled')}</option>
+          </Select>
+          <Select
             value={filterEvent}
             onChange={(e) => {
               setFilterEvent(e.target.value);
               setPage(0);
             }}
-            className="h-9 px-3 rounded-lg bg-white border border-zinc-200 text-zinc-700 text-sm outline-none focus:border-blue-500 transition-colors appearance-none cursor-pointer"
+            size="sm"
+            className="w-auto"
           >
-            <option value="">Event</option>
-            <option value="issue_labeled">Issue (Label)</option>
-            <option value="issue_comment">Issue (Comment)</option>
-            <option value="security_audit">Security Audit</option>
-          </select>
+            <option value="">{t('workflowLogs.eventFilter')}</option>
+            <option value="issue_labeled">{t('workflowLogs.eventIssueLabel')}</option>
+            <option value="issue_comment">{t('workflowLogs.eventIssueComment')}</option>
+            <option value="security_audit">{t('workflowLogs.eventSecurityAudit')}</option>
+          </Select>
         </div>
 
         {/* 加载中 */}
@@ -330,7 +336,9 @@ export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string
                       </div>
                     </div>
                     <div className="text-right shrink-0">
-                      <span className="text-xs text-zinc-400 block">{timeAgo(run.createdAt)}</span>
+                      <span className="text-xs text-zinc-400 block">
+                        {timeAgo(run.createdAt, t)}
+                      </span>
                       <span className={`text-[10px] font-medium ${cfg.color}`}>{run.status}</span>
                     </div>
                   </div>
@@ -350,7 +358,7 @@ export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string
               disabled={page === 0}
               className="text-zinc-500 hover:text-zinc-700"
             >
-              ← Prev
+              ← {t('dashboard.prev')}
             </Button>
             <span className="text-zinc-400 text-xs">
               {page + 1} / {Math.ceil(total / pageSize)}
@@ -362,7 +370,7 @@ export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string
               disabled={(page + 1) * pageSize >= total}
               className="text-zinc-500 hover:text-zinc-700"
             >
-              Next →
+              {t('dashboard.next')} →
             </Button>
           </div>
         )}
@@ -462,7 +470,7 @@ export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string
                           </span>
                         </div>
                         <span className="text-[10px] text-zinc-400 block mt-0.5">
-                          {timeAgo(repo.latest.createdAt)}
+                          {timeAgo(repo.latest.createdAt, t)}
                         </span>
                       </div>
                       <ArrowRight className="h-4 w-4 text-zinc-300 group-hover:text-blue-500 transition-colors" />

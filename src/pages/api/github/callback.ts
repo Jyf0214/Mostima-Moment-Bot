@@ -40,7 +40,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.redirect('/?install=error&reason=invalid_token');
     }
     adminGithubId = decoded.githubId;
-  } catch {
+  } catch (err) {
+    logger.warn('[GitHub Callback] JWT verification failed:', err);
     return res.redirect('/?install=error&reason=invalid_token');
   }
 
@@ -94,18 +95,37 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           });
         } else {
           await prisma.gitHubInstallation.create({
-            data: { installationId: installId, accountLogin: 'unknown', accountType: 'Unknown', accountId: 0, adminId: admin.id },
+            data: {
+              installationId: installId,
+              accountLogin: 'unknown',
+              accountType: 'Unknown',
+              accountId: 0,
+              adminId: admin.id,
+            },
           });
         }
-      } catch {
+      } catch (err) {
+        logger.warn(`[GitHub Callback] Failed to fetch installation ${installId} from API:`, err);
         await prisma.gitHubInstallation.create({
-          data: { installationId: installId, accountLogin: 'unknown', accountType: 'Unknown', accountId: 0, adminId: admin.id },
+          data: {
+            installationId: installId,
+            accountLogin: 'unknown',
+            accountType: 'Unknown',
+            accountId: 0,
+            adminId: admin.id,
+          },
         });
       }
     } catch (error) {
       logger.error('Failed to fetch installation details:', error);
       await prisma.gitHubInstallation.create({
-        data: { installationId: installId, accountLogin: 'unknown', accountType: 'Unknown', accountId: 0, adminId: admin.id },
+        data: {
+          installationId: installId,
+          accountLogin: 'unknown',
+          accountType: 'Unknown',
+          accountId: 0,
+          adminId: admin.id,
+        },
       });
     }
   }

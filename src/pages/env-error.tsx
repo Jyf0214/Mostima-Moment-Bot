@@ -100,7 +100,7 @@ export default function EnvErrorPage() {
             <ProCard>
               <StatusCard
                 icon={<X className="h-4 w-4" />}
-                title="Error"
+                title={t('dashboard.error')}
                 status={error}
                 statusType="error"
               />

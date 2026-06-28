@@ -1,5 +1,5 @@
 import { logger } from '../logger';
-import { execSync, spawn, type ChildProcess } from 'child_process';
+import { execFileSync } from 'child_process';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import crypto from 'crypto';
@@ -165,19 +165,16 @@ export async function runQwen(prompt: string, options: RunOptions = {}): Promise
     return args;
   }
 
-  // 执行单次 qwen 调用
+  // 执行单次 qwen 调用（使用 execFileSync 避免 shell 展开风险）
   function executeQwen(args: string[]): { ok: boolean; output: string } {
     try {
-      const result = execSync(
-        `qwen ${args.map((a) => `'${a.replace(/'/g, "'\\''")}'`).join(' ')}`,
-        {
-          env,
-          timeout,
-          maxBuffer: 50 * 1024 * 1024,
-          stdio: ['pipe', 'pipe', 'pipe'],
-          encoding: 'utf-8',
-        }
-      );
+      const result = execFileSync('qwen', args, {
+        env,
+        timeout,
+        maxBuffer: 50 * 1024 * 1024,
+        stdio: ['pipe', 'pipe', 'pipe'],
+        encoding: 'utf-8',
+      });
       return { ok: true, output: result };
     } catch (error) {
       const err = error as { stdout?: string; stderr?: string; message?: string };

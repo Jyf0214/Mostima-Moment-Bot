@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import fs from 'fs';
 import { getConfig } from '@/lib/db';
+import { logger } from '@/lib/logger';
 
 // 缓存 slug，避免重复 API 调用
 let cachedSlug: string | null = null;
@@ -30,8 +31,9 @@ export async function getPrivateKey(): Promise<string> {
   if (privateKeyPath) {
     try {
       return fs.readFileSync(privateKeyPath, 'utf8');
-    } catch {
+    } catch (err) {
       // 文件读取失败，继续尝试数据库
+      logger.warn(`[GitHub Auth] Failed to read private key from file ${privateKeyPath}:`, err);
     }
   }
 
@@ -114,8 +116,9 @@ export async function fetchBotSlug(): Promise<string> {
         return app.slug;
       }
     }
-  } catch {
+  } catch (err) {
     // API 调用失败，返回空
+    logger.warn('[GitHub Auth] Failed to fetch bot slug from API:', err);
   }
 
   return '';

@@ -125,7 +125,28 @@
     "testConnectionDesc": "Check GitHub App configuration and communication status",
     "searchRepos": "Search repos by name or description...",
     "searchResults": "Found {{count}} repos",
-    "noResults": "No matching repos found"
+    "noResults": "No matching repos found",
+    "error": "Error",
+    "prev": "Prev",
+    "next": "Next"
+  },
+  "workflowLogs": {
+    "statusFilter": "Status",
+    "eventFilter": "Event",
+    "statusSuccess": "Success",
+    "statusFailure": "Failure",
+    "statusRunning": "Running",
+    "statusPending": "Pending",
+    "statusCancelled": "Cancelled",
+    "eventIssueLabel": "Issue (Label)",
+    "eventIssueComment": "Issue (Comment)",
+    "eventSecurityAudit": "Security Audit"
+  },
+  "common": {
+    "secondsAgo": "{{count}}s ago",
+    "minutesAgo": "{{count}}m ago",
+    "hoursAgo": "{{count}}h ago",
+    "daysAgo": "{{count}}d ago"
   },
   "sidebar": {
     "overview": "Overview",
@@ -340,7 +361,13 @@
     "gradientSunset": "Sunset Orange",
     "gradientRose": "Rose Pink",
     "gradientIndigo": "Deep Indigo",
-    "gradientWhite": "Pure White"
+    "gradientWhite": "Pure White",
+    "saveConfig": "Save Config",
+    "saving": "Saving...",
+    "configSaveFailed": "Failed to save configuration",
+    "githubAppSection": "GitHub App",
+    "githubAppIdLabel": "GITHUB_APP_ID: {{appId}}",
+    "githubAppIdNotSet": "GITHUB_APP_ID not set in environment variables"
   },
   "api": {
     "methodNotAllowed": "Method not allowed",

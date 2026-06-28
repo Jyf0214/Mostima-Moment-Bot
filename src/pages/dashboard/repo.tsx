@@ -160,7 +160,7 @@ export default function RepoDetailPage() {
                   <GitBranch className="h-5 w-5 text-purple-400" />
                 </div>
                 <div>
-                  <h1 className="text-lg font-bold text-white">{repoName || 'Repository'}</h1>
+                  <h1 className="text-lg font-bold text-white">{repoName || t('sidebar.repos')}</h1>
                   <p className="text-white/40 text-xs">ID: {repoId}</p>
                 </div>
               </div>
