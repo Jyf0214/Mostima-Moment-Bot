@@ -13,7 +13,8 @@ interface MyDocumentProps extends DocumentInitialProps {
 
 class MyDocument extends Document<MyDocumentProps> {
   static async getInitialProps(ctx: DocumentContext): Promise<MyDocumentProps> {
-    const initialProps = await Document.getInitialProps(ctx);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const initialProps = await (Document as any).getInitialProps(ctx);
     // 从 Accept-Language 头解析首选语言，回退到 'en'
     const acceptLang = ctx.req?.headers?.['accept-language'];
     const lang = acceptLang?.split(',')[0]?.split('-')[0] || 'en';
