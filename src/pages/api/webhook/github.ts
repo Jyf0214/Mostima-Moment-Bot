@@ -21,6 +21,14 @@ export const config = {
   },
 };
 
+/**
+ * 从 webhook payload 中安全提取 repository.full_name
+ */
+function getRepoFullName(payload: Record<string, unknown>): string {
+  const repo = payload.repository as Record<string, unknown> | undefined;
+  return String(repo?.full_name || '');
+}
+
 interface IssueEventPayload {
   action: string;
   issue: { number: number; title: string; body: string };
@@ -126,12 +134,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           const prNumber = prPayload.pull_request.number;
           const baseBranch = prPayload.pull_request.base.ref;
           const headSha = prPayload.pull_request.head.sha;
-          const repo = String(
-            (payload as Record<string, unknown>).repository
-              ? ((payload as Record<string, unknown>).repository as Record<string, unknown>)
-                  .full_name || ''
-              : ''
-          );
+          const repo = getRepoFullName(payload);
 
           const auditRunId = await recordCiRun({
             repo,
@@ -184,12 +187,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           logger.info(`[Webhook] Issue auto-fix triggered for Issue #${issuePayload.issue.number}`);
 
           // 记录 bot 触发的工作流日志
-          const issueRepo = String(
-            (payload as Record<string, unknown>).repository
-              ? ((payload as Record<string, unknown>).repository as Record<string, unknown>)
-                  .full_name || ''
-              : ''
-          );
+          const issueRepo = getRepoFullName(payload);
           const issueRunId = await recordCiRun({
             repo: issueRepo,
             event: event === 'issues' ? 'issue_labeled' : 'issue_comment',

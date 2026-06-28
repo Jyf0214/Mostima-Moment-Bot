@@ -8,7 +8,7 @@ import {
   injectBranchProtection,
   createLspConfig,
 } from '../qwen/runner';
-import { buildScanPrompt, SCAN_RESUME_PROMPT, DEEP_SCAN_PROMPT } from '../qwen/prompts';
+import { buildScanPrompt, DEEP_SCAN_PROMPT } from '../qwen/prompts';
 import { validateBranchName } from '../git/workspace';
 
 /**
@@ -54,7 +54,8 @@ export async function runScheduledScan(workspaceDir: string): Promise<void> {
 
   try {
     execFileSync('git', ['checkout', '-b', scanBranch], { cwd: workspaceDir, stdio: 'pipe' });
-  } catch {
+  } catch (err) {
+    logger.warn(`[Scheduled Scanner] Branch ${scanBranch} already exists, checking out:`, err);
     execFileSync('git', ['checkout', scanBranch], { cwd: workspaceDir, stdio: 'pipe' });
   }
 
@@ -128,8 +129,8 @@ export async function runScheduledScan(workspaceDir: string): Promise<void> {
         ],
         { cwd: workspaceDir, stdio: 'pipe' }
       );
-    } catch {
-      // PR 已存在
+    } catch (err) {
+      logger.info(`[Scheduled Scanner] PR for scan already exists:`, err);
     }
 
     logger.info(`[Scheduled Scanner] Scan completed. Branch: ${scanBranch}`);

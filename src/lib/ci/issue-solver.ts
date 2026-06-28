@@ -119,13 +119,14 @@ export async function solveIssue(
         cwd: workspaceDir,
         stdio: 'pipe',
       });
-    } catch {
-      logger.warn('[Issue Solver] Merge conflict detected, leaving for Qwen to resolve');
+    } catch (err) {
+      logger.warn(`[Issue Solver] Merge conflict detected, leaving for Qwen to resolve:`, err);
     }
   } else {
     try {
       execFileSync('git', ['checkout', '-b', prBranch], { cwd: workspaceDir, stdio: 'pipe' });
-    } catch {
+    } catch (err) {
+      logger.warn(`[Issue Solver] Branch ${prBranch} already exists, checking out:`, err);
       execFileSync('git', ['checkout', prBranch], { cwd: workspaceDir, stdio: 'pipe' });
     }
   }
@@ -186,8 +187,8 @@ export async function solveIssue(
           ],
           { cwd: workspaceDir, stdio: 'pipe' }
         );
-      } catch {
-        // PR 已存在
+      } catch (err) {
+        logger.info(`[Issue Solver] PR for Issue #${issueNumber} already exists:`, err);
       }
     }
 
