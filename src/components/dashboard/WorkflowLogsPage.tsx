@@ -95,8 +95,18 @@ function shaShort(sha: string | null): string {
 export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string | null }) {
   const { t } = useTranslation();
 
+  // 从 URL 参数或 initialRepo 初始化，优先使用 URL 参数
+  const getInitialRepo = () => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const urlRepo = params.get('repo');
+      if (urlRepo) return urlRepo;
+    }
+    return initialRepo || null;
+  };
+
   // 列表/详情视图切换
-  const [selectedRepo, setSelectedRepo] = useState<string | null>(initialRepo || null);
+  const [selectedRepo, setSelectedRepo] = useState<string | null>(getInitialRepo);
 
   // === 列表视图状态 ===
   const [repos, setRepos] = useState<RepoSummary[]>([]);
@@ -199,10 +209,12 @@ export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string
     setPage(0);
     setFilterStatus('');
     setFilterEvent('');
+    window.history.replaceState({}, '', `/dashboard/logs?repo=${encodeURIComponent(repoFullName)}`);
   };
 
   const handleBack = () => {
     setSelectedRepo(null);
+    window.history.replaceState({}, '', '/dashboard/logs');
   };
 
   // === 详情视图 ===
