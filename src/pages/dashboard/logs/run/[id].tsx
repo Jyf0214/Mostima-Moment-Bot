@@ -19,6 +19,8 @@ import {
   ChevronRight,
   ChevronDown,
   SkipForward,
+  ChevronsUpDown,
+  ChevronsDownUp,
 } from 'lucide-react';
 
 interface RunDetail {
@@ -61,20 +63,73 @@ interface LogData {
 
 const STATUS_CONFIG: Record<
   string,
-  { icon: React.ElementType; color: string; bg: string; label: string }
+  { icon: React.ElementType; color: string; bg: string; label: string; ring: string }
 > = {
-  success: { icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50', label: 'Success' },
-  failure: { icon: XCircle, color: 'text-red-500', bg: 'bg-red-50', label: 'Failure' },
-  running: { icon: Loader2, color: 'text-blue-500', bg: 'bg-blue-50', label: 'Running' },
-  pending: { icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50', label: 'Pending' },
-  cancelled: { icon: XCircle, color: 'text-zinc-400', bg: 'bg-zinc-50', label: 'Cancelled' },
+  success: {
+    icon: CheckCircle2,
+    color: 'text-emerald-500',
+    bg: 'bg-emerald-50',
+    ring: 'ring-emerald-200',
+    label: 'Success',
+  },
+  failure: {
+    icon: XCircle,
+    color: 'text-red-500',
+    bg: 'bg-red-50',
+    ring: 'ring-red-200',
+    label: 'Failure',
+  },
+  running: {
+    icon: Loader2,
+    color: 'text-blue-500',
+    bg: 'bg-blue-50',
+    ring: 'ring-blue-200',
+    label: 'Running',
+  },
+  pending: {
+    icon: Clock,
+    color: 'text-amber-500',
+    bg: 'bg-amber-50',
+    ring: 'ring-amber-200',
+    label: 'Pending',
+  },
+  cancelled: {
+    icon: XCircle,
+    color: 'text-zinc-400',
+    bg: 'bg-zinc-50',
+    ring: 'ring-zinc-200',
+    label: 'Cancelled',
+  },
 };
 
-const CONCLUSION_CONFIG: Record<string, { icon: React.ElementType; color: string }> = {
-  success: { icon: CheckCircle2, color: 'text-emerald-500' },
-  failure: { icon: XCircle, color: 'text-red-500' },
-  skipped: { icon: SkipForward, color: 'text-zinc-400' },
-  cancelled: { icon: XCircle, color: 'text-zinc-400' },
+const CONCLUSION_CONFIG: Record<
+  string,
+  { icon: React.ElementType; color: string; bg: string; borderColor: string }
+> = {
+  success: {
+    icon: CheckCircle2,
+    color: 'text-emerald-500',
+    bg: 'bg-emerald-50',
+    borderColor: 'border-emerald-200',
+  },
+  failure: {
+    icon: XCircle,
+    color: 'text-red-500',
+    bg: 'bg-red-50',
+    borderColor: 'border-red-200',
+  },
+  skipped: {
+    icon: SkipForward,
+    color: 'text-zinc-400',
+    bg: 'bg-zinc-50',
+    borderColor: 'border-zinc-200',
+  },
+  cancelled: {
+    icon: XCircle,
+    color: 'text-zinc-400',
+    bg: 'bg-zinc-50',
+    borderColor: 'border-zinc-200',
+  },
 };
 
 function formatDuration(duration: number): string {
@@ -113,102 +168,293 @@ function parseStructuredLogs(logs: string): LogData | null {
   return null;
 }
 
-/** 单个步骤组件 */
-function StepItem({ step, defaultExpanded }: { step: LogStep; defaultExpanded?: boolean }) {
-  const [expanded, setExpanded] = useState(defaultExpanded ?? false);
+/** 带时间线的步骤组件 */
+function StepTimeline({
+  step,
+  index,
+  total,
+  expandedSet,
+  onToggle,
+}: {
+  step: LogStep;
+  index: number;
+  total: number;
+  expandedSet: Set<string>;
+  onToggle: (key: string) => void;
+}) {
+  const stepKey = `${step.name}-${index}`;
+  const expanded = expandedSet.has(stepKey);
   const conclusion = step.conclusion || (step.status === 'completed' ? 'success' : null);
   const cfg = conclusion ? CONCLUSION_CONFIG[conclusion] : null;
+  const isLast = index === total - 1;
+  const hasSubSteps = step.subSteps && step.subSteps.length > 0;
+  const hasOutput = !!step.output;
+  const isExpandable = hasSubSteps || hasOutput;
+
   const StatusIcon = cfg?.icon || (step.status === 'in_progress' ? Loader2 : Clock);
   const statusColor =
     cfg?.color || (step.status === 'in_progress' ? 'text-blue-500' : 'text-zinc-400');
 
   return (
-    <div className="border border-zinc-200 rounded-lg overflow-hidden">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-zinc-50 transition-colors"
-      >
-        <StatusIcon
-          className={`h-4 w-4 shrink-0 ${statusColor} ${step.status === 'in_progress' ? 'animate-spin' : ''}`}
-        />
-        {expanded ? (
-          <ChevronDown className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
-        ) : (
-          <ChevronRight className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
-        )}
-        <span className="text-sm font-medium text-zinc-900 flex-1 min-w-0 truncate">
-          {step.name}
-        </span>
-        {step.command && (
-          <code className="text-[10px] text-zinc-400 font-mono bg-zinc-100 px-1.5 py-0.5 rounded shrink-0 hidden sm:inline">
-            {step.command.length > 40 ? step.command.slice(0, 40) + '...' : step.command}
-          </code>
-        )}
-        {step.durationMs != null && (
-          <span className="text-[10px] text-zinc-400 shrink-0">
-            {formatDuration(step.durationMs)}
-          </span>
-        )}
-      </button>
-
-      {expanded && (
-        <div className="border-t border-zinc-100">
-          {/* 子步骤 */}
-          {step.subSteps && step.subSteps.length > 0 && (
-            <div className="px-4 py-2 space-y-1">
-              {step.subSteps.map((sub, i) => (
-                <StepItem key={`${sub.name}-${i}`} step={sub} defaultExpanded={false} />
-              ))}
-            </div>
-          )}
-          {/* 输出 */}
-          {step.output && (
-            <div className="px-4 pb-3">
-              <pre className="bg-zinc-50 border border-zinc-200 rounded-lg p-3 text-xs text-zinc-700 font-mono overflow-x-auto max-h-64 overflow-y-auto whitespace-pre-wrap break-all">
-                {step.output}
-              </pre>
-            </div>
-          )}
-          {/* 无输出提示 */}
-          {!step.output && (!step.subSteps || step.subSteps.length === 0) && (
-            <div className="px-4 pb-3 text-xs text-zinc-400">No output</div>
-          )}
+    <div className="relative flex gap-3">
+      {/* 时间线连接器 */}
+      <div className="flex flex-col items-center shrink-0">
+        {/* 状态圆点 */}
+        <div
+          className={`relative z-10 h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${
+            cfg ? cfg.bg : 'bg-zinc-100'
+          } ring-2 ${cfg ? cfg.borderColor : 'ring-zinc-200'}`}
+        >
+          <StatusIcon
+            className={`h-4 w-4 ${statusColor} ${
+              step.status === 'in_progress' ? 'animate-spin' : ''
+            }`}
+          />
         </div>
-      )}
+        {/* 连接线 */}
+        {!isLast && (
+          <div
+            className={`w-0.5 flex-1 min-h-4 ${
+              conclusion === 'failure' ? 'bg-red-200' : 'bg-zinc-200'
+            }`}
+          />
+        )}
+      </div>
+
+      {/* 步骤内容 */}
+      <div className={`flex-1 pb-4 ${isLast ? 'pb-0' : ''}`}>
+        {/* 步骤头部 */}
+        <button
+          onClick={() => isExpandable && onToggle(stepKey)}
+          className={`w-full text-left group ${isExpandable ? 'cursor-pointer' : 'cursor-default'}`}
+        >
+          <div
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+              isExpandable ? 'hover:bg-zinc-50 group-hover:bg-zinc-50' : ''
+            }`}
+          >
+            {/* 展开/折叠箭头 */}
+            {isExpandable ? (
+              expanded ? (
+                <ChevronDown className="h-4 w-4 text-zinc-400 shrink-0" />
+              ) : (
+                <ChevronRight className="h-4 w-4 text-zinc-400 shrink-0" />
+              )
+            ) : (
+              <div className="w-4 shrink-0" />
+            )}
+
+            {/* 步骤名称 */}
+            <span
+              className={`text-sm font-medium flex-1 min-w-0 truncate ${
+                conclusion === 'failure'
+                  ? 'text-red-700'
+                  : conclusion === 'success'
+                    ? 'text-zinc-900'
+                    : 'text-zinc-600'
+              }`}
+            >
+              {step.name}
+            </span>
+
+            {/* 命令标签 */}
+            {step.command && (
+              <code className="text-[10px] text-zinc-400 font-mono bg-zinc-100 px-2 py-0.5 rounded shrink-0 hidden sm:inline max-w-[200px] truncate">
+                {step.command}
+              </code>
+            )}
+
+            {/* 耗时 */}
+            {step.durationMs != null && step.durationMs > 0 && (
+              <span className="text-[10px] text-zinc-400 shrink-0 tabular-nums">
+                {formatDuration(step.durationMs)}
+              </span>
+            )}
+
+            {/* 状态徽章 */}
+            {conclusion && (
+              <span
+                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium shrink-0 ${
+                  cfg ? `${cfg.bg} ${cfg.color}` : 'bg-zinc-100 text-zinc-500'
+                }`}
+              >
+                {conclusion === 'success'
+                  ? 'OK'
+                  : conclusion === 'failure'
+                    ? 'FAIL'
+                    : conclusion === 'skipped'
+                      ? 'SKIP'
+                      : conclusion}
+              </span>
+            )}
+          </div>
+        </button>
+
+        {/* 展开内容 */}
+        {expanded && (
+          <div className="ml-2 mt-1 space-y-2">
+            {/* 子步骤 */}
+            {hasSubSteps && (
+              <div className="space-y-0">
+                {step.subSteps!.map((sub, i) => (
+                  <StepTimeline
+                    key={`${sub.name}-${i}`}
+                    step={sub}
+                    index={i}
+                    total={step.subSteps!.length}
+                    expandedSet={expandedSet}
+                    onToggle={onToggle}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* 输出 */}
+            {hasOutput && (
+              <div className="rounded-lg border border-zinc-200 bg-zinc-50 overflow-hidden">
+                <div className="flex items-center justify-between px-3 py-1.5 border-b border-zinc-200 bg-zinc-100/50">
+                  <span className="text-[10px] text-zinc-500 font-medium">Output</span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigator.clipboard.writeText(step.output || '');
+                    }}
+                    className="text-[10px] text-zinc-400 hover:text-zinc-600 transition-colors"
+                  >
+                    <Copy className="h-3 w-3" />
+                  </button>
+                </div>
+                <pre className="p-3 text-xs text-zinc-700 font-mono overflow-x-auto max-h-64 overflow-y-auto whitespace-pre-wrap break-all leading-relaxed">
+                  {step.output}
+                </pre>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 /** 结构化日志渲染 */
-function StructuredLogs({ logData }: { logData: LogData }) {
+function StructuredLogs({
+  logData,
+  onCopy,
+  copied,
+}: {
+  logData: LogData;
+  onCopy: () => void;
+  copied: boolean;
+}) {
+  const [expandedSet, setExpandedSet] = useState<Set<string>>(new Set());
+  const [allExpanded, setAllExpanded] = useState(false);
+
   const successCount = logData.steps.filter((s) => s.conclusion === 'success').length;
   const failCount = logData.steps.filter((s) => s.conclusion === 'failure').length;
+  const skipCount = logData.steps.filter((s) => s.conclusion === 'skipped').length;
+
+  const toggleAll = () => {
+    if (allExpanded) {
+      setExpandedSet(new Set());
+    } else {
+      const all = new Set<string>();
+      const collect = (steps: LogStep[], prefix = '') => {
+        steps.forEach((s, i) => {
+          const key = `${s.name}-${prefix}${i}`;
+          if (s.output || (s.subSteps && s.subSteps.length > 0)) {
+            all.add(key);
+          }
+          if (s.subSteps) collect(s.subSteps, `${key}-`);
+        });
+      };
+      collect(logData.steps);
+      setExpandedSet(all);
+    }
+    setAllExpanded(!allExpanded);
+  };
+
+  const toggleStep = (key: string) => {
+    setExpandedSet((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
 
   return (
     <div>
-      {/* 摘要 */}
-      <div className="flex items-center gap-4 mb-3 text-xs">
-        <span className="text-zinc-500">
-          {logData.steps.length} {logData.steps.length === 1 ? 'step' : 'steps'}
-        </span>
-        {successCount > 0 && (
-          <span className="text-emerald-500 flex items-center gap-1">
-            <CheckCircle2 className="h-3 w-3" /> {successCount}
+      {/* 摘要栏 */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3 text-xs">
+          <span className="text-zinc-500 font-medium">
+            {logData.steps.length} {logData.steps.length === 1 ? 'step' : 'steps'}
           </span>
-        )}
-        {failCount > 0 && (
-          <span className="text-red-500 flex items-center gap-1">
-            <XCircle className="h-3 w-3" /> {failCount}
-          </span>
-        )}
+          {successCount > 0 && (
+            <span className="text-emerald-500 flex items-center gap-1">
+              <CheckCircle2 className="h-3 w-3" /> {successCount} passed
+            </span>
+          )}
+          {failCount > 0 && (
+            <span className="text-red-500 flex items-center gap-1">
+              <XCircle className="h-3 w-3" /> {failCount} failed
+            </span>
+          )}
+          {skipCount > 0 && (
+            <span className="text-zinc-400 flex items-center gap-1">
+              <SkipForward className="h-3 w-3" /> {skipCount} skipped
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggleAll}
+            className="inline-flex items-center gap-1 text-[10px] text-zinc-500 hover:text-zinc-700 transition-colors"
+          >
+            {allExpanded ? (
+              <>
+                <ChevronsDownUp className="h-3 w-3" />
+                Collapse all
+              </>
+            ) : (
+              <>
+                <ChevronsUpDown className="h-3 w-3" />
+                Expand all
+              </>
+            )}
+          </button>
+          <button
+            onClick={onCopy}
+            className="inline-flex items-center gap-1 text-[10px] text-zinc-500 hover:text-zinc-700 transition-colors"
+          >
+            {copied ? (
+              <>
+                <Check className="h-3 w-3 text-emerald-500" />
+                Copied
+              </>
+            ) : (
+              <>
+                <Copy className="h-3 w-3" />
+                Copy JSON
+              </>
+            )}
+          </button>
+        </div>
       </div>
-      {/* 步骤列表 */}
-      <div className="space-y-2">
+
+      {/* 步骤时间线 */}
+      <div>
         {logData.steps.map((step, i) => (
-          <StepItem
+          <StepTimeline
             key={`${step.name}-${i}`}
             step={step}
-            defaultExpanded={step.conclusion === 'failure' || logData.steps.length <= 5}
+            index={i}
+            total={logData.steps.length}
+            expandedSet={expandedSet}
+            onToggle={toggleStep}
           />
         ))}
       </div>
@@ -314,7 +560,7 @@ export default function RunDetailPage() {
         <ProCard className="bg-white border-zinc-200 mb-6" padding="p-6">
           <div className="flex items-start gap-4">
             <div
-              className={`h-12 w-12 rounded-xl ${cfg.bg} flex items-center justify-center shrink-0`}
+              className={`h-12 w-12 rounded-xl ${cfg.bg} flex items-center justify-center shrink-0 ring-2 ${cfg.ring}`}
             >
               <StatusIcon
                 className={`h-6 w-6 ${cfg.color} ${run.status === 'running' ? 'animate-spin' : ''}`}
@@ -424,32 +670,34 @@ export default function RunDetailPage() {
               <ScrollText className="h-4 w-4 text-cyan-500" />
               <h3 className="text-zinc-900 font-semibold">{t('repoDetail.logs')}</h3>
             </div>
-            {run.logs && (
-              <button
-                onClick={copyLogs}
-                className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-700 transition-colors"
-              >
-                {copied ? (
-                  <>
-                    <Check className="h-3.5 w-3.5 text-emerald-500" />
-                    {t('settings.copied')}
-                  </>
-                ) : (
-                  <>
-                    <Copy className="h-3.5 w-3.5" />
-                    {t('settings.copy')}
-                  </>
-                )}
-              </button>
-            )}
           </div>
           {run.logs ? (
             logData ? (
-              <StructuredLogs logData={logData} />
+              <StructuredLogs logData={logData} onCopy={copyLogs} copied={copied} />
             ) : (
-              <pre className="bg-zinc-50 border border-zinc-200 rounded-lg p-4 text-xs text-zinc-700 font-mono overflow-x-auto max-h-96 overflow-y-auto whitespace-pre-wrap break-all">
-                {run.logs}
-              </pre>
+              <div>
+                <div className="flex items-center justify-end mb-2">
+                  <button
+                    onClick={copyLogs}
+                    className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-700 transition-colors"
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="h-3.5 w-3.5 text-emerald-500" />
+                        {t('settings.copied')}
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-3.5 w-3.5" />
+                        {t('settings.copy')}
+                      </>
+                    )}
+                  </button>
+                </div>
+                <pre className="bg-zinc-50 border border-zinc-200 rounded-lg p-4 text-xs text-zinc-700 font-mono overflow-x-auto max-h-96 overflow-y-auto whitespace-pre-wrap break-all">
+                  {run.logs}
+                </pre>
+              </div>
             )
           ) : (
             <p className="text-zinc-400 text-sm">{t('repoDetail.noLogs')}</p>
