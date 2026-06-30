@@ -14,6 +14,7 @@ interface OverviewPageProps {
   onNavigateToEnv: () => void;
 }
 
+/* 已知限制：当前 Dashboard 切换频率低，未使用 React.memo 包裹；若后续出现性能瓶颈，可考虑 memo 优化 */
 export default function OverviewPage({
   repos,
   reposLoading,

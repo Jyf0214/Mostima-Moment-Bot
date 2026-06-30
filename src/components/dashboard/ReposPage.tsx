@@ -10,6 +10,7 @@ interface Props {
   reposLoading: boolean;
 }
 
+/* 已知限制：当前仓库列表数据量小，未使用 React.memo 优化；若列表频繁重渲染，可考虑 memo 包裹 */
 export default function ReposPage({ repos, reposLoading }: Props) {
   const { t } = useTranslation();
 
@@ -41,6 +42,7 @@ export default function ReposPage({ repos, reposLoading }: Props) {
           </div>
         </ProCard>
       ) : (
+        /* 已知限制：当前仓库数量有限，.map 直接渲染即可；若仓库数量增长至上百，应考虑虚拟化列表 */
         allRepos.map((repo) => (
           <ProCard key={repo.id} className="bg-white border-zinc-200" padding="p-4">
             <div className="flex items-center justify-between">
