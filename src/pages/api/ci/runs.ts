@@ -4,7 +4,6 @@ import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
 import { verifyAuthToken } from '@/lib/auth-utils';
 import { getQueryParam, getQueryParamNumber, getQueryParamBoolean } from '@/lib/api-utils';
-import type { CiRunStatus } from '@prisma/client';
 
 /**
  * CI 运行日志
@@ -114,7 +113,7 @@ async function handleGetRepos(req: NextApiRequest, res: NextApiResponse) {
       string,
       {
         total: number;
-        latest: { status: CiRunStatus; createdAt: string; event: string; branch: string | null };
+        latest: { status: string; createdAt: string; event: string; branch: string | null };
       }
     >();
 
@@ -224,9 +223,9 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
     return res.status(400).json({ error: 'Invalid repo' });
   }
 
-  const validStatuses: CiRunStatus[] = ['pending', 'running', 'success', 'failure', 'cancelled'];
-  const runStatus: CiRunStatus = validStatuses.includes(status as CiRunStatus)
-    ? (status as CiRunStatus)
+  const validStatuses: string[] = ['pending', 'running', 'success', 'failure', 'cancelled'];
+  const runStatus: string = validStatuses.includes(status as string)
+    ? (status as string)
     : 'pending';
 
   try {

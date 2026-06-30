@@ -11,7 +11,7 @@ import { logger } from '../logger';
  * - 日志大小限制 50KB
  */
 
-import { Prisma, type CiRunStatus, type CiRunConclusion } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 
 /** 日志最大长度 */
@@ -27,8 +27,8 @@ export async function recordCiRun(params: {
   branch?: string;
   commitSha?: string;
   prNumber?: number;
-  status?: CiRunStatus;
-  conclusion?: CiRunConclusion;
+  status?: string;
+  conclusion?: string;
   triggeredBy?: string;
   ruleId?: string;
   checksRan?: string[];
@@ -45,7 +45,7 @@ export async function recordCiRun(params: {
         branch: params.branch?.slice(0, 255) || null,
         commitSha: params.commitSha?.slice(0, 40) || null,
         prNumber: params.prNumber || null,
-        status: params.status || ('running' as CiRunStatus),
+        status: params.status || 'running',
         conclusion: params.conclusion || null,
         triggeredBy: params.triggeredBy?.slice(0, 100) || null,
         ruleId: params.ruleId?.slice(0, 100) || null,
@@ -73,8 +73,8 @@ export async function recordCiRun(params: {
 export async function updateCiRun(
   runId: number,
   params: {
-    status?: CiRunStatus;
-    conclusion?: CiRunConclusion;
+    status?: string;
+    conclusion?: string;
     checksRan?: string[];
     logs?: string;
     duration?: number;

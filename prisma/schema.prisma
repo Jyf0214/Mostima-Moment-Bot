@@ -10,32 +10,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// 构建状态枚举
-enum BuildStatus {
-  pending
-  running
-  success
-  failure
-  cancelled
-}
-
-// CI 运行状态枚举
-enum CiRunStatus {
-  pending
-  running
-  success
-  failure
-  cancelled
-}
-
-// CI 运行结论枚举
-enum CiRunConclusion {
-  success
-  failure
-  cancelled
-  skipped
-}
-
 // 管理员表
 model Admin {
   id          Int      @id @default(autoincrement())
@@ -74,8 +48,8 @@ model CiRun {
   branch          String?
   commitSha       String?   @map("commit_sha")
   prNumber        Int?      @map("pr_number")
-  status          CiRunStatus @default(pending)
-  conclusion      CiRunConclusion?
+  status          String    @default("pending")
+  conclusion      String?
   triggeredBy     String?   @map("triggered_by")
   ruleId          String?   @map("rule_id")
   checksRan       String[]  @default([]) @map("checks_ran")
@@ -101,7 +75,7 @@ model Build {
   triggerUser   String    @map("trigger_user")
   startedAt     DateTime  @map("started_at")
   completedAt   DateTime? @map("completed_at")
-  status        BuildStatus
+  status        String
   totalDuration Int?      @map("total_duration")
   createdAt     DateTime  @default(now()) @map("created_at")
 
@@ -118,7 +92,7 @@ model BuildStep {
   id        Int      @id @default(autoincrement())
   buildId   Int      @map("build_id")
   stepName  String   @map("step_name")
-  status    BuildStatus
+  status    String
   duration  Int?
   exitCode  Int?     @map("exit_code")
   output    String?

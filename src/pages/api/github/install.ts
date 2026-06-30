@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import crypto from 'crypto';
 import { getInstallationUrl } from '@/lib/github/installation';
 import { setCookie } from '@/lib/cookie';
+import { requireAuth } from '@/lib/auth-utils';
 
 /**
  * GitHub App 安装入口
@@ -14,11 +15,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // 验证用户已登录
-  const token = req.cookies.auth_token;
-  if (!token) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
+  // 验证用户已登录（完整 JWT 签名验证）
+  const payload = await requireAuth(req, res);
+  if (!payload) return;
 
   // 生成 CSRF state
   const state = crypto.randomUUID();
