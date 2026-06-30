@@ -28,6 +28,12 @@ export default function SettingsPage() {
   const [heroSaving, setHeroSaving] = useState(false);
   const [heroMsg, setHeroMsg] = useState<string | null>(null);
 
+  const [qwenSettings, setQwenSettings] = useState('');
+  const [qwenSaving, setQwenSaving] = useState(false);
+  const [qwenMsg, setQwenMsg] = useState<string | null>(null);
+  const [qwenMsgType, setQwenMsgType] = useState<'success' | 'error'>('success');
+  const [qwenConfigured, setQwenConfigured] = useState(false);
+
   const GRADIENT_PRESETS = [
     { labelKey: 'settings.gradientBluePurple', value: 'from-blue-50 via-transparent to-purple-50' },
     { labelKey: 'settings.gradientMint', value: 'from-emerald-50 via-teal-50 to-cyan-50' },
@@ -69,10 +75,23 @@ export default function SettingsPage() {
     }
   };
 
+  const fetchQwenSettings = async () => {
+    try {
+      const res = await fetch('/api/qwen-settings');
+      if (res.ok) {
+        const data = await res.json();
+        setQwenConfigured(data.configured);
+      }
+    } catch {
+      /* default */
+    }
+  };
+
   useEffect(() => {
     checkPrivateKey();
     fetchBotInfo();
     fetchHeroConfig();
+    fetchQwenSettings();
   }, []);
 
   const saveHeroConfig = async () => {
@@ -109,6 +128,32 @@ export default function SettingsPage() {
       setHeroMsg(t('settings.configSaveFailed'));
     } finally {
       setHeroSaving(false);
+    }
+  };
+
+  const saveQwenSettings = async () => {
+    setQwenSaving(true);
+    setQwenMsg(null);
+    try {
+      const res = await fetch('/api/qwen-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings: qwenSettings }),
+      });
+      if (res.ok) {
+        setQwenMsgType('success');
+        setQwenMsg(t('settings.qwenSettingsSaved'));
+        setQwenConfigured(!!qwenSettings.trim());
+      } else {
+        const err = await res.json();
+        setQwenMsgType('error');
+        setQwenMsg(err.error || t('settings.qwenSettingsSaveFailed'));
+      }
+    } catch {
+      setQwenMsgType('error');
+      setQwenMsg(t('settings.qwenSettingsSaveFailed'));
+    } finally {
+      setQwenSaving(false);
     }
   };
 
@@ -286,6 +331,73 @@ export default function SettingsPage() {
           {heroSaving ? t('settings.saving') : t('settings.saveConfig')}
         </button>
         {heroMsg && <p className="mt-2 text-xs text-zinc-500">{heroMsg}</p>}
+      </ProCard>
+
+      <ProCard className="bg-white border-zinc-200" padding="p-5">
+        <div className="flex items-center gap-3 mb-4">
+          <Settings className="h-5 w-5 text-purple-500" />
+          <h3 className="text-zinc-900 font-medium">{t('settings.qwenSettings')}</h3>
+        </div>
+        <div className="mb-3">
+          <div className="flex items-center gap-2 mb-2">
+            {qwenConfigured ? (
+              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+            ) : (
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
+            )}
+            <span className="text-sm text-zinc-700">
+              {qwenConfigured
+                ? t('settings.qwenSettingsConfigured')
+                : t('settings.qwenSettingsNotConfigured')}
+            </span>
+          </div>
+        </div>
+        <div className="mb-4">
+          <p className="text-xs font-medium text-zinc-600 mb-2">
+            {t('settings.qwenSettingsJsonLabel')}
+          </p>
+          <textarea
+            value={qwenSettings}
+            onChange={(e) => setQwenSettings(e.target.value)}
+            placeholder={t('settings.qwenSettingsPlaceholder')}
+            className="w-full h-40 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-900 font-mono resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            spellCheck={false}
+          />
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={saveQwenSettings}
+            disabled={qwenSaving}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
+          >
+            {qwenSaving ? t('settings.saving') : t('settings.saveConfig')}
+          </button>
+          {qwenConfigured && (
+            <button
+              onClick={() => {
+                setQwenSettings('');
+                saveQwenSettings();
+              }}
+              disabled={qwenSaving}
+              className="rounded-lg bg-zinc-100 px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-200 transition-colors disabled:opacity-50"
+            >
+              {t('settings.clearConfig')}
+            </button>
+          )}
+        </div>
+        {qwenMsg && (
+          <div
+            className={`mt-3 flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${qwenMsgType === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}
+          >
+            {qwenMsgType === 'success' ? (
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+            ) : (
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+            )}
+            {qwenMsg}
+          </div>
+        )}
+        <p className="mt-3 text-xs text-zinc-500">{t('settings.qwenSettingsHint')}</p>
       </ProCard>
     </div>
   );

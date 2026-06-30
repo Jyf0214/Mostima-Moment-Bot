@@ -3,6 +3,7 @@ import { execFileSync } from 'child_process';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import crypto from 'crypto';
+import { prisma } from '../prisma';
 import type { LogCollector } from '../ci/log-collector';
 
 const QWEN_DIR = join(process.env.HOME || '/root', '.qwen');
@@ -53,13 +54,42 @@ export function getOrCreateSessionId(key: string): { sessionId: string; isResume
 
 /**
  * 配置 Qwen Settings
+ * 优先从数据库读取，其次从环境变量读取
  */
-export function configureSettings(): void {
+export async function configureSettings(): Promise<void> {
   ensureQwenDir();
   const settingsPath = join(QWEN_DIR, 'settings.json');
-  const settingsJson = process.env.QWEN_SETTINGS_JSON;
-  if (settingsJson && !existsSync(settingsPath)) {
+
+  // 如果 settings.json 已存在且非空，跳过配置
+  if (existsSync(settingsPath)) {
+    const existing = readFileSync(settingsPath, 'utf-8').trim();
+    if (existing && existing !== '{}') {
+      return;
+    }
+  }
+
+  let settingsJson: string | null = null;
+
+  // 优先从数据库读取
+  try {
+    const config = await prisma.appConfig.findUnique({
+      where: { configKey: 'qwen_settings' },
+    });
+    if (config?.configValue && config.configValue.trim()) {
+      settingsJson = config.configValue;
+    }
+  } catch (error) {
+    logger.warn('[Qwen Runner] Failed to read qwen_settings from database:', error);
+  }
+
+  // 其次从环境变量读取
+  if (!settingsJson) {
+    settingsJson = process.env.QWEN_SETTINGS_JSON || null;
+  }
+
+  if (settingsJson && settingsJson.trim()) {
     writeFileSync(settingsPath, settingsJson, 'utf-8');
+    logger.info('[Qwen Runner] Settings configured successfully');
   }
 }
 
@@ -129,7 +159,7 @@ export async function runQwen(prompt: string, options: RunOptions = {}): Promise
   } = options;
 
   ensureQwenDir();
-  configureSettings();
+  await configureSettings();
 
   const sessionId = providedSessionId || crypto.randomUUID();
   const isResume = forceResume ?? false;

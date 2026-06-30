@@ -384,7 +384,16 @@
     "configSaveFailed": "Failed to save configuration",
     "githubAppSection": "GitHub App",
     "githubAppIdLabel": "GITHUB_APP_ID: {{appId}}",
-    "githubAppIdNotSet": "GITHUB_APP_ID not set in environment variables"
+    "githubAppIdNotSet": "GITHUB_APP_ID not set in environment variables",
+    "qwenSettings": "Qwen Configuration",
+    "qwenSettingsConfigured": "Qwen configuration is active",
+    "qwenSettingsNotConfigured": "Qwen configuration not set",
+    "qwenSettingsJsonLabel": "Qwen Settings (JSON format)",
+    "qwenSettingsPlaceholder": "{\n  \"model\": \"qwen-plus\",\n  \"apiKey\": \"sk-xxx\"\n}",
+    "qwenSettingsSaved": "Qwen configuration saved successfully",
+    "qwenSettingsSaveFailed": "Failed to save Qwen configuration",
+    "clearConfig": "Clear Config",
+    "qwenSettingsHint": "Configure Qwen AI model settings for issue resolution and security audits. Requires valid JSON format."
   },
   "api": {
     "methodNotAllowed": "Method not allowed",
