@@ -1,5 +1,5 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import jwt from 'jsonwebtoken';
+import { createMockReq, createMockRes, createTestToken } from './helpers';
 
 const { mockPrisma } = vi.hoisted(() => ({
   mockPrisma: {
@@ -24,38 +24,13 @@ function mockReqRes(
     headers?: Record<string, string>;
   } = {}
 ) {
-  const query = opts.query || {};
-  const body = opts.body || {};
-  const cookies = opts.cookies || {};
-
-  let statusCode = 200;
-  let responseData: unknown = null;
-
-  const req = {
-    method,
-    query,
-    body,
-    cookies,
-    headers: opts.headers || {},
-    [Symbol.asyncIterator]: async function* () {
-      yield Buffer.from(JSON.stringify(body));
-    },
-  } as any;
-
-  const res = {
-    status: (code: number) => {
-      statusCode = code;
-      return res;
-    },
-    json: (data: unknown) => {
-      responseData = data;
-      return res;
-    },
-    _getStatusCode: () => statusCode,
-    _getData: () => JSON.stringify(responseData),
-  } as any;
-
-  return { req, res, getResponse: () => ({ statusCode, data: responseData }) };
+  const req = createMockReq({ method, ...opts });
+  const res = createMockRes();
+  return {
+    req,
+    res,
+    getResponse: () => ({ statusCode: res._getStatusCode(), data: res._getData() }),
+  };
 }
 
 describe('/api/ci/runs API', () => {
@@ -98,7 +73,7 @@ describe('/api/ci/runs API', () => {
       ]);
       mockPrisma.ciRun.count.mockResolvedValue(10);
 
-      const token = jwt.sign({ githubId: 12345 }, process.env.JWT_SECRET!);
+      const token = createTestToken({ githubId: 12345 });
       const { req, res } = mockReqRes('GET', {
         cookies: { auth_token: token },
       });
@@ -119,7 +94,7 @@ describe('/api/ci/runs API', () => {
       mockPrisma.ciRun.findMany.mockResolvedValue(mockRuns);
       mockPrisma.ciRun.count.mockResolvedValue(2);
 
-      const token = jwt.sign({ githubId: 12345 }, process.env.JWT_SECRET!);
+      const token = createTestToken({ githubId: 12345 });
       const { req, res } = mockReqRes('GET', {
         query: { repo: 'owner/repo' },
         cookies: { auth_token: token },
@@ -139,7 +114,7 @@ describe('/api/ci/runs API', () => {
       mockPrisma.ciRun.findMany.mockResolvedValue([]);
       mockPrisma.ciRun.count.mockResolvedValue(100);
 
-      const token = jwt.sign({ githubId: 12345 }, process.env.JWT_SECRET!);
+      const token = createTestToken({ githubId: 12345 });
       const { req, res } = mockReqRes('GET', {
         query: { repo: 'owner/repo', limit: '10', offset: '20' },
         cookies: { auth_token: token },
@@ -160,7 +135,7 @@ describe('/api/ci/runs API', () => {
       mockPrisma.ciRun.findMany.mockResolvedValue([]);
       mockPrisma.ciRun.count.mockResolvedValue(0);
 
-      const token = jwt.sign({ githubId: 12345 }, process.env.JWT_SECRET!);
+      const token = createTestToken({ githubId: 12345 });
       const { req, res } = mockReqRes('GET', {
         query: { repo: 'owner/repo', limit: '500' },
         cookies: { auth_token: token },
@@ -176,7 +151,7 @@ describe('/api/ci/runs API', () => {
       mockPrisma.ciRun.findMany.mockResolvedValue([]);
       mockPrisma.ciRun.count.mockResolvedValue(0);
 
-      const token = jwt.sign({ githubId: 12345 }, process.env.JWT_SECRET!);
+      const token = createTestToken({ githubId: 12345 });
       const { req, res } = mockReqRes('GET', {
         query: { repo: 'owner/repo', offset: '-5' },
         cookies: { auth_token: token },
@@ -192,7 +167,7 @@ describe('/api/ci/runs API', () => {
       mockPrisma.ciRun.findMany.mockResolvedValue([{ id: 1 }]);
       mockPrisma.ciRun.count.mockResolvedValue(1);
 
-      const token = jwt.sign({ githubId: 12345 }, process.env.JWT_SECRET!);
+      const token = createTestToken({ githubId: 12345 });
       const { req, res } = mockReqRes('GET', {
         query: { repo: 'owner/repo' },
         cookies: { auth_token: token },
@@ -207,7 +182,7 @@ describe('/api/ci/runs API', () => {
     it('数据库查询失败时应返回 500', async () => {
       mockPrisma.ciRun.findMany.mockRejectedValue(new Error('DB error'));
 
-      const token = jwt.sign({ githubId: 12345 }, process.env.JWT_SECRET!);
+      const token = createTestToken({ githubId: 12345 });
       const { req, res } = mockReqRes('GET', {
         query: { repo: 'owner/repo' },
         cookies: { auth_token: token },
@@ -233,7 +208,7 @@ describe('/api/ci/runs API', () => {
       mockPrisma.ciRun.findMany.mockResolvedValue([]);
       mockPrisma.ciRun.count.mockResolvedValue(0);
 
-      const token = jwt.sign({ githubId: 12345 }, process.env.JWT_SECRET!);
+      const token = createTestToken({ githubId: 12345 });
       const { req, res } = mockReqRes('GET', {
         query: { repo: 'owner/repo' },
         cookies: { auth_token: token },
@@ -418,7 +393,7 @@ describe('/api/ci/runs API', () => {
     it('应该通过 JWT cookie 认证', async () => {
       mockPrisma.ciRun.create.mockResolvedValue({ id: 1 });
 
-      const token = jwt.sign({ githubId: 12345 }, process.env.JWT_SECRET!);
+      const token = createTestToken({ githubId: 12345 });
       const { req, res } = mockReqRes('POST', {
         body: { repo: 'owner/repo', event: 'push' },
         cookies: { auth_token: token },

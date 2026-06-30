@@ -69,7 +69,7 @@ export function checkRateLimit(
 export function getRateLimitInfo(
   key: string,
   maxAttempts: number = 10,
-  windowMs: number = 60_000
+  _windowMs: number = 60_000
 ): { remaining: number; resetInMs: number } {
   const now = Date.now();
   const entry = store.get(key);

@@ -13,7 +13,7 @@ describe('认证流程', () => {
       };
 
       const token = jwt.sign(adminPayload, JWT_SECRET, { expiresIn: '7d' });
-      const decoded = jwt.verify(token, JWT_SECRET) as any;
+      const decoded = jwt.verify(token, JWT_SECRET) as Record<string, unknown>;
 
       expect(decoded.isAdmin).toBe(true);
       expect(decoded.githubId).toBe(12345);
@@ -29,7 +29,7 @@ describe('认证流程', () => {
       };
 
       const token = jwt.sign(userPayload, JWT_SECRET, { expiresIn: '7d' });
-      const decoded = jwt.verify(token, JWT_SECRET) as any;
+      const decoded = jwt.verify(token, JWT_SECRET) as Record<string, unknown>;
 
       expect(decoded.isAdmin).toBe(false);
     });

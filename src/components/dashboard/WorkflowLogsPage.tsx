@@ -176,7 +176,8 @@ export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string
 
   useEffect(() => {
     if (!selectedRepo) fetchRepos();
-  }, [selectedRepo]); // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchRepos 变化不应触发重新获取
+  }, [selectedRepo]);
 
   // 同步外部传入的 initialRepo 变化
   useEffect(() => {
@@ -186,11 +187,12 @@ export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string
       setFilterStatus('');
       setFilterEvent('');
     }
-  }, [initialRepo]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [initialRepo]);
 
   useEffect(() => {
     if (selectedRepo) fetchRuns();
-  }, [selectedRepo]); // eslint-disable-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchRuns 变化不应触发重新获取
+  }, [selectedRepo]);
 
   const handleViewDetail = (repoFullName: string) => {
     setSelectedRepo(repoFullName);

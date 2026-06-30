@@ -21,7 +21,7 @@ export default function FormField({
   type = 'text',
   placeholder,
   options,
-  rows = 4,
+  rows: _rows,
   className = '',
 }: FormFieldProps) {
   return (

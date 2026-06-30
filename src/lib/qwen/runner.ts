@@ -129,7 +129,7 @@ export async function runQwen(prompt: string, options: RunOptions = {}): Promise
   configureSettings();
 
   const sessionId = providedSessionId || crypto.randomUUID();
-  let isResume = forceResume ?? false;
+  const isResume = forceResume ?? false;
   let attempt = 1;
   let success = false;
   let triggerCompression = false;

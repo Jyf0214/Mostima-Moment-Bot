@@ -7,7 +7,7 @@
 
 import { getBotMention } from '@/lib/ci/config';
 
-export function buildIssueFixInitialPrompt(branch: string, issueNumber: number): string {
+export function buildIssueFixInitialPrompt(_branch: string, _issueNumber: number): string {
   return `/goal 仔细阅读本地文件 'issue_details.md'，提取并完全修复里面描述的【所有】高危和中危漏洞，绝对不允许遗漏任何一个！
 
 ## 【执行与验收强制规范】：

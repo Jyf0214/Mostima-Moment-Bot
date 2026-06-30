@@ -49,7 +49,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   ] as const;
 
   const missing = envVars.filter((v) => !process.env[v.key]);
-  const present = envVars.filter((v) => !!process.env[v.key]);
 
   if (missing.length === 0) {
     results.push({

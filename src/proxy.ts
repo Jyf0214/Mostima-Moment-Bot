@@ -69,7 +69,8 @@ async function checkDatabaseHasData(): Promise<boolean> {
  * 检查环境变量缺失情况
  * 返回缺失的变量列表
  */
-function getMissingEnvVars(): string[] {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function _getMissingEnvVars(): string[] {
   const missing: string[] = [];
   for (const key of ALL_KEYS) {
     if (!process.env[key]) {

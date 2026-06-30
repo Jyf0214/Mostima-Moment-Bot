@@ -55,7 +55,7 @@ function globToRegex(pattern: string): RegExp {
       }
     } else if (ch === '{') {
       // 选项列表 {a,b,c}
-      let j = sanitized.indexOf('}', i);
+      const j = sanitized.indexOf('}', i);
       if (j !== -1) {
         const options = sanitized.slice(i + 1, j).split(',');
         regexStr += '(' + options.map(escapeRegexChars).join('|') + ')';

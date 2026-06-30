@@ -40,10 +40,6 @@ export default function EnvVarsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedVar, setExpandedVar] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadEnvStatus();
-  }, []);
-
   const loadEnvStatus = async () => {
     setLoading(true);
     setLoadError(null);
@@ -61,6 +57,11 @@ export default function EnvVarsPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadEnvStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const allVars = groups.flatMap((g) => g.vars);
   const configuredCount = allVars.filter((v) => v.configured).length;

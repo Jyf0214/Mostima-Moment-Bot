@@ -1,4 +1,5 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { createMockReq, createMockRes } from './helpers';
 
 const { mockPrisma } = vi.hoisted(() => ({
   mockPrisma: {
@@ -38,40 +39,19 @@ vi.mock('@/lib/ci/security-auditor', () => ({
 import handler from '@/pages/api/webhook/github';
 
 function createWebhookRequest(event: string, payload: unknown) {
-  const body = JSON.stringify(payload);
-  return {
+  return createMockReq({
     method: 'POST',
     headers: {
       'x-github-event': event,
       'x-hub-signature-256': 'sha256=test',
       'content-type': 'application/json',
     },
-    body,
-    cookies: {},
-    [Symbol.asyncIterator]: async function* () {
-      yield Buffer.from(body);
-    },
-  } as any;
+    body: payload as Record<string, unknown>,
+  });
 }
 
 function createMockResponse() {
-  let statusCode = 200;
-  let responseData: unknown = null;
-
-  const res = {
-    status: (code: number) => {
-      statusCode = code;
-      return res;
-    },
-    json: (data: unknown) => {
-      responseData = data;
-      return res;
-    },
-    _getStatusCode: () => statusCode,
-    _getData: () => JSON.stringify(responseData),
-  } as any;
-
-  return res;
+  return createMockRes();
 }
 
 describe('Webhook Installation 事件处理', () => {

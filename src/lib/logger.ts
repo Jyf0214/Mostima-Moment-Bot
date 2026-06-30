@@ -28,12 +28,10 @@ export const logger = {
   },
 
   warn(message: string, ...args: unknown[]): void {
-    // eslint-disable-next-line no-console
     console.warn(formatMessage('warn', message), ...args);
   },
 
   error(message: string, ...args: unknown[]): void {
-    // eslint-disable-next-line no-console
     console.error(formatMessage('error', message), ...args);
   },
 };

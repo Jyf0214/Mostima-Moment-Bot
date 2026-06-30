@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import Image from 'next/image';
 import { logger } from '@/lib/logger';
 import { Button } from '@/components/ui/Button';
 import Sidebar, { type SidebarPage } from '@/components/dashboard/Sidebar';
@@ -26,33 +27,6 @@ export default function DashboardPage() {
   const [appConfigured, setAppConfigured] = useState<boolean | null>(null);
   const [installMsg, setInstallMsg] = useState<string | null>(null);
   const [installMsgType, setInstallMsgType] = useState<'success' | 'error'>('success');
-
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const logsRepoParam = params.get('logsRepo');
-    if (logsRepoParam) {
-      setLogsRepo(logsRepoParam);
-      setActivePage('logs');
-      window.history.replaceState({}, '', '/dashboard');
-    }
-  }, []);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const install = params.get('install');
-    if (install === 'success') {
-      setInstallMsg(t('home.installSuccess'));
-      setInstallMsgType('success');
-    } else if (install === 'error') {
-      setInstallMsg(t('home.installError'));
-      setInstallMsgType('error');
-    }
-    if (install) window.history.replaceState({}, '', '/dashboard');
-  }, [user]);
 
   const checkAuth = async () => {
     try {
@@ -86,6 +60,34 @@ export default function DashboardPage() {
     }
   };
 
+  useEffect(() => {
+    checkAuth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const logsRepoParam = params.get('logsRepo');
+    if (logsRepoParam) {
+      setLogsRepo(logsRepoParam);
+      setActivePage('logs');
+      window.history.replaceState({}, '', '/dashboard');
+    }
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const install = params.get('install');
+    if (install === 'success') {
+      setInstallMsg(t('home.installSuccess'));
+      setInstallMsgType('success');
+    } else if (install === 'error') {
+      setInstallMsg(t('home.installError'));
+      setInstallMsgType('error');
+    }
+    if (install) window.history.replaceState({}, '', '/dashboard');
+  }, [user, t]);
+
   const checkAppConfig = async () => {
     try {
       const res = await fetch('/api/github/install');
@@ -96,7 +98,7 @@ export default function DashboardPage() {
     }
   };
 
-  const loadRepos = async () => {
+  const loadRepos = useCallback(async () => {
     setReposLoading(true);
     try {
       const res = await fetch('/api/github/repos');
@@ -107,14 +109,14 @@ export default function DashboardPage() {
     } finally {
       setReposLoading(false);
     }
-  };
+  }, [t]);
 
   useEffect(() => {
     if (user) {
       checkAppConfig();
       loadRepos();
     }
-  }, [user]);
+  }, [user, loadRepos]);
 
   const handleLogout = async () => {
     try {
@@ -151,10 +153,13 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               {user?.avatarUrl && (
-                <img
+                <Image
                   src={user.avatarUrl}
                   alt={user.githubLogin}
+                  width={40}
+                  height={40}
                   className="h-10 w-10 rounded-full ring-2 ring-zinc-200"
+                  unoptimized
                 />
               )}
               <div>

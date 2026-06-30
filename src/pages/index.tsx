@@ -33,24 +33,11 @@ function GithubIcon({ size = 24 }: { size?: number }) {
   );
 }
 
-interface User {
-  githubId: number;
-  githubLogin: string;
-  avatarUrl: string;
-  isAdmin: boolean;
-}
-
 export default function HomePage() {
   const { t } = useTranslation();
-  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [heroGradient, setHeroGradient] = useState('from-blue-50 via-transparent to-purple-50');
   const [heroImageUrl, setHeroImageUrl] = useState('');
-
-  useEffect(() => {
-    checkStatus();
-    fetchHeroConfig();
-  }, []);
 
   const fetchHeroConfig = async () => {
     try {
@@ -71,7 +58,6 @@ export default function HomePage() {
       if (response.ok) {
         const data = await response.json();
         if (data.githubId) {
-          setUser(data);
           window.location.href = '/dashboard';
           return;
         }
@@ -82,6 +68,11 @@ export default function HomePage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    checkStatus();
+    fetchHeroConfig();
+  }, []);
 
   if (loading) {
     return (

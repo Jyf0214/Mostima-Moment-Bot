@@ -95,7 +95,7 @@ describe('GitHub Auth 模块', () => {
 
   describe('generateJWT', () => {
     it('应该使用私钥字符串生成有效的 JWT', () => {
-      const { privateKey, publicKey } = require('crypto').generateKeyPairSync('rsa', {
+      const { privateKey } = require('crypto').generateKeyPairSync('rsa', {
         modulusLength: 2048,
         privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
         publicKeyEncoding: { type: 'spki', format: 'pem' },
@@ -107,11 +107,11 @@ describe('GitHub Auth 模块', () => {
       expect(token).toBeTruthy();
       expect(token.split('.')).toHaveLength(3);
 
-      const decoded = jwt.decode(token) as any;
+      const decoded = jwt.decode(token) as Record<string, unknown>;
       expect(decoded.iss).toBe(appId);
       expect(decoded.iat).toBeDefined();
       expect(decoded.exp).toBeDefined();
-      expect(decoded.exp - decoded.iat).toBe(660);
+      expect((decoded.exp as number) - (decoded.iat as number)).toBe(660);
     });
 
     it('应该拒绝使用错误私钥验证的 JWT', () => {
@@ -121,7 +121,7 @@ describe('GitHub Auth 模块', () => {
         publicKeyEncoding: { type: 'spki', format: 'pem' },
       });
 
-      const { privateKey: correctKey, publicKey } = require('crypto').generateKeyPairSync('rsa', {
+      const { publicKey } = require('crypto').generateKeyPairSync('rsa', {
         modulusLength: 2048,
         privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
         publicKeyEncoding: { type: 'spki', format: 'pem' },
@@ -143,10 +143,10 @@ describe('GitHub Auth 模块', () => {
       const token = generateJWT('app-id', privateKey);
       const after = Math.floor(Date.now() / 1000);
 
-      const decoded = jwt.decode(token) as any;
+      const decoded = jwt.decode(token) as Record<string, unknown>;
       expect(decoded.iat).toBeGreaterThanOrEqual(before - 61);
       expect(decoded.iat).toBeLessThanOrEqual(after - 59);
-      expect(decoded.exp - decoded.iat).toBe(660);
+      expect((decoded.exp as number) - (decoded.iat as number)).toBe(660);
     });
   });
 });

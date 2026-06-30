@@ -2,6 +2,9 @@
 .git/
 .gitignore
 
+# GitHub Actions（构建时不需要）
+.github/
+
 # 环境文件（构建时不需要）
 .env
 .env.*
@@ -18,14 +21,18 @@ docker-compose.yml
 
 # 测试（构建时不需要）
 __tests__/
+vitest.config.mts
+
+# Lint/格式化配置（构建时不需要）
+.prettierrc
+.prettierignore
+eslint.config.mjs
 
 # 文档（构建时不需要）
 *.md
 LICENSE
 
-# 工具配置（构建时不需要）
-.prettierrc
-.prettierignore
+# 其他工具配置（构建时不需要）
 .lsp.json
 .dev.nix
 .idx/

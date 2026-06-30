@@ -2,7 +2,6 @@ import { logger } from '@/lib/logger';
 import { NextApiRequest, NextApiResponse } from 'next';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { prisma } from '@/lib/prisma';
 import { setConfig, getConfig } from '@/lib/db';
 import { verifyAuthToken } from '@/lib/auth-utils';
 
@@ -60,7 +59,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       await setConfig('github_private_key', privateKey, true);
 
       // 验证能正常读取和使用
-      const { generateJWT, getAppId } = await import('@/lib/github/auth');
+      const { generateJWT } = await import('@/lib/github/auth');
       const appId = process.env.GITHUB_APP_ID || (await getConfig('github_app_id'));
 
       if (appId) {

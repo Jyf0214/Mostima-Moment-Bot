@@ -1,6 +1,7 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import jwt from 'jsonwebtoken';
 import { getJwtSecret, verifyAuthToken, requireAuth, requireAdmin } from '@/lib/auth-utils';
+import { createMockReq, createMockRes } from './helpers';
 
 describe('认证工具函数', () => {
   const JWT_SECRET = 'test-jwt-secret-key';
@@ -64,11 +65,8 @@ describe('认证工具函数', () => {
 
   describe('requireAuth', () => {
     function createMockReqRes(cookies: Record<string, string> = {}) {
-      const req = { cookies } as any;
-      const res = {
-        status: vi.fn().mockReturnThis(),
-        json: vi.fn().mockReturnThis(),
-      } as any;
+      const req = createMockReq({ cookies });
+      const res = createMockRes();
       return { req, res };
     }
 
@@ -103,11 +101,8 @@ describe('认证工具函数', () => {
 
   describe('requireAdmin', () => {
     function createMockReqRes(cookies: Record<string, string> = {}) {
-      const req = { cookies } as any;
-      const res = {
-        status: vi.fn().mockReturnThis(),
-        json: vi.fn().mockReturnThis(),
-      } as any;
+      const req = createMockReq({ cookies });
+      const res = createMockRes();
       return { req, res };
     }
 

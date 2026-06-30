@@ -106,6 +106,7 @@ export default function ApiKeyPage() {
   };
 
   const timeAgo = (dateStr: string) => {
+    // eslint-disable-next-line react-hooks/purity -- Date.now() is acceptable for display-only time formatting
     const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
     if (diff < 60) return t('common.secondsAgo', { count: String(diff) });
     if (diff < 3600) return t('common.minutesAgo', { count: String(Math.floor(diff / 60)) });
@@ -270,7 +271,7 @@ export default function ApiKeyPage() {
             <p className="text-xs font-medium text-zinc-600 mb-1">{t('apiKey.usageApi')}</p>
             <code className="block px-3 py-2 rounded-lg bg-zinc-100 text-zinc-700 text-xs font-mono">
               POST /api/auth/api-key-login{'\n'}
-              {'{'}"apiKey": "YOUR_API_KEY"{'}'}
+              {'{"apiKey": "YOUR_API_KEY"}'}
             </code>
           </div>
         </div>

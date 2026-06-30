@@ -20,7 +20,7 @@ vi.mock('@/lib/github/auth', () => ({
   getPrivateKey: vi.fn(),
 }));
 
-const { prisma } = await import('@/lib/prisma');
+await import('@/lib/prisma');
 const { getConfig, setConfig } = await import('@/lib/db');
 const { generateJWT } = await import('@/lib/github/auth');
 
@@ -53,7 +53,14 @@ describe('Private Key API 端点', () => {
   describe('私钥存储', () => {
     it('应该使用 setConfig 存储私钥', async () => {
       const mockSetConfig = vi.mocked(setConfig);
-      mockSetConfig.mockResolvedValue({} as any);
+      mockSetConfig.mockResolvedValue({
+        id: 1,
+        createdAt: new Date(),
+        configKey: 'github_private_key',
+        configValue: 'test-value',
+        encrypted: true,
+        updatedAt: new Date(),
+      });
 
       const testKey = '-----BEGIN RSA PRIVATE KEY-----\nTEST\n-----END RSA PRIVATE KEY-----';
       await setConfig('github_private_key', testKey, true);
@@ -81,7 +88,7 @@ describe('Private Key API 端点', () => {
 
   describe('JWT 生成验证', () => {
     it('应该能用上传的私钥生成 JWT', () => {
-      const { privateKey, publicKey } = require('crypto').generateKeyPairSync('rsa', {
+      const { privateKey } = require('crypto').generateKeyPairSync('rsa', {
         modulusLength: 2048,
         privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
         publicKeyEncoding: { type: 'spki', format: 'pem' },
@@ -98,7 +105,7 @@ describe('Private Key API 端点', () => {
       const token = mockGenerateJWT('test-app', privateKey);
       expect(token).toBeTruthy();
 
-      const decoded = jwt.decode(token) as any;
+      const decoded = jwt.decode(token) as Record<string, unknown>;
       expect(decoded.iss).toBe('test-app');
     });
   });

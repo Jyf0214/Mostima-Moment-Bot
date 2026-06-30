@@ -205,7 +205,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
           solveIssue(event, issuePayload, workspaceDir)
             .then(() => {
-              logger.info(`[Webhook] Issue solver completed for issue #${issuePayload.issue.number}`);
+              logger.info(
+                `[Webhook] Issue solver completed for issue #${issuePayload.issue.number}`
+              );
               if (issueRunId) {
                 updateCiRun(issueRunId, { status: 'success', conclusion: 'success' });
               }
@@ -236,7 +238,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       case 'push': {
         const pushPayload = payload as unknown as PushPayload;
         const commitMsg = pushPayload.head_commit?.message?.slice(0, 80) || 'no message';
-        const pushBranch = String(pushPayload.ref || '').replace('refs/heads/', '');
         logger.info(
           `[Webhook] Push to ${pushPayload.ref}: ${pushPayload.head_commit?.id?.slice(0, 7) || 'unknown'} — ${commitMsg}`
         );

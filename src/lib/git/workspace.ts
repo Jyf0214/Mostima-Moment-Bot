@@ -76,7 +76,7 @@ export async function checkoutPRBranch(prNumber: number): Promise<void> {
   try {
     execFileSync('git', ['merge', 'origin/main', '--no-edit'], { cwd: workspaceDir });
     logger.info('Successfully merged with main branch');
-  } catch (error) {
+  } catch {
     throw new Error('Merge conflict detected');
   }
 }

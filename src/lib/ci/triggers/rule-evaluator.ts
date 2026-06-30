@@ -10,7 +10,7 @@
  * - commentPattern 使用内部构造的正则，禁止回溯深度超过 100
  */
 
-import type { TriggerRule, WebhookPayload, TriggerMatchResult, AuthorAssociation } from './types';
+import type { TriggerRule, WebhookPayload, TriggerMatchResult } from './types';
 import { matchBranch, isBranchExcluded } from './branch-matcher';
 
 /**

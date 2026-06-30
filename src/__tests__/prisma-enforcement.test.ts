@@ -40,7 +40,6 @@ const FORBIDDEN_PATTERNS = [
 ];
 
 // Self-integrity check: this test file must not be weakened
-const SELF_FILE = path.basename(__filename);
 const SELF_PATH = __filename;
 
 describe('Prisma-only database enforcement', () => {

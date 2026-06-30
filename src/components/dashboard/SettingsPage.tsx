@@ -37,11 +37,24 @@ export default function SettingsPage() {
     { labelKey: 'settings.gradientWhite', value: 'from-white via-zinc-50 to-zinc-100' },
   ];
 
-  useEffect(() => {
-    checkPrivateKey();
-    fetchBotInfo();
-    fetchHeroConfig();
-  }, []);
+  const checkPrivateKey = async () => {
+    try {
+      const res = await fetch('/api/github/private-key');
+      const data = await res.json();
+      setPrivateKeyStatus(data);
+    } catch {
+      setPrivateKeyStatus({ configured: false, source: 'unknown' });
+    }
+  };
+
+  const fetchBotInfo = async () => {
+    try {
+      const res = await fetch('/api/bot/info');
+      if (res.ok) setBotInfo(await res.json());
+    } catch {
+      /* silent */
+    }
+  };
 
   const fetchHeroConfig = async () => {
     try {
@@ -55,6 +68,12 @@ export default function SettingsPage() {
       /* default */
     }
   };
+
+  useEffect(() => {
+    checkPrivateKey();
+    fetchBotInfo();
+    fetchHeroConfig();
+  }, []);
 
   const saveHeroConfig = async () => {
     setHeroSaving(true);
@@ -83,25 +102,6 @@ export default function SettingsPage() {
       setHeroMsg(t('settings.configSaveFailed'));
     } finally {
       setHeroSaving(false);
-    }
-  };
-
-  const checkPrivateKey = async () => {
-    try {
-      const res = await fetch('/api/github/private-key');
-      const data = await res.json();
-      setPrivateKeyStatus(data);
-    } catch {
-      setPrivateKeyStatus({ configured: false, source: 'unknown' });
-    }
-  };
-
-  const fetchBotInfo = async () => {
-    try {
-      const res = await fetch('/api/bot/info');
-      if (res.ok) setBotInfo(await res.json());
-    } catch {
-      /* silent */
     }
   };
 

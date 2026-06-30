@@ -16,12 +16,14 @@ describe('Git 工作区校验函数', () => {
     });
 
     it('应该拒绝 null/undefined 类型', () => {
-      expect(() => validateBranchName(null as any)).toThrow('Unsafe branch name');
-      expect(() => validateBranchName(undefined as any)).toThrow('Unsafe branch name');
+      expect(() => validateBranchName(null as unknown as string)).toThrow('Unsafe branch name');
+      expect(() => validateBranchName(undefined as unknown as string)).toThrow(
+        'Unsafe branch name'
+      );
     });
 
     it('应该拒绝非字符串类型', () => {
-      expect(() => validateBranchName(123 as any)).toThrow('Unsafe branch name');
+      expect(() => validateBranchName(123 as unknown as string)).toThrow('Unsafe branch name');
     });
 
     it('应该拒绝包含空格的分支名', () => {

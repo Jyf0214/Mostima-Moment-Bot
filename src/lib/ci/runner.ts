@@ -47,7 +47,6 @@ export async function handlePullRequest(payload: PRPayload): Promise<void> {
     logger.error('[CI Runner] handlePullRequest: missing pull_request.number');
     return;
   }
-  const pr = payload.pull_request!;
   logger.info(`Triggering CI checks for PR #${prNumber}`);
 
   try {
