@@ -36,7 +36,6 @@ interface TriggerRule {
 export default function RepoDetailPage() {
   const { t } = useTranslation();
   const [repoName, setRepoName] = useState('');
-  const [repoId, setRepoId] = useState('');
   const [rules, setRules] = useState<TriggerRule[]>([]);
   const [runsTotal, setRunsTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -47,7 +46,6 @@ export default function RepoDetailPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     setRepoName(params.get('name') || '');
-    setRepoId(params.get('repoId') || '');
   }, []);
 
   const loadRules = useCallback(async () => {
@@ -176,7 +174,6 @@ export default function RepoDetailPage() {
                   <h1 className="text-lg font-bold text-zinc-900">
                     {repoName || t('sidebar.repos')}
                   </h1>
-                  <p className="text-zinc-500 text-xs">ID: {repoId}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
