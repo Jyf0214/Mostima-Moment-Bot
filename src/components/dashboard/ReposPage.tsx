@@ -46,16 +46,21 @@ export default function ReposPage({ repos, reposLoading }: Props) {
         allRepos.map((repo) => (
           <ProCard key={repo.id} className="bg-white border-zinc-200" padding="p-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <FolderGit2 className="h-4 w-4 text-zinc-400" />
-                <div>
-                  <p className="text-zinc-900 text-sm font-medium">{repo.full_name}</p>
+              <button
+                onClick={() =>
+                  (window.location.href = `/dashboard/repo?name=${encodeURIComponent(repo.full_name)}`)
+                }
+                className="flex items-center gap-3 text-left hover:opacity-80 transition-opacity flex-1 min-w-0"
+              >
+                <FolderGit2 className="h-4 w-4 text-zinc-400 shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-zinc-900 text-sm font-medium truncate">{repo.full_name}</p>
                   {repo.description && (
-                    <p className="text-zinc-500 text-xs mt-0.5">{repo.description}</p>
+                    <p className="text-zinc-500 text-xs mt-0.5 truncate">{repo.description}</p>
                   )}
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
+              </button>
+              <div className="flex items-center gap-2 shrink-0">
                 {repo.enabled && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
                 <a
                   href={repo.html_url}
@@ -63,6 +68,7 @@ export default function ReposPage({ repos, reposLoading }: Props) {
                   rel="noopener noreferrer"
                   className="text-zinc-400 hover:text-zinc-600"
                   aria-label={`${repo.full_name} - ${t('repos.viewOnGithub')}`}
+                  onClick={(e) => e.stopPropagation()}
                 >
                   <ExternalLink className="h-4 w-4" />
                 </a>
