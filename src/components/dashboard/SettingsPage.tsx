@@ -80,16 +80,23 @@ export default function SettingsPage() {
     setHeroMsg(null);
     try {
       // 使用 Promise.allSettled 并行保存，确保两个配置都尝试写入
+      // fetch() 在 HTTP 4xx/5xx 时不会 reject，必须手动检查 r.ok
       const results = await Promise.allSettled([
         fetch('/api/site-config', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ key: 'hero_gradient', value: heroGradient }),
+        }).then((r) => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return r;
         }),
         fetch('/api/site-config', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ key: 'hero_image_url', value: heroImageUrl }),
+        }).then((r) => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return r;
         }),
       ]);
       const failures = results.filter((r) => r.status === 'rejected');
