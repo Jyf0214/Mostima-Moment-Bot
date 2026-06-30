@@ -167,7 +167,8 @@
     "apiKeys": "API Keys",
     "settings": "Settings",
     "collapse": "Collapse",
-    "expand": "Expand"
+    "expand": "Expand",
+    "navLabel": "Main navigation"
   },
   "repoDetail": {
     "back": "Back",

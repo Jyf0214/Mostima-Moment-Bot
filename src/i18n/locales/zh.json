@@ -167,7 +167,8 @@
     "apiKeys": "API 密钥",
     "settings": "设置",
     "collapse": "收起",
-    "expand": "展开"
+    "expand": "展开",
+    "navLabel": "主导航"
   },
   "repoDetail": {
     "back": "返回",

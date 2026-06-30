@@ -79,8 +79,11 @@ export default function Sidebar({
         )}
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 py-3 px-2 space-y-1 overflow-y-auto min-h-0">
+      {/* Navigation — 原生 <nav>/<button>/<a> 已有隐式 ARIA role，无需显式添加 role 属性 */}
+      <nav
+        aria-label={t('sidebar.navLabel') || 'Main navigation'}
+        className="flex-1 py-3 px-2 space-y-1 overflow-y-auto min-h-0"
+      >
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;
           const isActive = activePage === item.id;
