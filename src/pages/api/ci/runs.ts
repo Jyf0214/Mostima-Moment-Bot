@@ -36,6 +36,48 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
   }
 
   const repo = getQueryParam(req, 'repo') || '';
+  const idParam = getQueryParam(req, 'id');
+
+  // 按 ID 查询单条运行（含日志详情）
+  if (idParam) {
+    const id = parseInt(idParam, 10);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid run id' });
+    }
+    try {
+      const run = await prisma.ciRun.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          repoFullName: true,
+          event: true,
+          action: true,
+          branch: true,
+          commitSha: true,
+          prNumber: true,
+          status: true,
+          conclusion: true,
+          triggeredBy: true,
+          ruleId: true,
+          checksRan: true,
+          isBotInitiated: true,
+          startedAt: true,
+          completedAt: true,
+          duration: true,
+          createdAt: true,
+          logs: true,
+        },
+      });
+      if (!run) {
+        return res.status(404).json({ error: 'Run not found' });
+      }
+      return res.status(200).json(run);
+    } catch (error) {
+      return res.status(500).json({
+        error: `Failed to query run: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      });
+    }
+  }
 
   // 没有 repo 参数时，返回所有仓库摘要
   if (!repo) {

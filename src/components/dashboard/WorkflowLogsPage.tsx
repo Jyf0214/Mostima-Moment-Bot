@@ -331,62 +331,67 @@ export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string
               const StatusIcon = cfg.icon;
               const eventLabel = EVENT_LABELS[run.event] || run.event;
               return (
-                <ProCard
+                <button
                   key={run.id}
-                  className="bg-white border-zinc-200 hover:border-zinc-300 hover:shadow-md transition-all"
-                  padding="p-4"
+                  onClick={() => (window.location.href = `/dashboard/logs/run/${run.id}`)}
+                  className="w-full text-left"
                 >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`h-8 w-8 rounded-lg ${cfg.bg} flex items-center justify-center shrink-0`}
-                    >
-                      <StatusIcon
-                        className={`h-4 w-4 ${cfg.color} ${run.status === 'running' ? 'animate-spin' : ''}`}
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="inline-flex items-center rounded-md bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-600">
-                          {eventLabel}
+                  <ProCard
+                    className="bg-white border-zinc-200 hover:border-zinc-300 hover:shadow-md transition-all cursor-pointer"
+                    padding="p-4"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`h-8 w-8 rounded-lg ${cfg.bg} flex items-center justify-center shrink-0`}
+                      >
+                        <StatusIcon
+                          className={`h-4 w-4 ${cfg.color} ${run.status === 'running' ? 'animate-spin' : ''}`}
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="inline-flex items-center rounded-md bg-zinc-100 px-2 py-0.5 text-[10px] font-medium text-zinc-600">
+                            {eventLabel}
+                          </span>
+                          {run.branch && (
+                            <span className="inline-flex items-center gap-1 text-xs text-zinc-500">
+                              <GitBranch className="h-3 w-3" />
+                              {run.branch}
+                            </span>
+                          )}
+                          {run.prNumber && (
+                            <span className="text-xs text-blue-500">PR #{run.prNumber}</span>
+                          )}
+                          {run.action && (
+                            <span className="text-[10px] text-zinc-400">{run.action}</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 mt-1 flex-wrap">
+                          {run.commitSha && (
+                            <span className="inline-flex items-center gap-1 text-xs text-zinc-400 font-mono">
+                              <GitCommitHorizontal className="h-3 w-3" />
+                              {shaShort(run.commitSha)}
+                            </span>
+                          )}
+                          {run.triggeredBy && (
+                            <span className="text-xs text-zinc-400">@{run.triggeredBy}</span>
+                          )}
+                          {run.duration != null && (
+                            <span className="text-xs text-zinc-400">
+                              {formatDuration(run.duration)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="text-xs text-zinc-400 block">
+                          {timeAgo(run.createdAt, t)}
                         </span>
-                        {run.branch && (
-                          <span className="inline-flex items-center gap-1 text-xs text-zinc-500">
-                            <GitBranch className="h-3 w-3" />
-                            {run.branch}
-                          </span>
-                        )}
-                        {run.prNumber && (
-                          <span className="text-xs text-blue-500">PR #{run.prNumber}</span>
-                        )}
-                        {run.action && (
-                          <span className="text-[10px] text-zinc-400">{run.action}</span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3 mt-1 flex-wrap">
-                        {run.commitSha && (
-                          <span className="inline-flex items-center gap-1 text-xs text-zinc-400 font-mono">
-                            <GitCommitHorizontal className="h-3 w-3" />
-                            {shaShort(run.commitSha)}
-                          </span>
-                        )}
-                        {run.triggeredBy && (
-                          <span className="text-xs text-zinc-400">@{run.triggeredBy}</span>
-                        )}
-                        {run.duration != null && (
-                          <span className="text-xs text-zinc-400">
-                            {formatDuration(run.duration)}
-                          </span>
-                        )}
+                        <span className={`text-[10px] font-medium ${cfg.color}`}>{run.status}</span>
                       </div>
                     </div>
-                    <div className="text-right shrink-0">
-                      <span className="text-xs text-zinc-400 block">
-                        {timeAgo(run.createdAt, t)}
-                      </span>
-                      <span className={`text-[10px] font-medium ${cfg.color}`}>{run.status}</span>
-                    </div>
-                  </div>
-                </ProCard>
+                  </ProCard>
+                </button>
               );
             })}
           </div>
