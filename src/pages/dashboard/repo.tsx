@@ -72,7 +72,9 @@ export default function RepoDetailPage() {
   const loadRuns = useCallback(async () => {
     if (!repoName) return;
     try {
-      const res = await fetch(`/api/ci/runs?repo=${encodeURIComponent(repoName)}&limit=1`);
+      const res = await fetch(
+        `/api/ci/runs?repo=${encodeURIComponent(repoName)}&limit=1&botOnly=true`
+      );
       if (res.ok) {
         const data = await res.json();
         setRunsTotal(data.total || 0);
