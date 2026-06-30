@@ -60,6 +60,7 @@ export default function ReposPage({ repos, reposLoading }: Props) {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-zinc-400 hover:text-zinc-600"
+                  aria-label={`${repo.full_name} - ${t('repos.viewOnGithub')}`}
                 >
                   <ExternalLink className="h-4 w-4" />
                 </a>

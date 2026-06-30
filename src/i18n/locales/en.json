@@ -156,7 +156,8 @@
   },
   "repos": {
     "noData": "Unable to load repository data",
-    "noRepos": "No authorized repositories"
+    "noRepos": "No authorized repositories",
+    "viewOnGithub": "View on GitHub"
   },
   "sidebar": {
     "overview": "Overview",
@@ -165,7 +166,8 @@
     "envVars": "Environment Variables",
     "apiKeys": "API Keys",
     "settings": "Settings",
-    "collapse": "Collapse"
+    "collapse": "Collapse",
+    "expand": "Expand"
   },
   "repoDetail": {
     "back": "Back",

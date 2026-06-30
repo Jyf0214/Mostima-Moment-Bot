@@ -88,6 +88,7 @@ export default function Sidebar({
             <button
               key={item.id}
               onClick={() => onNavigate(item.id)}
+              aria-label={t(item.labelKey)}
               title={collapsed ? t(item.labelKey) : undefined}
               className={cn(
                 'w-full flex items-center rounded-xl text-sm transition-all',
@@ -109,6 +110,7 @@ export default function Sidebar({
         {/* Collapse toggle */}
         <button
           onClick={onToggleCollapse}
+          aria-label={collapsed ? t('sidebar.expand') : t('sidebar.collapse')}
           className={cn(
             'w-full flex items-center text-sm text-zinc-400 hover:text-zinc-600 hover:bg-zinc-50 transition-all',
             collapsed ? 'justify-center h-10' : 'gap-3 px-3 py-2.5'

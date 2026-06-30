@@ -127,6 +127,7 @@ export function HeroBanner({
         {/* 背景图 + 遮罩 */}
         {backgroundImage && (
           <>
+            {/* 动态背景图 URL 无法通过 Tailwind 类实现，必须使用内联 style */}
             <div
               className="absolute inset-0 bg-cover bg-center"
               style={{ backgroundImage: `url(${backgroundImage})` }}

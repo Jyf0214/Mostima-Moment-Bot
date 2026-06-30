@@ -156,7 +156,8 @@
   },
   "repos": {
     "noData": "无法加载仓库数据",
-    "noRepos": "暂无授权仓库"
+    "noRepos": "暂无授权仓库",
+    "viewOnGithub": "在 GitHub 上查看"
   },
   "sidebar": {
     "overview": "概览",
@@ -165,7 +166,8 @@
     "envVars": "环境变量",
     "apiKeys": "API 密钥",
     "settings": "设置",
-    "collapse": "收起"
+    "collapse": "收起",
+    "expand": "展开"
   },
   "repoDetail": {
     "back": "返回",
