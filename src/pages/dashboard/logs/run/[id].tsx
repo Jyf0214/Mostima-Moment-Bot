@@ -16,6 +16,9 @@ import {
   AlertTriangle,
   Copy,
   Check,
+  ChevronRight,
+  ChevronDown,
+  SkipForward,
 } from 'lucide-react';
 
 interface RunDetail {
@@ -39,6 +42,23 @@ interface RunDetail {
   logs: string | null;
 }
 
+interface LogStep {
+  name: string;
+  command?: string;
+  status: 'queued' | 'in_progress' | 'completed';
+  conclusion?: 'success' | 'failure' | 'skipped' | 'cancelled' | null;
+  startedAt: string;
+  completedAt?: string;
+  durationMs?: number;
+  output?: string;
+  subSteps?: LogStep[];
+}
+
+interface LogData {
+  version: number;
+  steps: LogStep[];
+}
+
 const STATUS_CONFIG: Record<
   string,
   { icon: React.ElementType; color: string; bg: string; label: string }
@@ -48,6 +68,13 @@ const STATUS_CONFIG: Record<
   running: { icon: Loader2, color: 'text-blue-500', bg: 'bg-blue-50', label: 'Running' },
   pending: { icon: Clock, color: 'text-amber-500', bg: 'bg-amber-50', label: 'Pending' },
   cancelled: { icon: XCircle, color: 'text-zinc-400', bg: 'bg-zinc-50', label: 'Cancelled' },
+};
+
+const CONCLUSION_CONFIG: Record<string, { icon: React.ElementType; color: string }> = {
+  success: { icon: CheckCircle2, color: 'text-emerald-500' },
+  failure: { icon: XCircle, color: 'text-red-500' },
+  skipped: { icon: SkipForward, color: 'text-zinc-400' },
+  cancelled: { icon: XCircle, color: 'text-zinc-400' },
 };
 
 function formatDuration(duration: number): string {
@@ -71,6 +98,122 @@ function formatTime(dateStr: string): string {
     minute: '2-digit',
     second: '2-digit',
   });
+}
+
+/** 尝试解析结构化日志，失败则返回 null（旧版纯文本日志） */
+function parseStructuredLogs(logs: string): LogData | null {
+  try {
+    const parsed = JSON.parse(logs);
+    if (parsed && parsed.version === 1 && Array.isArray(parsed.steps)) {
+      return parsed as LogData;
+    }
+  } catch {
+    // 非 JSON，视为纯文本日志
+  }
+  return null;
+}
+
+/** 单个步骤组件 */
+function StepItem({ step, defaultExpanded }: { step: LogStep; defaultExpanded?: boolean }) {
+  const [expanded, setExpanded] = useState(defaultExpanded ?? false);
+  const conclusion = step.conclusion || (step.status === 'completed' ? 'success' : null);
+  const cfg = conclusion ? CONCLUSION_CONFIG[conclusion] : null;
+  const StatusIcon = cfg?.icon || (step.status === 'in_progress' ? Loader2 : Clock);
+  const statusColor =
+    cfg?.color || (step.status === 'in_progress' ? 'text-blue-500' : 'text-zinc-400');
+
+  return (
+    <div className="border border-zinc-200 rounded-lg overflow-hidden">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-zinc-50 transition-colors"
+      >
+        <StatusIcon
+          className={`h-4 w-4 shrink-0 ${statusColor} ${step.status === 'in_progress' ? 'animate-spin' : ''}`}
+        />
+        {expanded ? (
+          <ChevronDown className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
+        ) : (
+          <ChevronRight className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
+        )}
+        <span className="text-sm font-medium text-zinc-900 flex-1 min-w-0 truncate">
+          {step.name}
+        </span>
+        {step.command && (
+          <code className="text-[10px] text-zinc-400 font-mono bg-zinc-100 px-1.5 py-0.5 rounded shrink-0 hidden sm:inline">
+            {step.command.length > 40 ? step.command.slice(0, 40) + '...' : step.command}
+          </code>
+        )}
+        {step.durationMs != null && (
+          <span className="text-[10px] text-zinc-400 shrink-0">
+            {formatDuration(step.durationMs)}
+          </span>
+        )}
+      </button>
+
+      {expanded && (
+        <div className="border-t border-zinc-100">
+          {/* 子步骤 */}
+          {step.subSteps && step.subSteps.length > 0 && (
+            <div className="px-4 py-2 space-y-1">
+              {step.subSteps.map((sub, i) => (
+                <StepItem key={`${sub.name}-${i}`} step={sub} defaultExpanded={false} />
+              ))}
+            </div>
+          )}
+          {/* 输出 */}
+          {step.output && (
+            <div className="px-4 pb-3">
+              <pre className="bg-zinc-50 border border-zinc-200 rounded-lg p-3 text-xs text-zinc-700 font-mono overflow-x-auto max-h-64 overflow-y-auto whitespace-pre-wrap break-all">
+                {step.output}
+              </pre>
+            </div>
+          )}
+          {/* 无输出提示 */}
+          {!step.output && (!step.subSteps || step.subSteps.length === 0) && (
+            <div className="px-4 pb-3 text-xs text-zinc-400">No output</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** 结构化日志渲染 */
+function StructuredLogs({ logData }: { logData: LogData }) {
+  const successCount = logData.steps.filter((s) => s.conclusion === 'success').length;
+  const failCount = logData.steps.filter((s) => s.conclusion === 'failure').length;
+
+  return (
+    <div>
+      {/* 摘要 */}
+      <div className="flex items-center gap-4 mb-3 text-xs">
+        <span className="text-zinc-500">
+          {logData.steps.length} {logData.steps.length === 1 ? 'step' : 'steps'}
+        </span>
+        {successCount > 0 && (
+          <span className="text-emerald-500 flex items-center gap-1">
+            <CheckCircle2 className="h-3 w-3" /> {successCount}
+          </span>
+        )}
+        {failCount > 0 && (
+          <span className="text-red-500 flex items-center gap-1">
+            <XCircle className="h-3 w-3" /> {failCount}
+          </span>
+        )}
+      </div>
+      {/* 步骤列表 */}
+      <div className="space-y-2">
+        {logData.steps.map((step, i) => (
+          <StepItem
+            key={`${step.name}-${i}`}
+            step={step}
+            defaultExpanded={step.conclusion === 'failure' || logData.steps.length <= 5}
+          />
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export default function RunDetailPage() {
@@ -105,6 +248,9 @@ export default function RunDetailPage() {
   useEffect(() => {
     fetchRun();
   }, [fetchRun]);
+
+  /** 解析结构化日志 */
+  const logData = run?.logs ? parseStructuredLogs(run.logs) : null;
 
   const copyLogs = async () => {
     if (!run?.logs) return;
@@ -298,9 +444,13 @@ export default function RunDetailPage() {
             )}
           </div>
           {run.logs ? (
-            <pre className="bg-zinc-50 border border-zinc-200 rounded-lg p-4 text-xs text-zinc-700 font-mono overflow-x-auto max-h-96 overflow-y-auto whitespace-pre-wrap break-all">
-              {run.logs}
-            </pre>
+            logData ? (
+              <StructuredLogs logData={logData} />
+            ) : (
+              <pre className="bg-zinc-50 border border-zinc-200 rounded-lg p-4 text-xs text-zinc-700 font-mono overflow-x-auto max-h-96 overflow-y-auto whitespace-pre-wrap break-all">
+                {run.logs}
+              </pre>
+            )
           ) : (
             <p className="text-zinc-400 text-sm">{t('repoDetail.noLogs')}</p>
           )}

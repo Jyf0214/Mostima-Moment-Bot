@@ -1,5 +1,6 @@
 import { CheckResult } from './runner';
 import { execFileSync } from 'child_process';
+import type { LogCollector } from './log-collector';
 
 /** CI 检查步骤默认超时时间：10 分钟 */
 const DEFAULT_STEP_TIMEOUT = 600_000;
@@ -24,29 +25,41 @@ const ALLOWED_COMMANDS: ReadonlyMap<string, [program: string, args: string[]]> =
  * 1. 命令白名单校验 — 只允许 runner.ts 中预定义的命令
  * 2. 使用 execFileSync — 绕过 shell 解析，参数不经过 shell 展开
  */
-export function executeCheckStep(name: string, command: string, workspaceDir: string): CheckResult {
+export function executeCheckStep(
+  name: string,
+  command: string,
+  workspaceDir: string,
+  logCollector?: LogCollector
+): CheckResult {
   const startTime = Date.now();
 
   // 白名单校验：拒绝未授权的命令
   const allowed = ALLOWED_COMMANDS.get(command);
   if (!allowed) {
+    const output = `Command not allowed: ${command}`;
+    logCollector?.startStep(name, command);
+    logCollector?.finishStep(name, { conclusion: 'failure', output });
     return {
       step: name,
       status: 'FAIL',
       duration: Date.now() - startTime,
-      output: `Command not allowed: ${command}`,
+      output,
       exitCode: 1,
     };
   }
 
+  logCollector?.startStep(name, command);
+
   try {
     const [program, args] = allowed;
-    execFileSync(program, args, {
+    const result = execFileSync(program, args, {
       cwd: workspaceDir,
       stdio: 'pipe',
       timeout: DEFAULT_STEP_TIMEOUT,
+      encoding: 'utf-8',
     });
 
+    logCollector?.finishStep(name, { conclusion: 'success', output: result || undefined });
     return {
       step: name,
       status: 'PASS',
@@ -55,11 +68,13 @@ export function executeCheckStep(name: string, command: string, workspaceDir: st
     };
   } catch (error) {
     const err = error as NodeJS.ErrnoException & { stderr?: Buffer; status?: number };
+    const output = err.stderr?.toString() || err.message;
+    logCollector?.finishStep(name, { conclusion: 'failure', output });
     return {
       step: name,
       status: 'FAIL',
       duration: Date.now() - startTime,
-      output: err.stderr?.toString() || err.message,
+      output,
       exitCode: err.status || 1,
     };
   }
@@ -68,7 +83,9 @@ export function executeCheckStep(name: string, command: string, workspaceDir: st
 /**
  * 创建 SKIP 结果
  */
-export function createSkipResult(name: string): CheckResult {
+export function createSkipResult(name: string, logCollector?: LogCollector): CheckResult {
+  logCollector?.startStep(name);
+  logCollector?.finishStep(name, { conclusion: 'skipped' });
   return {
     step: name,
     status: 'SKIP',

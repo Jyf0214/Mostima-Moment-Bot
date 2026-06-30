@@ -22,6 +22,7 @@ vi.mock('@/lib/github/webhook', () => ({
 vi.mock('@/lib/ci/run-logger', () => ({
   recordCiRun: vi.fn().mockResolvedValue(1),
   updateCiRun: vi.fn().mockResolvedValue(undefined),
+  flushLogs: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock('@/lib/ci/runner', () => ({
   handlePullRequest: vi.fn().mockResolvedValue(undefined),

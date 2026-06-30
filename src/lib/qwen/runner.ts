@@ -3,6 +3,7 @@ import { execFileSync } from 'child_process';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import crypto from 'crypto';
+import type { LogCollector } from '../ci/log-collector';
 
 const QWEN_DIR = join(process.env.HOME || '/root', '.qwen');
 const MAX_ATTEMPTS = 5;
@@ -13,6 +14,7 @@ interface RunOptions {
   maxSessionTurns?: number;
   resume?: boolean;
   timeout?: number;
+  logCollector?: LogCollector;
 }
 
 interface RunResult {
@@ -123,6 +125,7 @@ export async function runQwen(prompt: string, options: RunOptions = {}): Promise
     maxSessionTurns = 100,
     resume: forceResume,
     timeout = 600_000,
+    logCollector,
   } = options;
 
   ensureQwenDir();
@@ -183,17 +186,27 @@ export async function runQwen(prompt: string, options: RunOptions = {}): Promise
   }
 
   // 首次执行
+  const stepName = isResume ? 'Qwen Resume' : 'Qwen Execute';
+  logCollector?.startStep(stepName, `qwen (session: ${sessionId.slice(0, 8)}...)`);
   logger.info(`[Qwen Runner] Starting (session: ${sessionId}, resume: ${isResume})...`);
   let result = executeQwen(buildArgs(sessionId, prompt, isResume));
   output = result.output;
 
   if (result.ok) {
     success = true;
+    logCollector?.finishStep(stepName, {
+      conclusion: 'success',
+      output: output.slice(-5000) || undefined,
+    });
   } else {
     const duration = Date.now() - startTime;
     logger.warn(`[Qwen Runner] Initial run failed. Duration: ${duration}ms`);
+    logCollector?.appendOutput(`\n[Attempt 1] Failed after ${duration}ms\n`);
     if (duration >= MAX_DURATION_MS || /524|terminated|closed/i.test(output)) {
       triggerCompression = true;
+      logCollector?.appendOutput(
+        '[Trigger] Timeout or connection error detected, enabling compression\n'
+      );
     }
   }
 
@@ -201,24 +214,30 @@ export async function runQwen(prompt: string, options: RunOptions = {}): Promise
   while (!success && attempt < MAX_ATTEMPTS) {
     attempt++;
     logger.info(`[Qwen Runner] Self-healing attempt ${attempt}/${MAX_ATTEMPTS}...`);
+    logCollector?.appendOutput(`\n[Self-healing] Attempt ${attempt}/${MAX_ATTEMPTS}\n`);
     await sleep(15_000);
 
     // 压缩机制
     if (triggerCompression) {
       if (attempt === 2) {
         logger.info('[Qwen Runner] Attempt 2: running /compress-fast...');
+        logCollector?.appendOutput('[Compression] Running /compress-fast...\n');
         executeQwen(buildArgs(sessionId, '/compress-fast', true));
+        logCollector?.appendOutput('[Compression] /compress-fast completed\n');
       } else if (attempt >= 3) {
         logger.info(`[Qwen Runner] Attempt ${attempt}: running /compress-fast + /compress...`);
+        logCollector?.appendOutput(`[Compression] Running /compress-fast + /compress...\n`);
         executeQwen(buildArgs(sessionId, '/compress-fast', true));
         await sleep(5_000);
         executeQwen(buildArgs(sessionId, '/compress', true));
+        logCollector?.appendOutput('[Compression] Compression completed\n');
       }
     }
 
     // 弹性恢复
     const resumePrompt =
       '由于网络或上下文限制中断，请继续完成所有步骤。对照 todo_checklist.md 继续修复未打勾的项，通过测试后完成代码提交与 PR。';
+    logCollector?.appendOutput(`[Resume] Sending recovery prompt...\n`);
     const retryStart = Date.now();
     result = executeQwen(buildArgs(sessionId, resumePrompt, true));
     output = result.output;
@@ -226,12 +245,26 @@ export async function runQwen(prompt: string, options: RunOptions = {}): Promise
     if (result.ok) {
       success = true;
       logger.info('[Qwen Runner] Self-healing succeeded.');
+      logCollector?.appendOutput(`[Resume] Succeeded after ${Date.now() - retryStart}ms\n`);
     } else {
       const duration = Date.now() - retryStart;
       logger.warn(`[Qwen Runner] Attempt ${attempt} failed. Duration: ${duration}ms`);
+      logCollector?.appendOutput(`[Resume] Failed after ${duration}ms\n`);
       if (duration >= MAX_DURATION_MS || /524|terminated|closed/i.test(output)) {
         triggerCompression = true;
+        logCollector?.appendOutput('[Trigger] Timeout or connection error detected\n');
       }
+    }
+  }
+
+  // 最终结果
+  if (logCollector) {
+    const finalStep = isResume ? 'Qwen Resume' : 'Qwen Execute';
+    if (!success) {
+      logCollector.finishStep(finalStep, {
+        conclusion: 'failure',
+        output: `Failed after ${attempt} attempts. Last output:\n${output.slice(-3000)}`,
+      });
     }
   }
 

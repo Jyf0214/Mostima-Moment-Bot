@@ -13,6 +13,7 @@ import { logger } from '../logger';
 
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import type { LogCollector } from './log-collector';
 
 /** 日志最大长度 */
 const MAX_LOG_LENGTH = 50000;
@@ -101,5 +102,25 @@ export async function updateCiRun(
     });
   } catch (err) {
     logger.error('[RunLogger] Failed to update CI run:', err);
+  }
+}
+
+/**
+ * 将 LogCollector 中的结构化日志刷入数据库
+ *
+ * 在 CI 运行完成或失败时调用，将收集到的所有 Step 日志
+ * 序列化为 JSON 存入 CiRun.logs 字段。
+ */
+export async function flushLogs(runId: number, collector: LogCollector): Promise<void> {
+  try {
+    const json = collector.toJSON();
+    if (!json || json === '{"version":1,"steps":[]}') return;
+
+    await prisma.ciRun.update({
+      where: { id: runId },
+      data: { logs: json.slice(0, MAX_LOG_LENGTH) },
+    });
+  } catch (err) {
+    logger.error('[RunLogger] Failed to flush logs:', err);
   }
 }

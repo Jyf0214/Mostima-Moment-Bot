@@ -1,7 +1,7 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { createMockReq, createMockRes } from './helpers';
 
-const { mockPrisma, mockRecordCiRun, mockUpdateCiRun } = vi.hoisted(() => ({
+const { mockPrisma, mockRecordCiRun, mockUpdateCiRun, mockFlushLogs } = vi.hoisted(() => ({
   mockPrisma: {
     admin: { findFirst: vi.fn() },
     gitHubInstallation: {
@@ -13,12 +13,14 @@ const { mockPrisma, mockRecordCiRun, mockUpdateCiRun } = vi.hoisted(() => ({
   },
   mockRecordCiRun: vi.fn(),
   mockUpdateCiRun: vi.fn(),
+  mockFlushLogs: vi.fn(),
 }));
 
 vi.mock('@/lib/prisma', () => ({ prisma: mockPrisma }));
 vi.mock('@/lib/ci/run-logger', () => ({
   recordCiRun: mockRecordCiRun,
   updateCiRun: mockUpdateCiRun,
+  flushLogs: mockFlushLogs,
 }));
 vi.mock('@/lib/github/webhook', () => ({
   verifyWebhookSignature: vi.fn().mockReturnValue(true),
@@ -59,6 +61,7 @@ describe('Webhook 事件日志记录', () => {
     vi.clearAllMocks();
     mockRecordCiRun.mockResolvedValue(1);
     mockUpdateCiRun.mockResolvedValue(undefined);
+    mockFlushLogs.mockResolvedValue(undefined);
   });
 
   describe('push 事件', () => {

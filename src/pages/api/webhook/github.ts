@@ -13,7 +13,8 @@ import {
 import { shouldTriggerIssueFix, solveIssue } from '@/lib/ci/issue-solver';
 import { getFixCommand } from '@/lib/ci/config';
 import { auditPR } from '@/lib/ci/security-auditor';
-import { recordCiRun, updateCiRun } from '@/lib/ci/run-logger';
+import { recordCiRun, updateCiRun, flushLogs } from '@/lib/ci/run-logger';
+import { LogCollector } from '@/lib/ci/log-collector';
 
 export const config = {
   api: {
@@ -80,10 +81,14 @@ async function handlePREvent(
 ): Promise<void> {
   const prPayload = payload as unknown as PREventPayload;
 
+  // CI 流水线日志收集器
+  const ciLogger = new LogCollector();
+
   // fire-and-forget：不阻塞 webhook 响应
-  handlePullRequest(prPayload as unknown as PRPayload)
-    .then(() => {
+  handlePullRequest(prPayload as unknown as PRPayload, ciLogger)
+    .then(async () => {
       logger.info(`[Webhook] CI pipeline completed for PR #${prPayload.pull_request.number}`);
+      // CI 流水线完成后刷新日志（暂不更新数据库，等审计完成后一起更新）
     })
     .catch((err) => {
       logger.error(`[Webhook] CI pipeline failed for PR #${prPayload.pull_request.number}:`, err);
@@ -95,6 +100,9 @@ async function handlePREvent(
     const baseBranch = prPayload.pull_request.base.ref;
     const headSha = prPayload.pull_request.head.sha;
     const repo = getRepoFullName(payload);
+
+    // 审计日志收集器
+    const auditLogger = new LogCollector();
 
     const auditRunId = await recordCiRun({
       repo,
@@ -108,21 +116,23 @@ async function handlePREvent(
       isBotInitiated: true,
     });
 
-    auditPR(prNumber, baseBranch, headSha, workspaceDir)
-      .then(() => {
+    auditPR(prNumber, baseBranch, headSha, workspaceDir, auditLogger)
+      .then(async () => {
         logger.info(`[Webhook] Security audit completed for PR #${prNumber}`);
         if (auditRunId) {
-          updateCiRun(auditRunId, { status: 'success', conclusion: 'success' });
+          await updateCiRun(auditRunId, { status: 'success', conclusion: 'success' });
+          await flushLogs(auditRunId, auditLogger);
         }
       })
-      .catch((err) => {
+      .catch(async (err) => {
         logger.error(`Security audit failed for PR #${prNumber}:`, err);
         if (auditRunId) {
-          updateCiRun(auditRunId, {
+          await updateCiRun(auditRunId, {
             status: 'failure',
             conclusion: 'failure',
-            logs: err instanceof Error ? err.message : String(err),
           });
+          auditLogger.addMessage(`Error: ${err instanceof Error ? err.message : String(err)}`);
+          await flushLogs(auditRunId, auditLogger);
         }
       });
   }
@@ -152,6 +162,9 @@ async function handleIssueEvent(
   if (shouldFix) {
     logger.info(`[Webhook] Issue auto-fix triggered for Issue #${issuePayload.issue.number}`);
 
+    // Issue 修复日志收集器
+    const issueLogger = new LogCollector();
+
     const issueRepo = getRepoFullName(payload);
     const issueRunId = await recordCiRun({
       repo: issueRepo,
@@ -163,21 +176,23 @@ async function handleIssueEvent(
       logs: `Issue #${issuePayload.issue.number}: ${issuePayload.issue.title}`,
     });
 
-    solveIssue(event, issuePayload, workspaceDir)
-      .then(() => {
+    solveIssue(event, issuePayload, workspaceDir, issueLogger)
+      .then(async () => {
         logger.info(`[Webhook] Issue solver completed for issue #${issuePayload.issue.number}`);
         if (issueRunId) {
-          updateCiRun(issueRunId, { status: 'success', conclusion: 'success' });
+          await updateCiRun(issueRunId, { status: 'success', conclusion: 'success' });
+          await flushLogs(issueRunId, issueLogger);
         }
       })
-      .catch((err) => {
+      .catch(async (err) => {
         logger.error(`Issue solver failed:`, err);
         if (issueRunId) {
-          updateCiRun(issueRunId, {
+          await updateCiRun(issueRunId, {
             status: 'failure',
             conclusion: 'failure',
-            logs: err instanceof Error ? err.message : String(err),
           });
+          issueLogger.addMessage(`Error: ${err instanceof Error ? err.message : String(err)}`);
+          await flushLogs(issueRunId, issueLogger);
         }
       });
   }
