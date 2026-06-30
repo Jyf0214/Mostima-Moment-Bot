@@ -75,6 +75,7 @@ export default function OverviewPage({
           {!hasInstallations && appConfigured !== false ? (
             <button
               onClick={onInstall}
+              aria-label={t('home.installApp')}
               className="flex items-center gap-3 p-4 rounded-xl bg-blue-50 border border-blue-200 hover:border-blue-300 transition-all text-left"
             >
               <Plug className="h-5 w-5 text-blue-500 shrink-0" />
@@ -86,6 +87,7 @@ export default function OverviewPage({
           ) : (
             <button
               onClick={onNavigateToRepos}
+              aria-label={t('home.repositories')}
               className="flex items-center gap-3 p-4 rounded-xl bg-white border border-zinc-200 hover:border-zinc-300 hover:shadow-md transition-all text-left"
             >
               <FolderGit2 className="h-5 w-5 text-blue-500 shrink-0" />
@@ -99,6 +101,7 @@ export default function OverviewPage({
           )}
           <button
             onClick={onNavigateToEnv}
+            aria-label={t('sidebar.envVars')}
             className="flex items-center gap-3 p-4 rounded-xl bg-white border border-zinc-200 hover:border-zinc-300 hover:shadow-md transition-all text-left"
           >
             <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
@@ -109,6 +112,7 @@ export default function OverviewPage({
           </button>
           <button
             onClick={() => (window.location.href = '/github-test')}
+            aria-label={t('dashboard.testConnection')}
             className="flex items-center gap-3 p-4 rounded-xl bg-white border border-zinc-200 hover:border-zinc-300 hover:shadow-md transition-all text-left"
           >
             <BarChart3 className="h-5 w-5 text-amber-500 shrink-0" />
