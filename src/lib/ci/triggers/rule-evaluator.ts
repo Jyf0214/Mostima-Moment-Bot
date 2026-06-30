@@ -191,11 +191,15 @@ function checkCommentEvent(rule: TriggerRule, payload: WebhookPayload): TriggerM
     if (rule.commentPattern.length > 200) {
       return { matched: false, reason: 'Comment pattern too long' };
     }
+    // 检查正则是否包含已知的 ReDoS 危险模式（嵌套量词）
+    if (hasDangerousRegexPattern(rule.commentPattern)) {
+      return { matched: false, reason: 'Comment pattern contains potentially unsafe regex' };
+    }
     try {
-      // 使用安全超时的正则匹配
       const regex = new RegExp(rule.commentPattern);
-      // 设置匹配步数上限防止 ReDoS
-      const match = regex.exec(payload.commentBody);
+      // 限制输入长度，减少 ReDoS 攻击面（评论内容截断至 1000 字符）
+      const safeInput = payload.commentBody.slice(0, 1000);
+      const match = regex.exec(safeInput);
       if (!match) {
         return {
           matched: false,
@@ -229,4 +233,21 @@ export function findFirstMatch(rules: TriggerRule[], payload: WebhookPayload): T
     if (result.matched) return result;
   }
   return { matched: false, reason: 'No matching rule found' };
+}
+
+/**
+ * 检测正则表达式中是否包含已知的 ReDoS 危险模式
+ *
+ * 检测嵌套量词（如 (a+)+ 、(a*)* 、(a|b)*c* ），
+ * 这些模式在回溯时可能导致指数级时间复杂度。
+ *
+ * 注意：此检查为启发式，不覆盖所有可能的 ReDoS 变体。
+ * 对于高安全场景，建议使用专用正则分析工具。
+ */
+function hasDangerousRegexPattern(pattern: string): boolean {
+  // 嵌套量词检测：捕获组后紧跟量词（+、*、?、{n,m}）
+  const nestedQuantifiers = /(\([^)]*[+*][^)]*\))[+*{]/;
+  // 重叠字符类检测：形如 [a-z]*[a-z] 的连续字符类
+  const overlappingClasses = /\[[^\]]+\][+*]\s*\[[^\]]+\]/;
+  return nestedQuantifiers.test(pattern) || overlappingClasses.test(pattern);
 }

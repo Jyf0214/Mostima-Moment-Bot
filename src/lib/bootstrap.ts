@@ -55,12 +55,15 @@ export async function autoSaveEnvVars(): Promise<void> {
         // 明文存储（encryption_key 等）
         // 绕过加密中间件，直接操作数据库
         const rawClient = new (await import('@prisma/client')).PrismaClient();
-        await rawClient.appConfig.upsert({
-          where: { configKey: key },
-          update: { configValue: value, encrypted: false },
-          create: { configKey: key, configValue: value, encrypted: false },
-        });
-        await rawClient.$disconnect();
+        try {
+          await rawClient.appConfig.upsert({
+            where: { configKey: key },
+            update: { configValue: value, encrypted: false },
+            create: { configKey: key, configValue: value, encrypted: false },
+          });
+        } finally {
+          await rawClient.$disconnect();
+        }
       }
     }
 

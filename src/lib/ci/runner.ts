@@ -101,8 +101,9 @@ export async function handleIssueComment(payload: CommentPayload): Promise<void>
     return;
   }
 
-  // 检查是否为重试命令
-  if (commentBody.includes('/rebuild') || commentBody.includes('/retry')) {
+  // 检查是否为重试命令（前缀匹配，避免 "DO NOT /rebuild" 等误触发）
+  const trimmedBody = commentBody.trimStart();
+  if (trimmedBody.startsWith('/rebuild') || trimmedBody.startsWith('/retry')) {
     logger.info(`Manual rebuild triggered for PR #${issueNumber} by ${commenter}`);
     await handlePullRequest({ pull_request: { number: issueNumber } });
   }

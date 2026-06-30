@@ -47,6 +47,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Name required' });
     }
 
+    const trimmedName = name.trim();
+    if (trimmedName.length === 0) {
+      return res.status(400).json({ error: 'Name cannot be empty' });
+    }
+    if (trimmedName.length > 100) {
+      return res.status(400).json({ error: 'Name too long (max 100 characters)' });
+    }
+
     // 生成 32 字节随机密钥
     const rawKey = `manticore_${crypto.randomBytes(32).toString('hex')}`;
     const keyHash = crypto.createHash('sha256').update(rawKey).digest('hex');
@@ -54,7 +62,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const apiKey = await prisma.apiKey.create({
       data: {
         keyHash,
-        name,
+        name: trimmedName,
         adminId: admin.id,
       },
     });

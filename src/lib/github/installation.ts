@@ -1,9 +1,22 @@
 import { generateJWT, getAppId, getPrivateKey } from './auth';
+import { logger } from '@/lib/logger';
+
+/** 安装令牌缓存：installationId → { token, expiresAt } */
+const tokenCache = new Map<number, { token: string; expiresAt: number }>();
+
+/** 缓存提前过期时间（毫秒），避免在过期边界使用失效令牌 */
+const CACHE_SAFETY_MARGIN_MS = 60_000;
 
 /**
- * 获取 GitHub App Installation 的访问令牌
+ * 获取 GitHub App Installation 的访问令牌（带缓存）
  */
 export async function getInstallationAccessToken(installationId: number): Promise<string> {
+  // 检查缓存
+  const cached = tokenCache.get(installationId);
+  if (cached && Date.now() < cached.expiresAt - CACHE_SAFETY_MARGIN_MS) {
+    return cached.token;
+  }
+
   const appId = await getAppId();
   const privateKey = await getPrivateKey();
 
@@ -24,7 +37,17 @@ export async function getInstallationAccessToken(installationId: number): Promis
     throw new Error(`Failed to get installation access token: ${response.statusText}`);
   }
 
-  const data = (await response.json()) as { token: string };
+  interface TokenResponse {
+    token: string;
+    expires_at?: string;
+  }
+  const data = (await response.json()) as TokenResponse;
+
+  // 计算过期时间（默认 1 小时）
+  const expiresAt = data.expires_at ? new Date(data.expires_at).getTime() : Date.now() + 3600000;
+
+  tokenCache.set(installationId, { token: data.token, expiresAt });
+
   return data.token;
 }
 

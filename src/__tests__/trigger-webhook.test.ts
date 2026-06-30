@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { normalizePayload, matchWebhook, matchWebhookFirst } from '@/lib/ci/triggers/index';
-import { DEFAULT_RULES } from '@/lib/ci/triggers/default-rules';
+import { getDefaultRules } from '@/lib/ci/triggers/default-rules';
 import { getBotSlug } from '@/lib/ci/config';
 
 describe('Webhook 载荷标准化与匹配', () => {
@@ -123,7 +123,7 @@ describe('Webhook 载荷标准化与匹配', () => {
         pusher: { name: 'Jyf0214' },
         repository: { full_name: 'Jyf0214/Mostima-Moment-Bot' },
       };
-      const results = matchWebhook(DEFAULT_RULES, 'push', payload);
+      const results = matchWebhook(getDefaultRules(), 'push', payload);
       const matched = results.filter((r) => r.matched);
       expect(matched.length).toBeGreaterThanOrEqual(2);
       expect(matched.some((r) => r.rule?.id === 'ci-verification')).toBe(true);
@@ -141,7 +141,7 @@ describe('Webhook 载荷标准化与匹配', () => {
         },
         repository: { full_name: 'Jyf0214/Mostima-Moment-Bot' },
       };
-      const results = matchWebhook(DEFAULT_RULES, 'pull_request', payload);
+      const results = matchWebhook(getDefaultRules(), 'pull_request', payload);
       const matched = results.filter((r) => r.matched);
       expect(matched.some((r) => r.rule?.id === 'security-audit')).toBe(true);
     });
@@ -156,7 +156,7 @@ describe('Webhook 载荷标准化与匹配', () => {
         },
         repository: { full_name: 'Jyf0214/Mostima-Moment-Bot' },
       };
-      const results = matchWebhook(DEFAULT_RULES, 'issue', payload);
+      const results = matchWebhook(getDefaultRules(), 'issue', payload);
       const matched = results.filter((r) => r.matched);
       expect(matched.some((r) => r.rule?.id === 'auto-fix')).toBe(true);
     });
@@ -168,7 +168,7 @@ describe('Webhook 载荷标准化与匹配', () => {
         pusher: { name: 'user' },
         repository: { full_name: 'Jyf0214/Mostima-Moment-Bot' },
       };
-      const results = matchWebhook(DEFAULT_RULES, 'push', payload);
+      const results = matchWebhook(getDefaultRules(), 'push', payload);
       const matched = results.filter((r) => r.matched);
       expect(matched.length).toBe(0);
     });
@@ -182,14 +182,14 @@ describe('Webhook 载荷标准化与匹配', () => {
         pusher: { name: 'Jyf0214' },
         repository: { full_name: 'Jyf0214/Mostima-Moment-Bot' },
       };
-      const result = matchWebhookFirst(DEFAULT_RULES, 'push', payload);
+      const result = matchWebhookFirst(getDefaultRules(), 'push', payload);
       expect(result.matched).toBe(true);
       expect(result.rule?.id).toBe('ci-verification');
     });
 
     it('没有匹配时应该返回 no matching rule', () => {
       const payload = { ref: 'refs/heads/feature/x' };
-      const result = matchWebhookFirst(DEFAULT_RULES, 'push', payload);
+      const result = matchWebhookFirst(getDefaultRules(), 'push', payload);
       expect(result.matched).toBe(false);
     });
   });

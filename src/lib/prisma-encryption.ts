@@ -42,12 +42,11 @@ async function getEncryptionKey(): Promise<string> {
   // 但密钥本身可能存储在数据库中（鸡生蛋问题）。此处创建独立 PrismaClient
   // 绕过加密中间件直接读取明文密钥，读取后立即断开连接。
   // 生产环境中优先使用 ENCRYPTION_KEY 环境变量以避免此路径。
+  const rawClient = new PrismaClient();
   try {
-    const rawClient = new PrismaClient();
     const config = await rawClient.appConfig.findUnique({
       where: { configKey: 'encryption_key' },
     });
-    await rawClient.$disconnect();
 
     if (config?.configValue) {
       cachedEncryptionKey = config.configValue;
@@ -57,6 +56,8 @@ async function getEncryptionKey(): Promise<string> {
   } catch (err) {
     // 数据库不可用，降级为仅环境变量模式
     logger.warn('[Encryption] Failed to read key from database:', err);
+  } finally {
+    await rawClient.$disconnect();
   }
 
   throw new Error(
@@ -90,7 +91,7 @@ function encryptObject(
   return result;
 }
 
-/** 解密对象中的指定字段 */
+/** 解密对象中的指定字段，解密失败时抛出异常防止明文密文混合 */
 function decryptObject(
   obj: Record<string, unknown>,
   model: string,
@@ -99,26 +100,23 @@ function decryptObject(
   const result = { ...obj };
   for (const [k, value] of Object.entries(result)) {
     if (isEncryptedField(model, k) && typeof value === 'string') {
-      try {
-        result[k] = decrypt(value, key);
-      } catch {
-        logger.error(`Failed to decrypt ${model}.${k}`);
-      }
+      result[k] = decrypt(value, key);
     }
   }
   return result;
 }
 
-/** 递归处理查询结果 */
+/** 递归处理查询结果：对包含加密字段的模型自动解密 */
 function processResult(result: unknown, model: string, key: string | null): unknown {
   if (result === null || result === undefined) return result;
   if (Array.isArray(result)) return result.map((item) => processResult(item, model, key));
   if (typeof result === 'object') {
     const obj = result as Record<string, unknown>;
-    if ('id' in obj || 'configKey' in obj) {
-      if (key) return decryptObject(obj, model, key);
-      return obj;
+    // 仅当模型存在需要加密的字段时才尝试解密，避免对非模型对象误操作
+    if (model && ENCRYPTED_FIELDS[model]?.length && key) {
+      return decryptObject(obj, model, key);
     }
+    return obj;
   }
   return result;
 }

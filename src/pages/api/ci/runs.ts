@@ -4,6 +4,7 @@ import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
 import { verifyAuthToken } from '@/lib/auth-utils';
 import { getQueryParam, getQueryParamNumber, getQueryParamBoolean } from '@/lib/api-utils';
+import type { CiRunStatus } from '@prisma/client';
 
 /**
  * CI 运行日志
@@ -94,7 +95,8 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
 async function handleGetRepos(req: NextApiRequest, res: NextApiResponse) {
   try {
     // 获取最近 500 条 bot 触发的运行记录，按仓库分组统计
-    const recentRuns = (await prisma.ciRun.findMany({
+    // Prisma 根据 select 子句自动推断返回类型，无需手动类型断言
+    const recentRuns = await prisma.ciRun.findMany({
       where: { isBotInitiated: true },
       orderBy: { createdAt: 'desc' },
       take: 500,
@@ -105,20 +107,14 @@ async function handleGetRepos(req: NextApiRequest, res: NextApiResponse) {
         event: true,
         branch: true,
       },
-    })) as Array<{
-      repoFullName: string;
-      status: string;
-      createdAt: Date;
-      event: string;
-      branch: string | null;
-    }>;
+    });
 
     // 按仓库分组，取每个仓库的统计和最新运行
     const repoMap = new Map<
       string,
       {
         total: number;
-        latest: { status: string; createdAt: string; event: string; branch: string | null };
+        latest: { status: CiRunStatus; createdAt: string; event: string; branch: string | null };
       }
     >();
 
@@ -228,8 +224,10 @@ async function handlePost(req: NextApiRequest, res: NextApiResponse) {
     return res.status(400).json({ error: 'Invalid repo' });
   }
 
-  const validStatuses = ['pending', 'running', 'success', 'failure', 'cancelled'];
-  const runStatus = validStatuses.includes(status) ? status : 'pending';
+  const validStatuses: CiRunStatus[] = ['pending', 'running', 'success', 'failure', 'cancelled'];
+  const runStatus: CiRunStatus = validStatuses.includes(status as CiRunStatus)
+    ? (status as CiRunStatus)
+    : 'pending';
 
   try {
     const run = await prisma.ciRun.create({

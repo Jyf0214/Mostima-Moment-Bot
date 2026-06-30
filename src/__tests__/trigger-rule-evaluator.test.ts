@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { evaluateRule, evaluateAllRules, findFirstMatch } from '@/lib/ci/triggers/rule-evaluator';
-import { DEFAULT_RULES } from '@/lib/ci/triggers/default-rules';
+import { getDefaultRules } from '@/lib/ci/triggers/default-rules';
 import type { TriggerRule, WebhookPayload } from '@/lib/ci/triggers/types';
 import { getBotSlug } from '@/lib/ci/config';
 
@@ -256,14 +256,14 @@ describe('规则匹配引擎', () => {
   describe('evaluateAllRules', () => {
     it('应该返回所有匹配的规则', () => {
       const payload: WebhookPayload = { event: 'push', branch: 'main' };
-      const results = evaluateAllRules(DEFAULT_RULES, payload);
+      const results = evaluateAllRules(getDefaultRules(), payload);
       const matched = results.filter((r) => r.matched);
       expect(matched.length).toBeGreaterThanOrEqual(2); // ci-verification + build-check
     });
 
     it('应该返回不匹配规则的原因', () => {
       const payload: WebhookPayload = { event: 'push', branch: 'develop' };
-      const results = evaluateAllRules(DEFAULT_RULES, payload);
+      const results = evaluateAllRules(getDefaultRules(), payload);
       const unmatched = results.filter((r) => !r.matched);
       expect(unmatched.length).toBeGreaterThan(0);
       expect(unmatched[0].reason).toBeDefined();
@@ -273,14 +273,14 @@ describe('规则匹配引擎', () => {
   describe('findFirstMatch', () => {
     it('应该返回第一条匹配的规则', () => {
       const payload: WebhookPayload = { event: 'push', branch: 'main' };
-      const result = findFirstMatch(DEFAULT_RULES, payload);
+      const result = findFirstMatch(getDefaultRules(), payload);
       expect(result.matched).toBe(true);
       expect(result.rule?.id).toBe('ci-verification');
     });
 
     it('没有匹配时应该返回 no matching rule', () => {
       const payload: WebhookPayload = { event: 'push', branch: 'develop' };
-      const result = findFirstMatch(DEFAULT_RULES, payload);
+      const result = findFirstMatch(getDefaultRules(), payload);
       expect(result.matched).toBe(false);
     });
   });

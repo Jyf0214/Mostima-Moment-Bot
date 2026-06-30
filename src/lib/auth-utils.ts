@@ -26,10 +26,20 @@ export function getJwtSecret(): string {
 
 /**
  * 验证认证令牌，返回解码后的载荷
+ * 使用环境变量中的 JWT_SECRET
  * @throws jwt 验证失败时抛出异常
  */
 export function verifyAuthToken(token: string): JwtPayload {
   const secret = getJwtSecret();
+  return jwt.verify(token, secret) as JwtPayload;
+}
+
+/**
+ * 使用指定密钥验证 JWT 令牌
+ * 适用于需要自定义密钥来源的场景（如从数据库读取 JWT_SECRET）
+ * @throws jwt 验证失败时抛出异常
+ */
+export function verifyTokenWithSecret(token: string, secret: string): JwtPayload {
   return jwt.verify(token, secret) as JwtPayload;
 }
 

@@ -72,6 +72,172 @@ interface WorkflowJobPayload {
 }
 
 /**
+ * 处理 PR 事件：CI 流水线 + 安全审计
+ */
+async function handlePREvent(
+  payload: Record<string, unknown>,
+  workspaceDir: string
+): Promise<void> {
+  const prPayload = payload as unknown as PREventPayload;
+
+  // fire-and-forget：不阻塞 webhook 响应
+  handlePullRequest(prPayload as unknown as PRPayload)
+    .then(() => {
+      logger.info(`[Webhook] CI pipeline completed for PR #${prPayload.pull_request.number}`);
+    })
+    .catch((err) => {
+      logger.error(`[Webhook] CI pipeline failed for PR #${prPayload.pull_request.number}:`, err);
+    });
+
+  // PR 安全审计（bot 自身的工作流）
+  if (prPayload.action === 'opened' || prPayload.action === 'synchronize') {
+    const prNumber = prPayload.pull_request.number;
+    const baseBranch = prPayload.pull_request.base.ref;
+    const headSha = prPayload.pull_request.head.sha;
+    const repo = getRepoFullName(payload);
+
+    const auditRunId = await recordCiRun({
+      repo,
+      event: 'security_audit',
+      action: prPayload.action,
+      branch: baseBranch,
+      commitSha: headSha,
+      prNumber,
+      status: 'running',
+      triggeredBy: 'bot',
+      isBotInitiated: true,
+    });
+
+    auditPR(prNumber, baseBranch, headSha, workspaceDir)
+      .then(() => {
+        logger.info(`[Webhook] Security audit completed for PR #${prNumber}`);
+        if (auditRunId) {
+          updateCiRun(auditRunId, { status: 'success', conclusion: 'success' });
+        }
+      })
+      .catch((err) => {
+        logger.error(`Security audit failed for PR #${prNumber}:`, err);
+        if (auditRunId) {
+          updateCiRun(auditRunId, {
+            status: 'failure',
+            conclusion: 'failure',
+            logs: err instanceof Error ? err.message : String(err),
+          });
+        }
+      });
+  }
+}
+
+/**
+ * 处理 Issue / issue_comment 事件：自动修复 + 评论重试
+ */
+async function handleIssueEvent(
+  event: string,
+  payload: Record<string, unknown>,
+  workspaceDir: string
+): Promise<void> {
+  const issuePayload = payload as unknown as IssueEventPayload;
+
+  logger.info(
+    `[Webhook] Issue event: ${event}, action=${issuePayload.action}, ` +
+      `issue=#${issuePayload.issue.number}, ` +
+      `label=${issuePayload.label?.name || 'none'}, ` +
+      `comment_body=${(issuePayload.comment?.body || '').slice(0, 80)}, ` +
+      `comment_assoc=${issuePayload.comment?.author_association || 'none'}`
+  );
+
+  // Issue 自动修复
+  const shouldFix = shouldTriggerIssueFix(event, issuePayload);
+  logger.info(`[Webhook] shouldTriggerIssueFix=${shouldFix}, fixCmd="${getFixCommand()}"`);
+  if (shouldFix) {
+    logger.info(`[Webhook] Issue auto-fix triggered for Issue #${issuePayload.issue.number}`);
+
+    const issueRepo = getRepoFullName(payload);
+    const issueRunId = await recordCiRun({
+      repo: issueRepo,
+      event: event === 'issues' ? 'issue_labeled' : 'issue_comment',
+      action: event === 'issues' ? 'auto-fix' : 'fix-command',
+      status: 'running',
+      triggeredBy: 'bot',
+      isBotInitiated: true,
+      logs: `Issue #${issuePayload.issue.number}: ${issuePayload.issue.title}`,
+    });
+
+    solveIssue(event, issuePayload, workspaceDir)
+      .then(() => {
+        logger.info(`[Webhook] Issue solver completed for issue #${issuePayload.issue.number}`);
+        if (issueRunId) {
+          updateCiRun(issueRunId, { status: 'success', conclusion: 'success' });
+        }
+      })
+      .catch((err) => {
+        logger.error(`Issue solver failed:`, err);
+        if (issueRunId) {
+          updateCiRun(issueRunId, {
+            status: 'failure',
+            conclusion: 'failure',
+            logs: err instanceof Error ? err.message : String(err),
+          });
+        }
+      });
+  }
+
+  // issue_comment 重试逻辑
+  if (event === 'issue_comment') {
+    await handleIssueComment(payload as unknown as CommentPayload);
+  }
+}
+
+/**
+ * 处理 installation 事件：记录/更新/停用 GitHub App 安装
+ */
+async function handleInstallationEvent(payload: Record<string, unknown>): Promise<void> {
+  const installPayload = payload as unknown as InstallationPayload;
+  const { action, installation } = installPayload;
+
+  if (action === 'created' || action === 'reopened') {
+    logger.info(
+      `[Webhook] Installation ${action}: ID=${installation.id}, account=${installation.account.login}`
+    );
+
+    const admin = await prisma.admin.findFirst();
+    if (!admin) {
+      logger.error('[Webhook] No admin found, cannot store installation');
+      return;
+    }
+
+    const existing = await prisma.gitHubInstallation.findUnique({
+      where: { installationId: installation.id },
+    });
+
+    if (existing) {
+      await prisma.gitHubInstallation.update({
+        where: { installationId: installation.id },
+        data: { isActive: true, adminId: admin.id },
+      });
+    } else {
+      await prisma.gitHubInstallation.create({
+        data: {
+          installationId: installation.id,
+          accountLogin: installation.account.login,
+          accountType: installation.account.type,
+          accountId: installation.account.id,
+          avatarUrl: installation.account.avatar_url,
+          adminId: admin.id,
+        },
+      });
+    }
+    logger.info(`[Webhook] Installation record saved: ${installation.account.login}`);
+  } else if (action === 'deleted' || action === 'suspend') {
+    logger.info(`[Webhook] Installation ${action}: ID=${installation.id}`);
+    await prisma.gitHubInstallation.updateMany({
+      where: { installationId: installation.id },
+      data: { isActive: false },
+    });
+  }
+}
+
+/**
  * GitHub Webhook 接收端
  * POST /api/webhook/github
  */
@@ -118,118 +284,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // 3. 事件路由
   try {
     switch (event) {
-      case 'pull_request': {
-        const prPayload = payload as unknown as PREventPayload;
-
-        // fire-and-forget：不阻塞 webhook 响应
-        handlePullRequest(prPayload as unknown as PRPayload)
-          .then(() => {
-            logger.info(`[Webhook] CI pipeline completed for PR #${prPayload.pull_request.number}`);
-          })
-          .catch((err) => {
-            logger.error(
-              `[Webhook] CI pipeline failed for PR #${prPayload.pull_request.number}:`,
-              err
-            );
-          });
-
-        // PR 安全审计（bot 自身的工作流）
-        if (prPayload.action === 'opened' || prPayload.action === 'synchronize') {
-          const prNumber = prPayload.pull_request.number;
-          const baseBranch = prPayload.pull_request.base.ref;
-          const headSha = prPayload.pull_request.head.sha;
-          const repo = getRepoFullName(payload);
-
-          const auditRunId = await recordCiRun({
-            repo,
-            event: 'security_audit',
-            action: prPayload.action,
-            branch: baseBranch,
-            commitSha: headSha,
-            prNumber,
-            status: 'running',
-            triggeredBy: 'bot',
-            isBotInitiated: true,
-          });
-
-          auditPR(prNumber, baseBranch, headSha, workspaceDir)
-            .then(() => {
-              logger.info(`[Webhook] Security audit completed for PR #${prNumber}`);
-              if (auditRunId) {
-                updateCiRun(auditRunId, { status: 'success', conclusion: 'success' });
-              }
-            })
-            .catch((err) => {
-              logger.error(`Security audit failed for PR #${prNumber}:`, err);
-              if (auditRunId) {
-                updateCiRun(auditRunId, {
-                  status: 'failure',
-                  conclusion: 'failure',
-                  logs: err instanceof Error ? err.message : String(err),
-                });
-              }
-            });
-        }
+      case 'pull_request':
+        await handlePREvent(payload, workspaceDir);
         break;
-      }
 
       case 'issues':
-      case 'issue_comment': {
-        const issuePayload = payload as unknown as IssueEventPayload;
-
-        logger.info(
-          `[Webhook] Issue event: ${event}, action=${issuePayload.action}, ` +
-            `issue=#${issuePayload.issue.number}, ` +
-            `label=${issuePayload.label?.name || 'none'}, ` +
-            `comment_body=${(issuePayload.comment?.body || '').slice(0, 80)}, ` +
-            `comment_assoc=${issuePayload.comment?.author_association || 'none'}`
-        );
-
-        // Issue 自动修复
-        const shouldFix = shouldTriggerIssueFix(event, issuePayload);
-        logger.info(`[Webhook] shouldTriggerIssueFix=${shouldFix}, fixCmd="${getFixCommand()}"`);
-        if (shouldFix) {
-          logger.info(`[Webhook] Issue auto-fix triggered for Issue #${issuePayload.issue.number}`);
-
-          // 记录 bot 触发的工作流日志
-          const issueRepo = getRepoFullName(payload);
-          const issueRunId = await recordCiRun({
-            repo: issueRepo,
-            event: event === 'issues' ? 'issue_labeled' : 'issue_comment',
-            action: event === 'issues' ? 'auto-fix' : 'fix-command',
-            status: 'running',
-            triggeredBy: 'bot',
-            isBotInitiated: true,
-            logs: `Issue #${issuePayload.issue.number}: ${issuePayload.issue.title}`,
-          });
-
-          solveIssue(event, issuePayload, workspaceDir)
-            .then(() => {
-              logger.info(
-                `[Webhook] Issue solver completed for issue #${issuePayload.issue.number}`
-              );
-              if (issueRunId) {
-                updateCiRun(issueRunId, { status: 'success', conclusion: 'success' });
-              }
-            })
-            .catch((err) => {
-              logger.error(`Issue solver failed:`, err);
-              if (issueRunId) {
-                updateCiRun(issueRunId, {
-                  status: 'failure',
-                  conclusion: 'failure',
-                  logs: err instanceof Error ? err.message : String(err),
-                });
-              }
-            });
-        }
-
-        // 原有的 issue_comment 重试逻辑
-        if (event === 'issue_comment') {
-          await handleIssueComment(payload as unknown as CommentPayload);
-        }
+      case 'issue_comment':
+        await handleIssueEvent(event, payload, workspaceDir);
         break;
-      }
 
       case 'workflow_run':
         await handleWorkflowRun(payload as unknown as WorkflowPayload);
@@ -241,7 +303,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         logger.info(
           `[Webhook] Push to ${pushPayload.ref}: ${pushPayload.head_commit?.id?.slice(0, 7) || 'unknown'} — ${commitMsg}`
         );
-        // 不记录 push 事件到 CiRun（禁止存储 GitHub Actions 记录）
         break;
       }
 
@@ -251,58 +312,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         logger.info(
           `[Webhook] Workflow job ${jobPayload.action}: ${job.name} — status=${job.status}, conclusion=${job.conclusion || 'pending'}`
         );
-        // 不记录 workflow_job 事件到 CiRun（禁止存储 GitHub Actions 记录）
         break;
       }
 
-      case 'installation': {
-        const installPayload = payload as unknown as InstallationPayload;
-        const { action, installation } = installPayload;
-
-        if (action === 'created' || action === 'reopened') {
-          logger.info(
-            `[Webhook] Installation ${action}: ID=${installation.id}, account=${installation.account.login}`
-          );
-
-          // 查找管理员（取第一个管理员）
-          const admin = await prisma.admin.findFirst();
-          if (!admin) {
-            logger.error('[Webhook] No admin found, cannot store installation');
-            break;
-          }
-
-          // 检查是否已存在
-          const existing = await prisma.gitHubInstallation.findUnique({
-            where: { installationId: installation.id },
-          });
-
-          if (existing) {
-            await prisma.gitHubInstallation.update({
-              where: { installationId: installation.id },
-              data: { isActive: true, adminId: admin.id },
-            });
-          } else {
-            await prisma.gitHubInstallation.create({
-              data: {
-                installationId: installation.id,
-                accountLogin: installation.account.login,
-                accountType: installation.account.type,
-                accountId: installation.account.id,
-                avatarUrl: installation.account.avatar_url,
-                adminId: admin.id,
-              },
-            });
-          }
-          logger.info(`[Webhook] Installation record saved: ${installation.account.login}`);
-        } else if (action === 'deleted' || action === 'suspend') {
-          logger.info(`[Webhook] Installation ${action}: ID=${installation.id}`);
-          await prisma.gitHubInstallation.updateMany({
-            where: { installationId: installation.id },
-            data: { isActive: false },
-          });
-        }
+      case 'installation':
+        await handleInstallationEvent(payload);
         break;
-      }
 
       default:
         logger.info(`Unhandled event: ${event}`);

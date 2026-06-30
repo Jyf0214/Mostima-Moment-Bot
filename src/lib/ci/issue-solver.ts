@@ -106,7 +106,7 @@ export async function solveIssue(
       }
     } catch (error) {
       logger.warn(
-        `[IssueSolver] Failed to get PR branch (issue #${issueNumber}), using default branch:`,
+        `[Issue Solver] Failed to get PR branch (issue #${issueNumber}), using default branch:`,
         error
       );
     }
@@ -199,8 +199,8 @@ export async function solveIssue(
         cwd: workspaceDir,
         stdio: 'pipe',
       });
-    } catch {
-      logger.warn('[Issue Solver] Failed to post issue comment');
+    } catch (err) {
+      logger.warn('[Issue Solver] Failed to post issue comment:', err);
     }
 
     logger.info(`[Issue Solver] Issue #${issueNumber} fixed successfully.`);

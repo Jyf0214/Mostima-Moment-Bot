@@ -1,8 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import jwt from 'jsonwebtoken';
 import { resetEncryptionKeyCache } from '@/lib/prisma-encryption';
 import { logger } from '@/lib/logger';
-import type { JwtPayload } from '@/lib/auth-utils';
+import { verifyTokenWithSecret } from '@/lib/auth-utils';
 
 /**
  * 加密密钥存储管理
@@ -38,14 +37,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(500).json({ error: 'JWT_SECRET not configured' });
   }
 
-  // 验证身份
+  // 验证身份（使用 verifyTokenWithSecret 以支持自定义密钥来源）
   const token = req.cookies.auth_token;
   if (!token) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
 
   try {
-    const decoded = jwt.verify(token, jwtSecret) as JwtPayload;
+    const decoded = verifyTokenWithSecret(token, jwtSecret);
     if (!decoded.isAdmin) {
       return res.status(403).json({ error: 'Admin only' });
     }
@@ -80,15 +79,38 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'encryptionKey is required' });
     }
 
-    // 使用原始 Prisma 客户端明文写入（绕过加密中间件）
-    // 注意：此密钥必须以可恢复形式存储，因为后续启动需要读取它进行加解密操作
-    // hashed 存储会导致密钥不可用，encrypted: false 是有意为之的设计
+    // 密钥格式校验：必须为 64 位十六进制字符串（32 字节 = 256 位）
+    const trimmedKey = encryptionKey.trim();
+    if (!/^[0-9a-f]{64}$/i.test(trimmedKey)) {
+      return res.status(400).json({
+        error: 'Encryption key must be a 64-character hexadecimal string (32 bytes)',
+      });
+    }
+
+    // 安全性验证：尝试用新密钥解密一条已有加密数据，确保密钥有效
+    // 防止错误密钥写入后导致所有加密数据永久不可读
     const rawClient = new (await import('@prisma/client')).PrismaClient();
     try {
+      const encryptedConfig = await rawClient.appConfig.findFirst({
+        where: { encrypted: true },
+      });
+      if (encryptedConfig?.configValue) {
+        const { decrypt } = await import('@/lib/crypto');
+        try {
+          decrypt(encryptedConfig.configValue, trimmedKey);
+        } catch {
+          return res.status(400).json({
+            error:
+              'The provided key cannot decrypt existing encrypted data. Please verify the key is correct.',
+          });
+        }
+      }
+
+      // 验证通过，写入数据库
       await rawClient.appConfig.upsert({
         where: { configKey: 'encryption_key' },
-        update: { configValue: encryptionKey, encrypted: false },
-        create: { configKey: 'encryption_key', configValue: encryptionKey, encrypted: false },
+        update: { configValue: trimmedKey, encrypted: false },
+        create: { configKey: 'encryption_key', configValue: trimmedKey, encrypted: false },
       });
     } finally {
       await rawClient.$disconnect();

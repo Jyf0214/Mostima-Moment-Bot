@@ -1,6 +1,9 @@
 import { CheckResult } from './runner';
 import { execFileSync } from 'child_process';
 
+/** CI 检查步骤默认超时时间：10 分钟 */
+const DEFAULT_STEP_TIMEOUT = 600_000;
+
 /**
  * 允许执行的命令白名单
  *
@@ -41,6 +44,7 @@ export function executeCheckStep(name: string, command: string, workspaceDir: st
     execFileSync(program, args, {
       cwd: workspaceDir,
       stdio: 'pipe',
+      timeout: DEFAULT_STEP_TIMEOUT,
     });
 
     return {

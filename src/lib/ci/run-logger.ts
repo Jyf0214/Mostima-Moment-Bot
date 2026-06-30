@@ -11,6 +11,7 @@ import { logger } from '../logger';
  * - 日志大小限制 50KB
  */
 
+import { Prisma, type CiRunStatus, type CiRunConclusion } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 
 /** 日志最大长度 */
@@ -26,8 +27,8 @@ export async function recordCiRun(params: {
   branch?: string;
   commitSha?: string;
   prNumber?: number;
-  status?: string;
-  conclusion?: string;
+  status?: CiRunStatus;
+  conclusion?: CiRunConclusion;
   triggeredBy?: string;
   ruleId?: string;
   checksRan?: string[];
@@ -44,7 +45,7 @@ export async function recordCiRun(params: {
         branch: params.branch?.slice(0, 255) || null,
         commitSha: params.commitSha?.slice(0, 40) || null,
         prNumber: params.prNumber || null,
-        status: params.status || 'running',
+        status: params.status || ('running' as CiRunStatus),
         conclusion: params.conclusion || null,
         triggeredBy: params.triggeredBy?.slice(0, 100) || null,
         ruleId: params.ruleId?.slice(0, 100) || null,
@@ -72,15 +73,16 @@ export async function recordCiRun(params: {
 export async function updateCiRun(
   runId: number,
   params: {
-    status?: string;
-    conclusion?: string;
+    status?: CiRunStatus;
+    conclusion?: CiRunConclusion;
     checksRan?: string[];
     logs?: string;
     duration?: number;
   }
 ): Promise<void> {
   try {
-    const updateData: Record<string, unknown> = {};
+    // 使用 Prisma 类型安全的更新输入类型
+    const updateData: Prisma.CiRunUpdateInput = {};
 
     if (params.status) {
       updateData.status = params.status;

@@ -1,5 +1,8 @@
 import { prisma } from './prisma';
 import { logger } from './logger';
+import type { BuildStatus } from '@prisma/client';
+
+export type { BuildStatus };
 
 /**
  * Check if this is a fresh application (no admins)
@@ -88,7 +91,11 @@ export async function createBuild(prNumber: number, branchName: string, triggerU
 /**
  * 更新构建状态
  */
-export async function updateBuildStatus(buildId: number, status: string, totalDuration?: number) {
+export async function updateBuildStatus(
+  buildId: number,
+  status: BuildStatus,
+  totalDuration?: number
+) {
   return prisma.build.update({
     where: { id: buildId },
     data: {
@@ -105,7 +112,7 @@ export async function updateBuildStatus(buildId: number, status: string, totalDu
 export async function createBuildStep(
   buildId: number,
   stepName: string,
-  status: string,
+  status: BuildStatus,
   duration?: number,
   exitCode?: number,
   output?: string

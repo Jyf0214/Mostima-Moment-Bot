@@ -1,12 +1,12 @@
 import { logger } from '../logger';
-import { execFileSync } from 'child_process';
+import { spawnAsync } from '../exec';
 import { getPRInfo } from '../github/api';
 
 /**
  * 验证分支名是否安全（仅允许 Git refname 合法字符）
  *
  * 防御命令注入：恶意分支名可能包含 shell 元字符（; | & ` $() 等），
- * 即使使用 execFileSync 不经过 shell，分支名仍必须符合 Git 规范。
+ * 即使使用 spawnAsync 不经过 shell，分支名仍必须符合 Git 规范。
  */
 export function validateBranchName(name: string): string {
   if (
@@ -64,19 +64,20 @@ export async function checkoutPRBranch(prNumber: number): Promise<void> {
   logger.info(`Checking out branch: ${branchName}`);
 
   // 2. 清理工作区
-  execFileSync('git', ['checkout', '.'], { cwd: workspaceDir });
-  execFileSync('git', ['clean', '-fd'], { cwd: workspaceDir });
+  await spawnAsync('git', ['checkout', '.'], { cwd: workspaceDir });
+  await spawnAsync('git', ['clean', '-fd'], { cwd: workspaceDir });
 
   // 3. 切换分支
-  execFileSync('git', ['fetch', 'origin', branchName], { cwd: workspaceDir });
-  execFileSync('git', ['checkout', branchName], { cwd: workspaceDir });
-  execFileSync('git', ['pull', 'origin', branchName], { cwd: workspaceDir });
+  await spawnAsync('git', ['fetch', 'origin', branchName], { cwd: workspaceDir });
+  await spawnAsync('git', ['checkout', branchName], { cwd: workspaceDir });
+  await spawnAsync('git', ['pull', 'origin', branchName], { cwd: workspaceDir });
 
   // 4. 同步主分支
-  try {
-    execFileSync('git', ['merge', 'origin/main', '--no-edit'], { cwd: workspaceDir });
-    logger.info('Successfully merged with main branch');
-  } catch {
+  const mergeResult = await spawnAsync('git', ['merge', 'origin/main', '--no-edit'], {
+    cwd: workspaceDir,
+  });
+  if (mergeResult.exitCode !== 0) {
     throw new Error('Merge conflict detected');
   }
+  logger.info('Successfully merged with main branch');
 }

@@ -106,6 +106,3 @@ export const BUILD_CHECK_RULE: TriggerRule = {
 export function getDefaultRules(): TriggerRule[] {
   return [CI_VERIFICATION_RULE, SECURITY_AUDIT_RULE, getAutoFixRule(), BUILD_CHECK_RULE];
 }
-
-/** @deprecated 使用 getDefaultRules() 代替，此导出仅供测试向后兼容 */
-export const DEFAULT_RULES: TriggerRule[] = getDefaultRules();

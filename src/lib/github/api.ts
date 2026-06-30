@@ -67,10 +67,32 @@ async function getAccessToken(): Promise<string> {
 }
 
 /**
+ * 执行 GitHub API 请求，401 时自动清除 token 缓存并重试一次
+ *
+ * @param requester - 接受 token 参数并返回 Response 的请求函数
+ * @returns 最终的 Response（可能是首次或重试的结果）
+ */
+async function githubRequestWithRetry(
+  requester: (token: string) => Promise<Response>
+): Promise<Response> {
+  const token = await getAccessToken();
+  let response = await requester(token);
+
+  if (response.status === 401) {
+    logger.warn('[GitHub API] Request returned 401, clearing token cache and retrying');
+    accessToken = null;
+    tokenExpiry = 0;
+    const retryToken = await getAccessToken();
+    response = await requester(retryToken);
+  }
+
+  return response;
+}
+
+/**
  * 在 PR 下发表评论
  */
 export async function postPRComment(prNumber: number, body: string): Promise<void> {
-  const token = await getAccessToken();
   const owner = process.env.REPO_OWNER;
   const repo = process.env.REPO_NAME;
 
@@ -78,9 +100,10 @@ export async function postPRComment(prNumber: number, body: string): Promise<voi
     throw new Error('REPO_OWNER and REPO_NAME must be set');
   }
 
-  const response = await fetch(
-    `https://api.github.com/repos/${owner}/${repo}/issues/${prNumber}/comments`,
-    {
+  const url = `https://api.github.com/repos/${owner}/${repo}/issues/${prNumber}/comments`;
+
+  const response = await githubRequestWithRetry((token) =>
+    fetch(url, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -88,32 +111,8 @@ export async function postPRComment(prNumber: number, body: string): Promise<voi
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ body }),
-    }
+    })
   );
-
-  // 401 时清除缓存并重试一次（token 可能被 GitHub 侧撤销）
-  if (response.status === 401) {
-    logger.warn('[GitHub API] Post comment returned 401, clearing token cache and retrying');
-    accessToken = null;
-    tokenExpiry = 0;
-    const retryToken = await getAccessToken();
-    const retryResponse = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/issues/${prNumber}/comments`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${retryToken}`,
-          Accept: 'application/vnd.github.v3+json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ body }),
-      }
-    );
-    if (!retryResponse.ok) {
-      throw new Error(`Failed to post comment after retry: ${retryResponse.statusText}`);
-    }
-    return;
-  }
 
   if (!response.ok) {
     throw new Error(`Failed to post comment: ${response.statusText}`);
@@ -128,7 +127,6 @@ interface PRInfo {
  * 获取 PR 信息
  */
 export async function getPRInfo(prNumber: number): Promise<PRInfo> {
-  const token = await getAccessToken();
   const owner = process.env.REPO_OWNER;
   const repo = process.env.REPO_NAME;
 
@@ -136,30 +134,20 @@ export async function getPRInfo(prNumber: number): Promise<PRInfo> {
     throw new Error('REPO_OWNER and REPO_NAME must be set');
   }
 
-  let response = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: 'application/vnd.github.v3+json',
-    },
-  });
+  const url = `https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}`;
 
-  // 401 时清除缓存并重试一次
-  if (response.status === 401) {
-    logger.warn('[GitHub API] Get PR info returned 401, clearing token cache and retrying');
-    accessToken = null;
-    tokenExpiry = 0;
-    const retryToken = await getAccessToken();
-    response = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls/${prNumber}`, {
+  const response = await githubRequestWithRetry((token) =>
+    fetch(url, {
       headers: {
-        Authorization: `Bearer ${retryToken}`,
+        Authorization: `Bearer ${token}`,
         Accept: 'application/vnd.github.v3+json',
       },
-    });
-  }
+    })
+  );
 
   if (!response.ok) {
     throw new Error(`Failed to get PR info: ${response.statusText}`);
   }
 
-  return response.json();
+  return (await response.json()) as PRInfo;
 }
