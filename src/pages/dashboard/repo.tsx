@@ -231,7 +231,7 @@ export default function RepoDetailPage() {
                         >
                           <span
                             className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
-                              rule.enabled ? 'left-4.5 translate-x-0' : 'left-0.5'
+                              rule.enabled ? 'left-[18px] translate-x-0' : 'left-[2px]'
                             }`}
                           />
                         </button>
@@ -309,7 +309,7 @@ export default function RepoDetailPage() {
                         >
                           <span
                             className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
-                              rule.enabled ? 'left-4.5 translate-x-0' : 'left-0.5'
+                              rule.enabled ? 'left-[18px] translate-x-0' : 'left-[2px]'
                             }`}
                           />
                         </button>
