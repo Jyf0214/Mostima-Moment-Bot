@@ -12,7 +12,7 @@ export default defineConfig({
       reporter: ['text', 'lcov', 'json-summary'],
       include: ['src/lib/**/*.ts', 'src/pages/**/*.ts'],
       exclude: ['src/__tests__/**', 'src/i18n/**', '**/*.d.ts'],
-      // 最低覆盖率门槛：CI 中 test:coverage 会强制执行，应随测试增长逐步提高
+      // [BUILDER-C-AUD-C-001] 最低覆盖率门槛：CI 中 test:coverage 会强制执行，应随测试增长逐步提高
       thresholds: {
         lines: 30,
         functions: 48,

@@ -1,5 +1,6 @@
 /**
  * 测试工具函数
+ * [BUILDER-C-B-C-001] 冗余 eslint-disable 已移除，test-overrides 规则已覆盖
  *
  * 提供共享的 mock 工厂函数，减少测试文件中的 `as any` 类型断言。
  */

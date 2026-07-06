@@ -38,6 +38,7 @@ jobs:
       - name: 运行测试
         run: npm test
 
+      # [BUILDER-C-AUD-C-001] 覆盖率报告 — continue-on-error 已移除，阈值检查将阻断 CI
       - name: 生成覆盖率报告
         run: npm run test:coverage
 
