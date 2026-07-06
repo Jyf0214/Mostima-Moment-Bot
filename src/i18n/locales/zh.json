@@ -191,7 +191,22 @@
     "runLogs": "运行日志",
     "totalRuns": "次运行",
     "noRuns": "暂无运行记录",
-    "viewLogs": "查看详情"
+    "viewLogs": "查看详情",
+    "notFound": "运行记录不存在",
+    "runInfo": "运行详情",
+    "logs": "运行日志",
+    "noLogs": "暂无运行日志",
+    "event": "事件",
+    "triggeredBy": "触发者",
+    "commit": "提交",
+    "ruleId": "规则 ID",
+    "duration": "耗时",
+    "botInitiated": "Bot 触发",
+    "startedAt": "开始时间",
+    "completedAt": "完成时间",
+    "createdAt": "创建时间",
+    "yes": "是",
+    "no": "否"
   },
   "envPage": {
     "title": "环境变量配置",
@@ -384,7 +399,16 @@
     "configSaveFailed": "保存配置失败",
     "githubAppSection": "GitHub App",
     "githubAppIdLabel": "GITHUB_APP_ID: {{appId}}",
-    "githubAppIdNotSet": "GITHUB_APP_ID 未在环境变量中配置"
+    "githubAppIdNotSet": "GITHUB_APP_ID 未在环境变量中配置",
+    "qwenSettings": "Qwen 配置",
+    "qwenSettingsConfigured": "Qwen 配置已激活",
+    "qwenSettingsNotConfigured": "Qwen 配置未设置",
+    "qwenSettingsJsonLabel": "Qwen 配置（JSON 格式）",
+    "qwenSettingsPlaceholder": "{\n  \"model\": \"qwen-plus\",\n  \"apiKey\": \"sk-xxx\"\n}",
+    "qwenSettingsSaved": "Qwen 配置保存成功",
+    "qwenSettingsSaveFailed": "Qwen 配置保存失败",
+    "clearConfig": "清除配置",
+    "qwenSettingsHint": "配置 Qwen AI 模型设置，用于 Issue 修复和安全审计。需要有效的 JSON 格式。"
   },
   "api": {
     "methodNotAllowed": "Method not allowed",

@@ -191,7 +191,22 @@
     "runLogs": "Run Logs",
     "totalRuns": "runs",
     "noRuns": "No run logs yet",
-    "viewLogs": "View Details"
+    "viewLogs": "View Details",
+    "notFound": "Run not found",
+    "runInfo": "Run Info",
+    "logs": "Logs",
+    "noLogs": "No logs available",
+    "event": "Event",
+    "triggeredBy": "Triggered By",
+    "commit": "Commit",
+    "ruleId": "Rule ID",
+    "duration": "Duration",
+    "botInitiated": "Bot Initiated",
+    "startedAt": "Started At",
+    "completedAt": "Completed At",
+    "createdAt": "Created At",
+    "yes": "Yes",
+    "no": "No"
   },
   "envPage": {
     "title": "Environment Variables",

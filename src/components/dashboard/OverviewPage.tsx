@@ -38,7 +38,7 @@ export default function OverviewPage({
             <div>
               <p className="text-zinc-500 text-xs">{t('dashboard.activeInstallations')}</p>
               <p className="text-xl font-bold text-zinc-900">
-                {reposLoading ? '...' : repos?.installations.length || 0}
+                {reposLoading ? '...' : repos?.installations?.length || 0}
               </p>
             </div>
           </div>

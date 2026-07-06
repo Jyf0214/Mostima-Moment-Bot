@@ -47,14 +47,18 @@ export default function Sidebar({
   const [botName, setBotName] = useState('Bot');
 
   useEffect(() => {
-    fetch('/api/bot/info')
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data?.slug) setBotName(data.slug);
-      })
-      .catch(() => {
+    const fetchBotName = async () => {
+      try {
+        const res = await fetch('/api/bot/info');
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.slug) setBotName(data.slug);
+        }
+      } catch {
         /* 使用默认值 */
-      });
+      }
+    };
+    fetchBotName();
   }, []);
 
   return (

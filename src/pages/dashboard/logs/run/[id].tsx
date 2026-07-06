@@ -598,49 +598,51 @@ export default function RunDetailPage() {
           <h3 className="text-zinc-900 font-semibold mb-4">{t('repoDetail.runInfo')}</h3>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <span className="text-zinc-400">Event</span>
+              <span className="text-zinc-400">{t('repoDetail.event')}</span>
               <p className="text-zinc-900 font-medium">{run.event}</p>
             </div>
             <div>
-              <span className="text-zinc-400">Triggered By</span>
+              <span className="text-zinc-400">{t('repoDetail.triggeredBy')}</span>
               <p className="text-zinc-900 font-medium">
                 {run.triggeredBy ? `@${run.triggeredBy}` : '-'}
               </p>
             </div>
             <div>
-              <span className="text-zinc-400">Commit</span>
+              <span className="text-zinc-400">{t('repoDetail.commit')}</span>
               <p className="text-zinc-900 font-mono text-xs">
                 {run.commitSha ? shaShort(run.commitSha) : '-'}
               </p>
             </div>
             <div>
-              <span className="text-zinc-400">Rule ID</span>
+              <span className="text-zinc-400">{t('repoDetail.ruleId')}</span>
               <p className="text-zinc-900 font-medium">{run.ruleId || '-'}</p>
             </div>
             <div>
-              <span className="text-zinc-400">Duration</span>
+              <span className="text-zinc-400">{t('repoDetail.duration')}</span>
               <p className="text-zinc-900 font-medium">
                 {run.duration != null ? formatDuration(run.duration) : '-'}
               </p>
             </div>
             <div>
-              <span className="text-zinc-400">Bot Initiated</span>
-              <p className="text-zinc-900 font-medium">{run.isBotInitiated ? 'Yes' : 'No'}</p>
+              <span className="text-zinc-400">{t('repoDetail.botInitiated')}</span>
+              <p className="text-zinc-900 font-medium">
+                {run.isBotInitiated ? t('repoDetail.yes') : t('repoDetail.no')}
+              </p>
             </div>
             <div>
-              <span className="text-zinc-400">Started At</span>
+              <span className="text-zinc-400">{t('repoDetail.startedAt')}</span>
               <p className="text-zinc-900 font-medium">
                 {run.startedAt ? formatTime(run.startedAt) : '-'}
               </p>
             </div>
             <div>
-              <span className="text-zinc-400">Completed At</span>
+              <span className="text-zinc-400">{t('repoDetail.completedAt')}</span>
               <p className="text-zinc-900 font-medium">
                 {run.completedAt ? formatTime(run.completedAt) : '-'}
               </p>
             </div>
             <div className="col-span-2">
-              <span className="text-zinc-400">Created At</span>
+              <span className="text-zinc-400">{t('repoDetail.createdAt')}</span>
               <p className="text-zinc-900 font-medium">{formatTime(run.createdAt)}</p>
             </div>
           </div>
@@ -684,12 +686,12 @@ export default function RunDetailPage() {
                     {copied ? (
                       <>
                         <Check className="h-3.5 w-3.5 text-emerald-500" />
-                        {t('settings.copied')}
+                        {t('apiKey.copied')}
                       </>
                     ) : (
                       <>
                         <Copy className="h-3.5 w-3.5" />
-                        {t('settings.copy')}
+                        {t('apiKey.copy')}
                       </>
                     )}
                   </button>

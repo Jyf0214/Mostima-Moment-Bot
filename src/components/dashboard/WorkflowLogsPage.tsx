@@ -125,6 +125,13 @@ export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string
   const [page, setPage] = useState(0);
   const pageSize = 30;
 
+  // 过滤后的运行记录
+  const filteredRuns = runs.filter((run) => {
+    if (filterStatus && run.status !== filterStatus) return false;
+    if (filterEvent && run.event !== filterEvent) return false;
+    return true;
+  });
+
   // === 列表数据 ===
   const fetchRepos = useCallback(
     async (showRefresh = false) => {
@@ -166,10 +173,7 @@ export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string
         const res = await fetch(`/api/ci/runs?${params}`);
         if (res.ok) {
           const data = await res.json();
-          let filtered = data.runs || [];
-          if (filterStatus) filtered = filtered.filter((r: CiRun) => r.status === filterStatus);
-          if (filterEvent) filtered = filtered.filter((r: CiRun) => r.event === filterEvent);
-          setRuns(filtered);
+          setRuns(data.runs || []);
           setTotal(data.total || 0);
         } else {
           setDetailError(t('home.checkStatusFailed'));
@@ -181,7 +185,7 @@ export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string
         setDetailRefreshing(false);
       }
     },
-    [selectedRepo, filterStatus, filterEvent, page, t]
+    [selectedRepo, page, t]
   );
 
   useEffect(() => {
@@ -201,8 +205,7 @@ export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string
 
   useEffect(() => {
     if (selectedRepo) fetchRuns();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchRuns 变化不应触发重新获取
-  }, [selectedRepo]);
+  }, [selectedRepo, filterStatus, filterEvent, page, fetchRuns]);
 
   const handleViewDetail = (repoFullName: string) => {
     setSelectedRepo(repoFullName);
@@ -314,7 +317,7 @@ export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string
         )}
 
         {/* 空状态 */}
-        {!detailLoading && !detailError && runs.length === 0 && (
+        {!detailLoading && !detailError && filteredRuns.length === 0 && (
           <ProCard className="bg-white border-zinc-200 border-dashed" padding="p-8">
             <div className="text-center">
               <Clock className="h-10 w-10 text-zinc-300 mx-auto mb-3" />
@@ -324,9 +327,9 @@ export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string
         )}
 
         {/* 运行列表 */}
-        {!detailLoading && runs.length > 0 && (
+        {!detailLoading && filteredRuns.length > 0 && (
           <div className="space-y-2">
-            {runs.map((run) => {
+            {filteredRuns.map((run) => {
               const cfg = STATUS_CONFIG[run.status] || STATUS_CONFIG.pending;
               const StatusIcon = cfg.icon;
               const eventLabel = EVENT_LABELS[run.event] || run.event;
