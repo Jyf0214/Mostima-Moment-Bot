@@ -28,7 +28,7 @@ export default function DashboardPage() {
   const [installMsg, setInstallMsg] = useState<string | null>(null);
   const [installMsgType, setInstallMsgType] = useState<'success' | 'error'>('success');
 
-  const checkAuth = async () => {
+  const checkAuth = useCallback(async () => {
     try {
       const response = await fetch('/api/auth/me');
       if (!response.ok) {
@@ -58,12 +58,11 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
 
   useEffect(() => {
     checkAuth();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [checkAuth]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -88,7 +87,7 @@ export default function DashboardPage() {
     if (install) window.history.replaceState({}, '', '/dashboard');
   }, [user, t]);
 
-  const checkAppConfig = async () => {
+  const checkAppConfig = useCallback(async () => {
     try {
       const res = await fetch('/api/github/install');
       setAppConfigured(res.status !== 500);
@@ -96,7 +95,7 @@ export default function DashboardPage() {
       logger.error('Failed to check app configuration');
       setAppConfigured(false);
     }
-  };
+  }, []);
 
   const loadRepos = useCallback(async () => {
     setReposLoading(true);
@@ -116,7 +115,7 @@ export default function DashboardPage() {
       checkAppConfig();
       loadRepos();
     }
-  }, [user, loadRepos]);
+  }, [user, checkAppConfig, loadRepos]);
 
   const handleLogout = async () => {
     try {
