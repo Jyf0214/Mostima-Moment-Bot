@@ -70,6 +70,7 @@ export async function setConfig(key: string, value: string, encrypted: boolean =
   });
 }
 
+// TODO: CI/CD 构建记录预留接口，当前未使用，保留供未来扩展
 /**
  * 创建构建记录
  */
@@ -85,6 +86,7 @@ export async function createBuild(prNumber: number, branchName: string, triggerU
   });
 }
 
+// TODO: CI/CD 构建记录预留接口，当前未使用，保留供未来扩展
 /**
  * 更新构建状态
  */
@@ -99,6 +101,7 @@ export async function updateBuildStatus(buildId: number, status: string, totalDu
   });
 }
 
+// TODO: CI/CD 构建记录预留接口，当前未使用，保留供未来扩展
 /**
  * 创建构建步骤
  */
