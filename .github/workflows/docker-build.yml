@@ -40,7 +40,6 @@ jobs:
 
       - name: 生成覆盖率报告
         run: npm run test:coverage
-        continue-on-error: true
 
       - name: 上传覆盖率报告
         if: always()

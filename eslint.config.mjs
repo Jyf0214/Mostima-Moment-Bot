@@ -3,14 +3,7 @@ import tseslint from "typescript-eslint";
 
 const eslintConfig = [
   ...nextConfig,
-  // 测试文件放宽规则
-  {
-    name: "test-overrides",
-    files: ["src/__tests__/**/*.ts", "src/__tests__/**/*.tsx"],
-    rules: {
-      "@typescript-eslint/no-explicit-any": "off",
-    },
-  },
+  // 项目自定义规则（全局生效）
   {
     name: "custom-rules",
     plugins: {
@@ -27,8 +20,16 @@ const eslintConfig = [
       "react-hooks/set-state-in-effect": "off",
     },
   },
+  // 测试文件放宽规则（必须在 custom-rules 之后，flat config 中后者覆盖前者）
   {
-    ignores: [".next/**", "node_modules/**", "dist/**", "src/lib/**"],
+    name: "test-overrides",
+    files: ["src/__tests__/**/*.ts", "src/__tests__/**/*.tsx"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+    },
+  },
+  {
+    ignores: [".next/**", "node_modules/**", "dist/**", "src/lib/**", "coverage/**"],
   },
 ];
 

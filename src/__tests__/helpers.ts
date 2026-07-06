@@ -3,7 +3,6 @@
  *
  * 提供共享的 mock 工厂函数，减少测试文件中的 `as any` 类型断言。
  */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { vi } from 'vitest';
 import jwt from 'jsonwebtoken';
 import type { NextApiRequest, NextApiResponse } from 'next';
