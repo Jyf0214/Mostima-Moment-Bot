@@ -37,30 +37,22 @@ COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/next.config.js ./next.config.js
 
-# 创建 UID 为 1000 的用户（用于运行应用和安装全局包）
-RUN if ! getent group 1000 >/dev/null 2>&1; then \
-      addgroup --system --gid 1000 appgroup; \
-    fi \
-    && if ! getent passwd 1000 >/dev/null 2>&1; then \
-      adduser --system --uid 1000 --ingroup $(getent group 1000 | cut -d: -f1) appuser; \
-    fi
-
-# 获取 npm 全局安装目录并确保 appuser 有写权限
+# 获取 npm 全局安装目录并确保 node 用户有写权限
 RUN NPM_GLOBAL_DIR=$(npm config get prefix)/lib/node_modules \
     && mkdir -p "$NPM_GLOBAL_DIR" \
-    && chown -R appuser:appgroup "$NPM_GLOBAL_DIR" \
-    && mkdir -p /home/appuser/.npm \
-    && chown -R appuser:appgroup /home/appuser
+    && chown -R node:node "$NPM_GLOBAL_DIR" \
+    && mkdir -p /home/node/.npm \
+    && chown -R node:node /home/node
 
-# 以 appuser 身份全局安装 qwen CLI（用于 CI 工作流执行代码修复）
-USER appuser
+# 以 node 身份全局安装 qwen CLI（用于 CI 工作流执行代码修复）
+USER node
 RUN npm install -g @qwen-code/qwen-code@latest
 
 # 切回 root 设置应用目录权限
 USER root
-RUN chown -R appuser:appgroup /app
+RUN chown -R node:node /app
 
-USER appuser
+USER node
 
 ENV PORT=3001
 ENV HOSTNAME="0.0.0.0"
