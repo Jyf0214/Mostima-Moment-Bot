@@ -408,7 +408,18 @@
     "qwenSettingsSaved": "Qwen configuration saved successfully",
     "qwenSettingsSaveFailed": "Failed to save Qwen configuration",
     "clearConfig": "Clear Config",
-    "qwenSettingsHint": "Configure Qwen AI model settings for issue resolution and security audits. Requires valid JSON format."
+    "qwenSettingsHint": "Configure Qwen AI model settings for issue resolution and security audits. Requires valid JSON format.",
+    "dbMode": "Database Mode",
+    "dbModeDescription": "When enabled, the system will automatically load environment variables from the database. Only ENCRYPTION_KEY and DATABASE_URL are required in .env.",
+    "dbModeStatusEnabled": "Enabled ({{count}} environment variables stored)",
+    "dbModeStatusDisabled": "Not enabled",
+    "dbModeEnable": "Enable Database Mode",
+    "dbModeDisable": "Disable Database Mode",
+    "dbModeEnabled": "Database mode enabled. {{count}} environment variables saved. Restart required.",
+    "dbModeEnableFailed": "Failed to enable database mode",
+    "dbModeDisabled": "Database mode disabled",
+    "dbModeDisableFailed": "Failed to disable database mode",
+    "dbModeHint": "When enabled, only ENCRYPTION_KEY and DATABASE_URL are needed on next startup."
   },
   "api": {
     "methodNotAllowed": "Method not allowed",

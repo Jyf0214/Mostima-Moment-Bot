@@ -4,7 +4,16 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ProCard } from '@/components/ui/ProCard';
 import { Input } from '@/components/ui/Input';
-import { Plug, CheckCircle2, AlertTriangle, Lock, Settings, Paintbrush } from 'lucide-react';
+import {
+  Plug,
+  CheckCircle2,
+  AlertTriangle,
+  Lock,
+  Settings,
+  Paintbrush,
+  Database,
+  RefreshCw,
+} from 'lucide-react';
 
 export default function SettingsPage() {
   const { t } = useTranslation();
@@ -33,6 +42,13 @@ export default function SettingsPage() {
   const [qwenMsg, setQwenMsg] = useState<string | null>(null);
   const [qwenMsgType, setQwenMsgType] = useState<'success' | 'error'>('success');
   const [qwenConfigured, setQwenConfigured] = useState(false);
+
+  // 数据库运行模式状态
+  const [dbModeEnabled, setDbModeEnabled] = useState(false);
+  const [dbModeEnvCount, setDbModeEnvCount] = useState(0);
+  const [dbModeLoading, setDbModeLoading] = useState(false);
+  const [dbModeMsg, setDbModeMsg] = useState<string | null>(null);
+  const [dbModeMsgType, setDbModeMsgType] = useState<'success' | 'error'>('success');
 
   const GRADIENT_PRESETS = [
     { labelKey: 'settings.gradientBluePurple', value: 'from-blue-50 via-transparent to-purple-50' },
@@ -87,11 +103,72 @@ export default function SettingsPage() {
     }
   };
 
+  const fetchDbModeStatus = async () => {
+    try {
+      const res = await fetch('/api/env-db-mode');
+      if (res.ok) {
+        const data = await res.json();
+        setDbModeEnabled(data.enabled);
+        setDbModeEnvCount(data.envCount);
+      }
+    } catch {
+      /* default */
+    }
+  };
+
+  const enableDbMode = async () => {
+    setDbModeLoading(true);
+    setDbModeMsg(null);
+    try {
+      const res = await fetch('/api/env-db-mode', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        setDbModeMsgType('success');
+        setDbModeMsg(t('settings.dbModeEnabled', { count: data.envCount }));
+        setDbModeEnabled(true);
+        setDbModeEnvCount(data.envCount);
+      } else {
+        const err = await res.json();
+        setDbModeMsgType('error');
+        setDbModeMsg(err.error || t('settings.dbModeEnableFailed'));
+      }
+    } catch {
+      setDbModeMsgType('error');
+      setDbModeMsg(t('settings.dbModeEnableFailed'));
+    } finally {
+      setDbModeLoading(false);
+    }
+  };
+
+  const disableDbMode = async () => {
+    setDbModeLoading(true);
+    setDbModeMsg(null);
+    try {
+      const res = await fetch('/api/env-db-mode', { method: 'DELETE' });
+      if (res.ok) {
+        setDbModeMsgType('success');
+        setDbModeMsg(t('settings.dbModeDisabled'));
+        setDbModeEnabled(false);
+        setDbModeEnvCount(0);
+      } else {
+        const err = await res.json();
+        setDbModeMsgType('error');
+        setDbModeMsg(err.error || t('settings.dbModeDisableFailed'));
+      }
+    } catch {
+      setDbModeMsgType('error');
+      setDbModeMsg(t('settings.dbModeDisableFailed'));
+    } finally {
+      setDbModeLoading(false);
+    }
+  };
+
   useEffect(() => {
     checkPrivateKey();
     fetchBotInfo();
     fetchHeroConfig();
     fetchQwenSettings();
+    fetchDbModeStatus();
   }, []);
 
   const saveHeroConfig = async () => {
@@ -331,6 +408,72 @@ export default function SettingsPage() {
           {heroSaving ? t('settings.saving') : t('settings.saveConfig')}
         </button>
         {heroMsg && <p className="mt-2 text-xs text-zinc-500">{heroMsg}</p>}
+      </ProCard>
+
+      <ProCard className="bg-white border-zinc-200" padding="p-5">
+        <div className="flex items-center gap-3 mb-4">
+          <Database className="h-5 w-5 text-indigo-500" />
+          <h3 className="text-zinc-900 font-medium">{t('settings.dbMode')}</h3>
+        </div>
+        <p className="text-zinc-500 text-xs mb-4">{t('settings.dbModeDescription')}</p>
+
+        <div className="flex items-center gap-2 mb-4">
+          {dbModeEnabled ? (
+            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+          ) : (
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
+          )}
+          <span className="text-sm text-zinc-700">
+            {dbModeEnabled
+              ? t('settings.dbModeStatusEnabled', { count: dbModeEnvCount })
+              : t('settings.dbModeStatusDisabled')}
+          </span>
+        </div>
+
+        <div className="flex gap-2">
+          {!dbModeEnabled ? (
+            <button
+              onClick={enableDbMode}
+              disabled={dbModeLoading}
+              className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700 transition-colors disabled:opacity-50"
+            >
+              {dbModeLoading ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <Database className="h-4 w-4" />
+              )}
+              {t('settings.dbModeEnable')}
+            </button>
+          ) : (
+            <button
+              onClick={disableDbMode}
+              disabled={dbModeLoading}
+              className="flex items-center gap-2 rounded-lg bg-zinc-100 px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-200 transition-colors disabled:opacity-50"
+            >
+              {dbModeLoading ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <Database className="h-4 w-4" />
+              )}
+              {t('settings.dbModeDisable')}
+            </button>
+          )}
+        </div>
+
+        {dbModeMsg && (
+          <div
+            className={`mt-3 flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${dbModeMsgType === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}
+          >
+            {dbModeMsgType === 'success' ? (
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+            ) : (
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+            )}
+            {dbModeMsg}
+          </div>
+        )}
+
+        <p className="mt-3 text-xs text-zinc-500">{t('settings.dbModeHint')}</p>
       </ProCard>
 
       <ProCard className="bg-white border-zinc-200" padding="p-5">
