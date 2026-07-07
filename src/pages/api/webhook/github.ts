@@ -11,7 +11,7 @@ import {
   type WorkflowPayload,
 } from '@/lib/ci/runner';
 import { shouldTriggerIssueFix, solveIssue } from '@/lib/ci/issue-solver';
-import { getFixCommand } from '@/lib/ci/config';
+import { resolveBotSlug } from '@/lib/ci/config';
 import { auditPR } from '@/lib/ci/security-auditor';
 import { recordCiRun, updateCiRun, flushLogs } from '@/lib/ci/run-logger';
 import { LogCollector } from '@/lib/ci/log-collector';
@@ -156,9 +156,14 @@ async function handleIssueEvent(
       `comment_assoc=${issuePayload.comment?.author_association || 'none'}`
   );
 
+  // 通过 GitHub API 解析 bot slug（不依赖环境变量）
+  const botSlug = await resolveBotSlug();
+  const fixCmd = botSlug ? `@${botSlug} /fix` : '';
+  logger.info(`[Webhook] Resolved bot slug="${botSlug}", fixCmd="${fixCmd}"`);
+
   // Issue 自动修复
-  const shouldFix = shouldTriggerIssueFix(event, issuePayload);
-  logger.info(`[Webhook] shouldTriggerIssueFix=${shouldFix}, fixCmd="${getFixCommand()}"`);
+  const shouldFix = await shouldTriggerIssueFix(event, issuePayload, fixCmd);
+  logger.info(`[Webhook] shouldTriggerIssueFix=${shouldFix}`);
   if (shouldFix) {
     logger.info(`[Webhook] Issue auto-fix triggered for Issue #${issuePayload.issue.number}`);
 

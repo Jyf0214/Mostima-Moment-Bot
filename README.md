@@ -164,7 +164,6 @@ DATABASE_URL=postgresql://user:password@localhost:5432/manticore
 # ---- GitHub App 配置 ----
 # 在 GitHub → Settings → Developer settings → GitHub Apps 页面获取
 GITHUB_APP_ID=123456
-GITHUB_APP_SLUG=your-app-slug
 GITHUB_PRIVATE_KEY_PATH=./private-key.pem
 
 # ---- 服务器配置 ----

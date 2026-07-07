@@ -133,7 +133,7 @@ export async function getInstallationUrl(state: string): Promise<string> {
   const slug = await resolveBotSlug();
   if (!slug) {
     throw new Error(
-      'GitHub App slug not available (configure GITHUB_APP_SLUG or ensure App is set up)'
+      'GitHub App slug not available (ensure App ID is configured and App is set up)'
     );
   }
   return `https://github.com/apps/${slug}/installations/new?state=${state}`;

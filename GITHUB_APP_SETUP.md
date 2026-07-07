@@ -51,46 +51,17 @@
 
 ### GitHub App 环境变量
 
-| 变量                      | 说明                  | 获取方式                                                                                                   |
-| ------------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `GITHUB_APP_ID`           | GitHub App 数字 ID    | 创建 App 后在 App 设置页面顶部可见，格式为纯数字如 `123456`                                                |
-| `GITHUB_APP_SLUG`         | GitHub App URL 标识符 | 创建 App 后在 App 设置页面顶部可见。它也是 App URL 的一部分：`https://github.com/apps/{SLUG}`              |
-| `GITHUB_PRIVATE_KEY_PATH` | 私钥文件路径          | 创建 App 时点击 **Generate a private key**，下载 `.pem` 文件，放到服务器上并填写路径如 `./private-key.pem` |
-| `ENCRYPTION_KEY`          | Webhook 签名密钥      | 创建 App 时设置的 Webhook secret，用于验证 GitHub 发送的 Webhook 请求                                      |
-| `REPO_OWNER`              | 目标仓库所有者        | 你的 GitHub 用户名或组织名，如 `Jyf0214`                                                                   |
-| `REPO_NAME`               | 目标仓库名称          | 仓库名，如 `Mostima-Moment-Bot`                                                                            |
+| 变量                      | 说明               | 获取方式                                                                                                   |
+| ------------------------- | ------------------ | ---------------------------------------------------------------------------------------------------------- |
+| `GITHUB_APP_ID`           | GitHub App 数字 ID | 创建 App 后在 App 设置页面顶部可见，格式为纯数字如 `123456`                                                |
+| `GITHUB_PRIVATE_KEY_PATH` | 私钥文件路径       | 创建 App 时点击 **Generate a private key**，下载 `.pem` 文件，放到服务器上并填写路径如 `./private-key.pem` |
+| `ENCRYPTION_KEY`          | Webhook 签名密钥   | 创建 App 时设置的 Webhook secret，用于验证 GitHub 发送的 Webhook 请求                                      |
+| `REPO_OWNER`              | 目标仓库所有者     | 你的 GitHub 用户名或组织名，如 `Jyf0214`                                                                   |
+| `REPO_NAME`               | 目标仓库名称       | 仓库名，如 `Mostima-Moment-Bot`                                                                            |
 
-### 如何找到 GITHUB_APP_SLUG
+### 如何找到 App Slug
 
-**方法 1：从 URL 获取**
-
-创建 App 后，访问你的 App 页面：
-
-```
-https://github.com/settings/apps/你的应用名
-```
-
-页面 URL 中的应用名就是 slug。
-
-**方法 2：从 App 设置页面获取**
-
-进入 App 设置页，页面标题下方会显示：
-
-```
-manticore-bot
-```
-
-这个名称就是 slug。
-
-**方法 3：从 App 安装 URL 获取**
-
-App 安装链接格式为：
-
-```
-https://github.com/apps/{SLUG}/installations/new
-```
-
-其中 `{SLUG}` 就是 `GITHUB_APP_SLUG`。
+Bot slug 通过 App ID 调用 GitHub API 自动获取，无需手动配置。只需确保 `GITHUB_APP_ID` 正确即可。
 
 ---
 
@@ -110,7 +81,6 @@ DATABASE_URL=postgresql://user:pass@localhost:5432/manticore
 
 # GitHub App
 GITHUB_APP_ID=123456
-GITHUB_APP_SLUG=manticore-bot
 GITHUB_PRIVATE_KEY_PATH=./private-key.pem
 ENCRYPTION_KEY=$(openssl rand -base64 32)
 
@@ -153,7 +123,7 @@ REPO_NAME=Mostima-Moment-Bot
 
 ### 安装按钮点击后跳转失败
 
-检查 `GITHUB_APP_SLUG` 是否正确配置。可在浏览器访问 `https://github.com/apps/{你的SLUG}` 验证。
+检查 `GITHUB_APP_ID` 是否正确配置。Bot slug 通过 API 自动获取。
 
 ### 仓库列表为空
 

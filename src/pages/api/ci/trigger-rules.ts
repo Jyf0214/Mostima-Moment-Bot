@@ -25,7 +25,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // 读取仓库专属配置，没有则使用默认规则
       const configKey = `trigger_rules_${repo.replace('/', '_')}`;
       const saved = await getConfig(configKey);
-      const rules: TriggerRule[] = saved ? JSON.parse(saved) : getDefaultRules();
+      const rules: TriggerRule[] = saved ? JSON.parse(saved) : await getDefaultRules();
 
       return res.status(200).json({
         repo,
@@ -36,7 +36,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       logger.warn(`[Trigger Rules] Failed to read rules for ${repo}, using defaults:`, err);
       return res.status(200).json({
         repo,
-        rules: getDefaultRules(),
+        rules: await getDefaultRules(),
         isCustom: false,
       });
     }
