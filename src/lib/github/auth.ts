@@ -86,8 +86,25 @@ export async function generateJWTAuto(): Promise<string> {
 }
 
 /**
+ * 启动时预热 slug 缓存
+ * 通过 GitHub App ID + JWT 调用 API 获取 slug，结果存入内存缓存。
+ * 后续所有 fetchBotSlug() / resolveBotSlug() 调用直接返回缓存，不再请求 API。
+ */
+export async function warmBotSlugCache(): Promise<void> {
+  if (cachedSlug) return;
+  try {
+    await fetchBotSlug();
+    if (cachedSlug) {
+      logger.info(`[GitHub Auth] Bot slug cached: ${cachedSlug}`);
+    }
+  } catch (err) {
+    logger.warn('[GitHub Auth] Failed to warm bot slug cache:', err);
+  }
+}
+
+/**
  * 获取 GitHub App Slug
- * 优先级：缓存 → 环境变量 → GitHub API 自动获取
+ * 优先级：内存缓存 → GitHub API 自动获取（首次调用）
  */
 export async function fetchBotSlug(): Promise<string> {
   // 1. 返回缓存
