@@ -1,8 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import crypto from 'crypto';
-import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
-import { verifyAuthToken } from '@/lib/auth-utils';
+import { requireAuth, verifyAuthToken } from '@/lib/auth-utils';
 import { getQueryParam, getQueryParamNumber, getQueryParamBoolean } from '@/lib/api-utils';
 
 /**
@@ -22,18 +21,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 }
 
 async function handleGet(req: NextApiRequest, res: NextApiResponse) {
-  // 验证管理员身份
-  const authToken = req.cookies.auth_token;
-  if (!authToken) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
-
-  try {
-    verifyAuthToken(authToken);
-  } catch (err) {
-    logger.warn('[CI Runs] JWT verification failed:', err);
-    return res.status(401).json({ error: 'Invalid token' });
-  }
+  // 验证管理员身份（支持 cookie 和 Bearer header）
+  const payload = await requireAuth(req, res);
+  if (!payload) return;
 
   const repo = getQueryParam(req, 'repo') || '';
   const idParam = getQueryParam(req, 'id');
