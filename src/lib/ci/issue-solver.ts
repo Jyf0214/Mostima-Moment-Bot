@@ -192,7 +192,7 @@ export async function solveIssue(
   if (!result.success) {
     logger.error(`[Issue Solver] Failed after ${result.attempts} attempts`);
     logCollector?.addMessage(`Failed after ${result.attempts} attempts`);
-    return;
+    throw new Error(`Qwen execution failed after ${result.attempts} attempts`);
   }
 
   logCollector?.addMessage(`Qwen completed in ${result.duration}ms (${result.attempts} attempts)`);
