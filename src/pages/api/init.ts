@@ -3,7 +3,6 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import i18n from '@/i18n';
 import { prisma } from '@/lib/prisma';
 import { loadEnvVarsFromDatabase } from '@/lib/bootstrap';
-import { warmBotSlugCache } from '@/lib/github/auth';
 
 /**
  * Database initialization API
@@ -24,9 +23,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // 从数据库加载环境变量（如果启用了数据库运行模式）
     const envLoaded = await loadEnvVarsFromDatabase();
-
-    // 预热 bot slug 缓存（启动时通过 GitHub API 获取一次，后续不再请求）
-    await warmBotSlugCache();
 
     const adminCount = await prisma.admin.count();
     const elapsed = Date.now() - startTime;

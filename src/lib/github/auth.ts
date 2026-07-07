@@ -6,6 +6,13 @@ import { logger } from '@/lib/logger';
 // 缓存 slug，避免重复 API 调用
 let cachedSlug: string | null = null;
 
+// 模块加载时自动预热缓存（服务器启动即触发，无需等待页面访问）
+(async () => {
+  try {
+    await fetchBotSlug();
+  } catch {}
+})();
+
 /**
  * 获取 GitHub App ID
  * 优先级：环境变量 → AppConfig
@@ -86,25 +93,8 @@ export async function generateJWTAuto(): Promise<string> {
 }
 
 /**
- * 启动时预热 slug 缓存
- * 通过 GitHub App ID + JWT 调用 API 获取 slug，结果存入内存缓存。
- * 后续所有 fetchBotSlug() / resolveBotSlug() 调用直接返回缓存，不再请求 API。
- */
-export async function warmBotSlugCache(): Promise<void> {
-  if (cachedSlug) return;
-  try {
-    await fetchBotSlug();
-    if (cachedSlug) {
-      logger.info(`[GitHub Auth] Bot slug cached: ${cachedSlug}`);
-    }
-  } catch (err) {
-    logger.warn('[GitHub Auth] Failed to warm bot slug cache:', err);
-  }
-}
-
-/**
  * 获取 GitHub App Slug
- * 优先级：内存缓存 → GitHub API 自动获取（首次调用）
+ * 优先级：内存缓存 → GitHub API 自动获取（首次调用时获取，之后永久缓存）
  */
 export async function fetchBotSlug(): Promise<string> {
   // 1. 返回缓存
