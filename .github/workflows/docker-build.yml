@@ -62,30 +62,6 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v4
 
-      - name: 触发 HF Space 工厂重建
-        if: github.event_name != 'pull_request'
-        env:
-          HF_SPACE_NAME: ${{ secrets.HF_SPACE_NAME }}
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: |
-          if [ -z "$HF_TOKEN" ] || [ -z "$HF_SPACE_NAME" ]; then
-            echo "⚠️ HF_SPACE_NAME 或 HF_TOKEN 未配置，跳过 HF Space 重建"
-            exit 0
-          fi
-          echo "触发 Hugging Face Space 工厂重建: $HF_SPACE_NAME"
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
-            -X POST \
-            "https://huggingface.co/api/spaces/${HF_SPACE_NAME}/restart" \
-            -H "Authorization: Bearer ${HF_TOKEN}" \
-            -H "Content-Type: application/json" \
-            -d '{"factory_rebuild": true}')
-          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
-            echo "✅ HF Space 工厂重建已触发"
-          else
-            echo "❌ HF Space 工厂重建失败 (HTTP $HTTP_CODE)"
-            exit 1
-          fi
-
       - name: 设置 Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -120,3 +96,27 @@ jobs:
           platforms: linux/amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: 触发 HF Space 工厂重建
+        if: github.event_name != 'pull_request'
+        env:
+          HF_SPACE_NAME: ${{ secrets.HF_SPACE_NAME }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          if [ -z "$HF_TOKEN" ] || [ -z "$HF_SPACE_NAME" ]; then
+            echo "⚠️ HF_SPACE_NAME 或 HF_TOKEN 未配置，跳过 HF Space 重建"
+            exit 0
+          fi
+          echo "触发 Hugging Face Space 工厂重建: $HF_SPACE_NAME"
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST \
+            "https://huggingface.co/api/spaces/${HF_SPACE_NAME}/restart" \
+            -H "Authorization: Bearer ${HF_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d '{"factory_rebuild": true}')
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "✅ HF Space 工厂重建已触发"
+          else
+            echo "❌ HF Space 工厂重建失败 (HTTP $HTTP_CODE)"
+            exit 1
+          fi
