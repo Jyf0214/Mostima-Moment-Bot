@@ -37,6 +37,9 @@ COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/next.config.js ./next.config.js
 
+# 全局安装 qwen CLI（用于 CI 工作流执行代码修复）
+RUN npm install -g @qwen-code/qwen-code@latest
+
 # 创建非 root 用户
 RUN addgroup --system --gid 1001 nodejs \
     && adduser --system --uid 1001 nextjs \
