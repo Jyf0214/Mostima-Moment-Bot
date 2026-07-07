@@ -2,7 +2,7 @@ services:
   manticore-bot:
     build:
       context: ..
-      dockerfile: docker/Dockerfile
+      dockerfile: Dockerfile
     ports:
       - '${PORT:-3001}:${PORT:-3001}'
     environment:
