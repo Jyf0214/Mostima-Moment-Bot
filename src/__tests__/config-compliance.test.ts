@@ -72,8 +72,8 @@ describe('Dockerfile 安全最佳实践', () => {
   let dockerfile: string;
 
   it('Dockerfile 应存在', () => {
-    expect(fs.existsSync(path.join(ROOT_DIR, 'docker', 'Dockerfile'))).toBe(true);
-    dockerfile = readFile('docker/Dockerfile');
+    expect(fs.existsSync(path.join(ROOT_DIR, 'Dockerfile'))).toBe(true);
+    dockerfile = readFile('Dockerfile');
   });
 
   it('Dockerfile 应使用非 root 用户运行', () => {
