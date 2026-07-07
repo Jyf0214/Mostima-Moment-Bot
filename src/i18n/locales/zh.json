@@ -157,7 +157,9 @@
   "repos": {
     "noData": "无法加载仓库数据",
     "noRepos": "暂无授权仓库",
-    "viewOnGithub": "在 GitHub 上查看"
+    "viewOnGithub": "在 GitHub 上查看",
+    "enable": "启用 CI/CD",
+    "disable": "禁用 CI/CD"
   },
   "sidebar": {
     "overview": "概览",

@@ -157,7 +157,9 @@
   "repos": {
     "noData": "Unable to load repository data",
     "noRepos": "No authorized repositories",
-    "viewOnGithub": "View on GitHub"
+    "viewOnGithub": "View on GitHub",
+    "enable": "Enable CI/CD",
+    "disable": "Disable CI/CD"
   },
   "sidebar": {
     "overview": "Overview",

@@ -246,7 +246,9 @@ export default function DashboardPage() {
               }}
             />
           )}
-          {activePage === 'repos' && <ReposPage repos={repos} reposLoading={reposLoading} />}
+          {activePage === 'repos' && (
+            <ReposPage repos={repos} reposLoading={reposLoading} onRefresh={loadRepos} />
+          )}
           {activePage === 'logs' && <WorkflowLogsPage initialRepo={logsRepo} />}
           {activePage === 'env' && <EnvVarsPage />}
           {activePage === 'apikeys' && <ApiKeyPage />}
