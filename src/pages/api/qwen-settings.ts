@@ -2,6 +2,8 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/prisma';
 import { requireAdmin } from '@/lib/auth-utils';
 import { logger } from '@/lib/logger';
+import { writeFileSync, existsSync, mkdirSync } from 'fs';
+import { join } from 'path';
 
 /**
  * Qwen 配置 API
@@ -57,11 +59,26 @@ async function handlePut(req: NextApiRequest, res: NextApiResponse) {
 
     const value = typeof settings === 'string' ? settings.trim() : '';
 
+    // 保存到数据库
     await prisma.appConfig.upsert({
       where: { configKey: 'qwen_settings' },
       update: { configValue: value },
       create: { configKey: 'qwen_settings', configValue: value },
     });
+
+    // 立即写入 ~/.qwen/settings.json
+    const qwenDir = join(process.env.HOME || '/root', '.qwen');
+    const settingsPath = join(qwenDir, 'settings.json');
+    if (!existsSync(qwenDir)) {
+      mkdirSync(qwenDir, { recursive: true });
+    }
+    if (value) {
+      writeFileSync(settingsPath, value, 'utf-8');
+      logger.info('[Qwen Settings] Settings written to ~/.qwen/settings.json');
+    } else if (existsSync(settingsPath)) {
+      writeFileSync(settingsPath, '{}', 'utf-8');
+      logger.info('[Qwen Settings] Settings.json cleared');
+    }
 
     logger.info(`[Qwen Settings] Config updated: ${value ? 'saved' : 'cleared'}`);
     return res.status(200).json({ success: true });

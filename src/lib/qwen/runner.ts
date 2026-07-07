@@ -60,19 +60,12 @@ export function getOrCreateSessionId(key: string): { sessionId: string; isResume
 
 /**
  * 配置 Qwen Settings
+ * 每次启动时从数据库读取并写入 ~/.qwen/settings.json
  * 优先从数据库读取，其次从环境变量读取
  */
 export async function configureSettings(): Promise<void> {
   ensureQwenDir();
   const settingsPath = join(QWEN_DIR, 'settings.json');
-
-  // 如果 settings.json 已存在且非空，跳过配置
-  if (existsSync(settingsPath)) {
-    const existing = readFileSync(settingsPath, 'utf-8').trim();
-    if (existing && existing !== '{}') {
-      return;
-    }
-  }
 
   let settingsJson: string | null = null;
 
