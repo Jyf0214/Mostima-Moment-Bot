@@ -9,7 +9,9 @@ import { prisma } from '@/lib/prisma';
  *
  * 注意：此时加密已通过环境变量 ENCRYPTION_KEY 开启，
  * 所以通过 Prisma 中间件保存的数据会自动加密。
- * ENCRYPTION_KEY 本身也明文保存（供后续从数据库读取使用）。
+ *
+ * [安全警告] ENCRYPTION_KEY 本身以明文形式保存到数据库。
+ * 这是设计上的降级路径，生产环境强烈建议始终配置 ENCRYPTION_KEY 环境变量。
  */
 export async function autoSaveEnvVars(): Promise<void> {
   try {
@@ -38,9 +40,14 @@ export async function autoSaveEnvVars(): Promise<void> {
     }
 
     // 加密密钥本身明文存储（供后续从数据库读取）
+    // [安全警告] 这是降级路径，生产环境应始终配置 ENCRYPTION_KEY 环境变量
     const encryptionKey = process.env.ENCRYPTION_KEY;
     if (encryptionKey) {
       varsToSave.push({ key: 'encryption_key', value: encryptionKey, encrypted: false });
+      logger.warn(
+        '[Bootstrap] ⚠️ SECURITY NOTE: Storing ENCRYPTION_KEY in database (less secure). ' +
+          'Configure via environment variable for production.'
+      );
     }
 
     for (const { key, value, encrypted } of varsToSave) {

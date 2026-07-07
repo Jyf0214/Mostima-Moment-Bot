@@ -140,9 +140,35 @@ export async function handleWorkflowRun(payload: WorkflowPayload): Promise<void>
 
 /**
  * 检查用户是否为仓库合作者
+ *
+ * [安全说明] 当前实现仅检查环境变量中的合作者列表。
+ * 这存在安全风险：任何能修改环境变量的人都可以绕过权限检查。
+ * 生产环境建议通过 GitHub API 实时验证用户权限。
+ *
+ * TODO: 考虑使用 GitHub API 验证：
+ *   GET /repos/{owner}/{repo}/collaborators/{username}
+ *   或使用 octokit.rest.repos.checkCollaborator()
  */
 async function checkCollaborator(username: string): Promise<boolean> {
   // 简单实现：检查环境变量中的合作者列表
-  const collaborators = process.env.COLLABORATORS?.split(',') || [];
-  return collaborators.includes(username);
+  const collaboratorsRaw = process.env.COLLABORATORS || '';
+  if (!collaboratorsRaw) {
+    logger.warn(
+      '[CI Runner] ⚠️ SECURITY WARNING: COLLABORATORS env var not set. ' +
+        'All rebuild requests will be denied.'
+    );
+    return false;
+  }
+
+  const collaborators = collaboratorsRaw
+    .split(',')
+    .map((c) => c.trim())
+    .filter(Boolean);
+  const isCollab = collaborators.includes(username);
+
+  if (!isCollab) {
+    logger.info(`[CI Runner] User "${username}" is not in COLLABORATORS list`);
+  }
+
+  return isCollab;
 }

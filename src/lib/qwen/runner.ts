@@ -8,7 +8,13 @@ import type { LogCollector } from '../ci/log-collector';
 
 const QWEN_DIR = join(process.env.HOME || '/root', '.qwen');
 const MAX_ATTEMPTS = 5;
-const MAX_DURATION_MS = 1200_000; // 20 分钟
+/**
+ * 最大运行时间：20 分钟
+ * 可通过环境变量 QWEN_MAX_DURATION_MS 自定义（毫秒）
+ */
+const MAX_DURATION_MS_DEFAULT = 1200_000;
+const MAX_DURATION_MS =
+  parseInt(process.env.QWEN_MAX_DURATION_MS || '', 10) || MAX_DURATION_MS_DEFAULT;
 
 interface RunOptions {
   sessionId?: string;
@@ -149,12 +155,18 @@ exit 0
  * - 超时或网络错误时触发压缩（/compress-fast, /compress）
  * - 通过位置参数传递 prompt，避免交互阻塞
  */
+/**
+ * Qwen 单次调用默认超时时间：10 分钟
+ * 可通过环境变量 QWEN_TIMEOUT_MS 自定义（毫秒）
+ */
+const QWEN_TIMEOUT_MS_DEFAULT = 600_000;
+
 export async function runQwen(prompt: string, options: RunOptions = {}): Promise<RunResult> {
   const {
     sessionId: providedSessionId,
     maxSessionTurns = 100,
     resume: forceResume,
-    timeout = 600_000,
+    timeout = parseInt(process.env.QWEN_TIMEOUT_MS || '', 10) || QWEN_TIMEOUT_MS_DEFAULT,
     logCollector,
   } = options;
 

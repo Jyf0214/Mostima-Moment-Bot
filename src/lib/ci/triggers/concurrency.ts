@@ -11,8 +11,15 @@
  * 安全说明：
  * - groupKey 模板经过严格白名单验证，只允许 alphanumeric + _ - /
  * - 不接受用户直接输入的任意字符串
+ *
+ * 内存管理：
+ * - 最大并发组数量限制为 1000，防止内存泄漏
+ * - 超过限制时淘汰最旧的条目（简单 FIFO 策略）
+ * - 每个条目有 1 小时 TTL，过期后自动清理
+ * - 生产环境建议使用 Redis 等外部存储替代内存实现
  */
 
+import { logger } from '../../logger';
 import type { ConcurrencyConfig, ConcurrencyCheckResult } from './types';
 
 /** 活跃的并发组记录 */
@@ -184,7 +191,17 @@ export class ConcurrencyManager {
     }
 
     if (oldestKey) {
+      const entry = this.active.get(oldestKey);
+      // 取消被淘汰条目的运行
+      if (entry?.abortController) {
+        entry.abortController.abort();
+      }
       this.active.delete(oldestKey);
+      this.clearCleanupTimer(oldestKey);
+      logger.warn(
+        `[Concurrency] Evicted oldest group "${oldestKey}" (run ${entry?.runId}) ` +
+          `to make room. Active groups: ${this.active.size}`
+      );
     }
   }
 

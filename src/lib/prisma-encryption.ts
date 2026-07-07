@@ -29,7 +29,7 @@ let encryptionKeyLoaded = false;
 async function getEncryptionKey(): Promise<string> {
   if (encryptionKeyLoaded && cachedEncryptionKey) return cachedEncryptionKey;
 
-  // 1. 环境变量
+  // 1. 环境变量（推荐方式，安全等级最高）
   const envKey = process.env.ENCRYPTION_KEY;
   if (envKey) {
     cachedEncryptionKey = envKey;
@@ -38,10 +38,38 @@ async function getEncryptionKey(): Promise<string> {
   }
 
   // 2. 数据库 AppConfig（用户在设置页面存储的密钥，明文）
-  // 注意：这是有意为之的设计。加密中间件需要密钥才能解密数据库中的数据，
+  // [安全警告] 此路径存在安全风险：加密密钥明文存储在数据库中。
+  // 如果数据库被攻破，所有加密数据（github_client_secret、jwt_secret 等）都会泄露。
+  // 生产环境强烈建议配置 ENCRYPTION_KEY 环境变量。
+  //
+  // 设计说明：这是有意为之的降级路径。加密中间件需要密钥才能解密数据库中的数据，
   // 但密钥本身可能存储在数据库中（鸡生蛋问题）。此处创建独立 PrismaClient
   // 绕过加密中间件直接读取明文密钥，读取后立即断开连接。
-  // 生产环境中优先使用 ENCRYPTION_KEY 环境变量以避免此路径。
+  //
+  // [废弃警告] 此降级路径已在 v1.x 中标记为废弃，将在 v2.0.0 中移除。
+  // 请尽快迁移到 ENCRYPTION_KEY 环境变量配置。
+  const warningMessage = `
+  ⚠️  SECURITY WARNING: Reading encryption key from database
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Your system is using the legacy database-stored encryption key.
+  This path is DEPRECATED and will be REMOVED in v2.0.0.
+
+  Please configure ENCRYPTION_KEY environment variable:
+  1. Generate a new key: openssl rand -hex 32
+  2. Add to your .env file: ENCRYPTION_KEY=<generated_key>
+  3. Restart the application
+
+  Security risk: If database is compromised, all encrypted data
+  (github_client_secret, jwt_secret, etc.) will be exposed.
+  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  `;
+  console.warn(warningMessage);
+  logger.warn(
+    '[Encryption] ⚠️ SECURITY WARNING: ENCRYPTION_KEY not found in environment variables. ' +
+      'Falling back to database storage (DEPRECATED, will be removed in v2.0.0). ' +
+      'Please migrate to ENCRYPTION_KEY environment variable for production.'
+  );
+
   const rawClient = new PrismaClient();
   try {
     const config = await rawClient.appConfig.findUnique({
@@ -51,6 +79,7 @@ async function getEncryptionKey(): Promise<string> {
     if (config?.configValue) {
       cachedEncryptionKey = config.configValue;
       encryptionKeyLoaded = true;
+      logger.warn('[Encryption] Loaded encryption key from database (less secure than env var)');
       return config.configValue;
     }
   } catch (err) {
@@ -76,7 +105,12 @@ function isEncryptedField(model: string, field: string): boolean {
   return ENCRYPTED_FIELDS[model]?.includes(field) ?? false;
 }
 
-/** 加密对象中的指定字段 */
+/**
+ * 加密对象中的指定字段
+ *
+ * 注意：仅对字符串类型进行加密。如果字段值为 null/undefined/数字等非字符串类型，
+ * 则跳过加密。这是有意为之的设计：加密算法只处理字符串，非字符串值不需要加密。
+ */
 function encryptObject(
   obj: Record<string, unknown>,
   model: string,
@@ -84,14 +118,27 @@ function encryptObject(
 ): Record<string, unknown> {
   const result = { ...obj };
   for (const [k, value] of Object.entries(result)) {
-    if (isEncryptedField(model, k) && typeof value === 'string') {
-      result[k] = encrypt(value, key);
+    if (isEncryptedField(model, k)) {
+      if (typeof value === 'string') {
+        result[k] = encrypt(value, key);
+      } else if (value !== null && value !== undefined) {
+        // 非字符串类型的加密字段，记录警告（可能需要检查数据模型）
+        logger.warn(
+          `[Encryption] Field "${k}" in model "${model}" is marked for encryption ` +
+            `but has non-string type (${typeof value}). Skipping encryption.`
+        );
+      }
     }
   }
   return result;
 }
 
-/** 解密对象中的指定字段，解密失败时抛出异常防止明文密文混合 */
+/**
+ * 解密对象中的指定字段
+ *
+ * 注意：仅对字符串类型进行解密。如果字段值为 null/undefined/数字等非字符串类型，
+ * 则跳过解密。解密失败时抛出异常防止明文密文混合。
+ */
 function decryptObject(
   obj: Record<string, unknown>,
   model: string,
@@ -99,8 +146,16 @@ function decryptObject(
 ): Record<string, unknown> {
   const result = { ...obj };
   for (const [k, value] of Object.entries(result)) {
-    if (isEncryptedField(model, k) && typeof value === 'string') {
-      result[k] = decrypt(value, key);
+    if (isEncryptedField(model, k)) {
+      if (typeof value === 'string') {
+        result[k] = decrypt(value, key);
+      } else if (value !== null && value !== undefined) {
+        // 非字符串类型的加密字段，记录警告
+        logger.warn(
+          `[Encryption] Field "${k}" in model "${model}" is marked for encryption ` +
+            `but has non-string type (${typeof value}). Skipping decryption.`
+        );
+      }
     }
   }
   return result;

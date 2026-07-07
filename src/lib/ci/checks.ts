@@ -2,8 +2,12 @@ import { CheckResult } from './runner';
 import { execFileSync } from 'child_process';
 import type { LogCollector } from './log-collector';
 
-/** CI 检查步骤默认超时时间：10 分钟 */
+/**
+ * CI 检查步骤默认超时时间：10 分钟
+ * 可通过环境变量 CI_STEP_TIMEOUT_MS 自定义（毫秒）
+ */
 const DEFAULT_STEP_TIMEOUT = 600_000;
+const STEP_TIMEOUT_MS = parseInt(process.env.CI_STEP_TIMEOUT_MS || '', 10) || DEFAULT_STEP_TIMEOUT;
 
 /**
  * 允许执行的命令白名单
@@ -55,7 +59,7 @@ export function executeCheckStep(
     const result = execFileSync(program, args, {
       cwd: workspaceDir,
       stdio: 'pipe',
-      timeout: DEFAULT_STEP_TIMEOUT,
+      timeout: STEP_TIMEOUT_MS,
       encoding: 'utf-8',
     });
 
