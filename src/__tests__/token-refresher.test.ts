@@ -44,7 +44,9 @@ describe('Token Refresher', () => {
       const mockPrisma = vi.mocked(prisma);
 
       // 模拟数据库返回有效的 installation
-      mockPrisma.gitHubInstallation.findFirst.mockResolvedValue({
+      (
+        mockPrisma.gitHubInstallation.findFirst as unknown as ReturnType<typeof vi.fn>
+      ).mockResolvedValue({
         installationId: 12345678,
         isActive: true,
         createdAt: new Date(),
@@ -95,7 +97,9 @@ describe('Token Refresher', () => {
       const mockPrisma = vi.mocked(prisma);
 
       // 模拟数据库返回空
-      mockPrisma.gitHubInstallation.findFirst.mockResolvedValue(null);
+      (
+        mockPrisma.gitHubInstallation.findFirst as unknown as ReturnType<typeof vi.fn>
+      ).mockResolvedValue(null);
 
       startTokenRefresher();
 
@@ -115,7 +119,9 @@ describe('Token Refresher', () => {
       const mockPrisma = vi.mocked(prisma);
 
       // 模拟数据库返回有效的 installation
-      mockPrisma.gitHubInstallation.findFirst.mockResolvedValue({
+      (
+        mockPrisma.gitHubInstallation.findFirst as unknown as ReturnType<typeof vi.fn>
+      ).mockResolvedValue({
         installationId: 12345678,
         isActive: true,
         createdAt: new Date(),
@@ -147,7 +153,9 @@ describe('Token Refresher', () => {
       const mockPrisma = vi.mocked(prisma);
 
       // 模拟数据库返回有效的 installation
-      mockPrisma.gitHubInstallation.findFirst.mockResolvedValue({
+      (
+        mockPrisma.gitHubInstallation.findFirst as unknown as ReturnType<typeof vi.fn>
+      ).mockResolvedValue({
         installationId: 12345678,
         isActive: true,
         createdAt: new Date(),
@@ -189,7 +197,9 @@ describe('Token Refresher', () => {
       const mockPrisma = vi.mocked(prisma);
 
       // 模拟数据库返回有效的 installation
-      mockPrisma.gitHubInstallation.findFirst.mockResolvedValue({
+      (
+        mockPrisma.gitHubInstallation.findFirst as unknown as ReturnType<typeof vi.fn>
+      ).mockResolvedValue({
         installationId: 12345678,
         isActive: true,
         createdAt: new Date(),
