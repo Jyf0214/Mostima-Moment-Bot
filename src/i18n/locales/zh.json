@@ -279,6 +279,7 @@
     "encryptionKey": "AES-256-GCM 数据加密密钥，用于加密存储敏感信息和验证 Webhook 签名",
     "databaseUrl": "PostgreSQL 数据库连接字符串",
     "githubAppId": "GitHub App 的数字 ID，用于生成 App JWT 认证",
+    "githubAppSlug": "GitHub App 的 URL 标识符，用于生成安装链接",
     "githubPrivateKeyPath": "GitHub App 私钥文件（.pem）的路径",
     "appUrl": "应用的公开访问地址"
   },
@@ -289,6 +290,7 @@
     "encryptionKey": "通过 Prisma 加密中间件自动加密/解密数据库中的敏感字段（私钥等），同时用于 Webhook 签名验证",
     "databaseUrl": "Prisma Client 连接数据库，存储管理员账户、GitHub App 安装记录、CI 构建历史等数据",
     "githubAppId": "与 GITHUB_PRIVATE_KEY_PATH 配合，生成 RS256 签名的 JWT，获取 Installation Access Token",
+    "githubAppSlug": "仪表盘「安装 GitHub App」按钮使用此变量生成安装链接",
     "githubPrivateKeyPath": "用于生成 GitHub App JWT（RS256 签名），获取 Installation Access Token",
     "appUrl": "用于生成 OAuth 回调 URL 和其他需要完整地址的场景"
   },
@@ -311,6 +313,7 @@
     "encryptionKey": "在终端运行:\nopenssl rand -hex 32\n\n然后将 64 位十六进制字符串复制到 .env.local\n\n此密钥同时用于数据库字段加密和 Webhook 签名验证",
     "databaseUrl": "方案 A - Docker（推荐）:\ndocker run -d --name postgres -e POSTGRES_USER=user -e POSTGRES_PASSWORD=password -e POSTGRES_DB=manticore -p 5432:5432 postgres:16-alpine\n\n然后设置: postgresql://user:password@localhost:5432/manticore\n\n方案 B - 本地 PostgreSQL:\n1. 安装: sudo apt install postgresql\n2. 创建数据库: psql -U postgres -c \"CREATE DATABASE manticore;\"\n3. 根据实际情况填写连接字符串",
     "githubAppId": "步骤：\n1. 打开 https://github.com/settings/apps\n2. 点击你创建的 App 名称\n3. 页面顶部「About」区域显示的「GitHub App ID」即为所需值\n4. 或在 URL 格式中查看：https://github.com/settings/apps/{slug}",
+    "githubAppSlug": "步骤：\n1. 打开 https://github.com/settings/apps\n2. 点击你创建的 App 名称\n3. 页面 URL 中的名称即为 slug\n4. 或在 App 设置页「GitHub App name」下方可见\n5. 安装链接格式：https://github.com/apps/{slug}/installations/new",
     "githubPrivateKeyPath": "步骤：\n1. 在 GitHub App 设置页底部「Private keys」区域\n2. 点击「Generate a private key」\n3. 下载 .pem 文件\n4. 将文件放到服务器上，如：/app/private-key.pem\n5. 填写文件的绝对路径或相对于项目根目录的路径",
     "appUrl": "应用的公开访问地址，用于生成 OAuth 回调 URL。\n\n示例：\n- 本地开发：http://localhost:3001\n- 生产环境：https://manticore-bot.example.com\n\n注意：不要以 / 结尾"
   },

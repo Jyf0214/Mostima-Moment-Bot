@@ -279,6 +279,7 @@
     "encryptionKey": "AES-256-GCM data encryption key, used for encrypting sensitive information and verifying Webhook signatures",
     "databaseUrl": "PostgreSQL database connection string",
     "githubAppId": "GitHub App numeric ID, used for generating App JWT authentication",
+    "githubAppSlug": "GitHub App URL identifier, used for generating installation links",
     "githubPrivateKeyPath": "Path to GitHub App private key file (.pem)",
     "appUrl": "Public access URL of the application"
   },
@@ -289,6 +290,7 @@
     "encryptionKey": "Prisma encryption middleware automatically encrypts/decrypts sensitive database fields (private keys, etc.), also used for Webhook signature verification",
     "databaseUrl": "Prisma Client connects to database, stores admin accounts, GitHub App installations, CI build history, etc.",
     "githubAppId": "Works with GITHUB_PRIVATE_KEY_PATH to generate RS256-signed JWT, obtains Installation Access Token for GitHub API calls",
+    "githubAppSlug": "Dashboard 'Install GitHub App' button uses this variable to generate installation link: https://github.com/apps/{SLUG}/installations/new",
     "githubPrivateKeyPath": "Used to generate GitHub App JWT (RS256 signature), obtains Installation Access Token",
     "appUrl": "Used for generating OAuth callback URLs and other scenarios requiring the full application address"
   },
@@ -311,6 +313,7 @@
     "encryptionKey": "Run in terminal:\nopenssl rand -hex 32\n\nThen copy the 64-character hex string to .env.local",
     "databaseUrl": "Option A - Docker (recommended):\ndocker run -d --name postgres -e POSTGRES_USER=user -e POSTGRES_PASSWORD=password -e POSTGRES_DB=manticore -p 5432:5432 postgres:16-alpine\n\nThen set: postgresql://user:password@localhost:5432/manticore\n\nOption B - Local PostgreSQL:\n1. Install: sudo apt install postgresql\n2. Create DB: psql -U postgres -c \"CREATE DATABASE manticore;\"\n3. Set connection string accordingly",
     "githubAppId": "Steps:\n1. Go to https://github.com/settings/apps\n2. Click on your App name\n3. The 'GitHub App ID' in the 'About' section at the top is the value you need\n4. Or check the URL format: https://github.com/settings/apps/{slug}",
+    "githubAppSlug": "Steps:\n1. Go to https://github.com/settings/apps\n2. Click on your App name\n3. The name in the page URL is the slug\n4. Or visible below 'GitHub App name' in App settings\n5. Installation link format: https://github.com/apps/{slug}/installations/new",
     "githubPrivateKeyPath": "Steps:\n1. In GitHub App settings, scroll to 'Private keys' section at the bottom\n2. Click 'Generate a private key'\n3. Download the .pem file\n4. Place the file on your server, e.g.: /app/private-key.pem\n5. Enter the absolute path or path relative to project root",
     "appUrl": "Public access URL of the application, used for generating OAuth callback URLs.\n\nExamples:\n- Local dev: http://localhost:3001\n- Production: https://manticore-bot.example.com\n\nNote: do not end with /"
   },

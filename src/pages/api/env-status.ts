@@ -63,6 +63,14 @@ const ENV_VARS: EnvVarDef[] = [
     hintKey: 'envVarHints.githubAppId',
   },
   {
+    key: 'GITHUB_APP_SLUG',
+    categoryKey: 'envCategory.githubApp',
+    required: false,
+    descriptionKey: 'envVarDescriptions.githubAppSlug',
+    usageKey: 'envUsage.githubAppSlug',
+    hintKey: 'envVarHints.githubAppSlug',
+  },
+  {
     key: 'GITHUB_PRIVATE_KEY_PATH',
     categoryKey: 'envCategory.githubApp',
     required: false,

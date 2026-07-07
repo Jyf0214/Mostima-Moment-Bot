@@ -5,7 +5,7 @@
  * 这些提示词是发给 Qwen Code CLI 的指令，不是用户界面文本。
  */
 
-import { resolveBotSlug } from '@/lib/ci/config';
+import { getBotMention } from '@/lib/ci/config';
 
 export function buildIssueFixInitialPrompt(_branch: string, _issueNumber: number): string {
   return `/goal 仔细阅读本地文件 'issue_details.md'，提取并完全修复里面描述的【所有】高危和中危漏洞，绝对不允许遗漏任何一个！
@@ -118,14 +118,10 @@ export function buildIssueFixReply(issueNumber: number, branch: string): string 
   );
 }
 
-export async function buildAuditFailComment(
-  cycleCount: number,
-  reportContent: string
-): Promise<string> {
-  const botMention = `@${await resolveBotSlug()}`;
+export function buildAuditFailComment(cycleCount: number, reportContent: string): string {
   return (
     `### 🚨 安全审计未通过（第 ${cycleCount}/5 轮自愈）\n\n` +
-    `${botMention} /fix [AI 自动审计警告]\n` +
+    `${getBotMention()} /fix [AI 自动审计警告]\n` +
     `当前 PR 引入了高风险安全漏洞。请立刻分析以下报告，并在当前分支上修复这些问题：\n\n` +
     '````markdown\n' +
     reportContent +

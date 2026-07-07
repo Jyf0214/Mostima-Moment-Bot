@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { evaluateRule, evaluateAllRules, findFirstMatch } from '@/lib/ci/triggers/rule-evaluator';
 import { getDefaultRules } from '@/lib/ci/triggers/default-rules';
 import type { TriggerRule, WebhookPayload } from '@/lib/ci/triggers/types';
+import { getBotSlug } from '@/lib/ci/config';
 
 describe('规则匹配引擎', () => {
   describe('evaluateRule - 基础匹配', () => {
@@ -170,17 +171,17 @@ describe('规则匹配引擎', () => {
       events: ['issue_comment'],
       actions: ['created'],
       requiredAuthorAssociation: ['OWNER', 'MEMBER', 'COLLABORATOR'],
-      commentPattern: '^@manticore-bot\\s+/fix',
+      commentPattern: `^@${getBotSlug()}\\s+/fix`,
       labels: ['auto-fix'],
       checks: [],
     };
 
-    it('应该匹配 OWNER 发送的 @manticore-bot /fix 评论', () => {
+    it('应该匹配 OWNER 发送的 @{GITHUB_APP_SLUG} /fix 评论', () => {
       const payload: WebhookPayload = {
         event: 'issue_comment',
         action: 'created',
         authorAssociation: 'OWNER',
-        commentBody: '@manticore-bot /fix please fix this bug',
+        commentBody: `@${getBotSlug()} /fix please fix this bug`,
         labels: ['auto-fix'],
       };
       expect(evaluateRule(commentRule, payload).matched).toBe(true);
@@ -191,7 +192,7 @@ describe('规则匹配引擎', () => {
         event: 'issue_comment',
         action: 'created',
         authorAssociation: 'MEMBER',
-        commentBody: '@manticore-bot /fix',
+        commentBody: `@${getBotSlug()} /fix`,
         labels: ['auto-fix'],
       };
       expect(evaluateRule(commentRule, payload).matched).toBe(true);
@@ -202,7 +203,7 @@ describe('规则匹配引擎', () => {
         event: 'issue_comment',
         action: 'created',
         authorAssociation: 'NONE',
-        commentBody: '@manticore-bot /fix',
+        commentBody: `@${getBotSlug()} /fix`,
         labels: ['auto-fix'],
       };
       const result = evaluateRule(commentRule, payload);
@@ -228,7 +229,7 @@ describe('规则匹配引擎', () => {
         event: 'issue_comment',
         action: 'edited',
         authorAssociation: 'OWNER',
-        commentBody: '@manticore-bot /fix',
+        commentBody: `@${getBotSlug()} /fix`,
         labels: ['auto-fix'],
       };
       const result = evaluateRule(commentRule, payload);
@@ -253,16 +254,16 @@ describe('规则匹配引擎', () => {
   });
 
   describe('evaluateAllRules', () => {
-    it('应该返回所有匹配的规则', async () => {
+    it('应该返回所有匹配的规则', () => {
       const payload: WebhookPayload = { event: 'push', branch: 'main' };
-      const results = evaluateAllRules(await getDefaultRules(), payload);
+      const results = evaluateAllRules(getDefaultRules(), payload);
       const matched = results.filter((r) => r.matched);
       expect(matched.length).toBeGreaterThanOrEqual(2); // ci-verification + build-check
     });
 
-    it('应该返回不匹配规则的原因', async () => {
+    it('应该返回不匹配规则的原因', () => {
       const payload: WebhookPayload = { event: 'push', branch: 'develop' };
-      const results = evaluateAllRules(await getDefaultRules(), payload);
+      const results = evaluateAllRules(getDefaultRules(), payload);
       const unmatched = results.filter((r) => !r.matched);
       expect(unmatched.length).toBeGreaterThan(0);
       expect(unmatched[0].reason).toBeDefined();
@@ -270,16 +271,16 @@ describe('规则匹配引擎', () => {
   });
 
   describe('findFirstMatch', () => {
-    it('应该返回第一条匹配的规则', async () => {
+    it('应该返回第一条匹配的规则', () => {
       const payload: WebhookPayload = { event: 'push', branch: 'main' };
-      const result = findFirstMatch(await getDefaultRules(), payload);
+      const result = findFirstMatch(getDefaultRules(), payload);
       expect(result.matched).toBe(true);
       expect(result.rule?.id).toBe('ci-verification');
     });
 
-    it('没有匹配时应该返回 no matching rule', async () => {
+    it('没有匹配时应该返回 no matching rule', () => {
       const payload: WebhookPayload = { event: 'push', branch: 'develop' };
-      const result = findFirstMatch(await getDefaultRules(), payload);
+      const result = findFirstMatch(getDefaultRules(), payload);
       expect(result.matched).toBe(false);
     });
   });

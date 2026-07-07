@@ -95,7 +95,14 @@ export async function fetchBotSlug(): Promise<string> {
   // 1. 返回缓存
   if (cachedSlug) return cachedSlug;
 
-  // 2. 调用 GitHub API 获取（App ID + JWT 认证）
+  // 2. 环境变量
+  const envSlug = process.env.GITHUB_APP_SLUG;
+  if (envSlug) {
+    cachedSlug = envSlug;
+    return envSlug;
+  }
+
+  // 3. 调用 GitHub API 获取
   try {
     const appJwt = await generateJWTAuto();
     const response = await fetch('https://api.github.com/app', {

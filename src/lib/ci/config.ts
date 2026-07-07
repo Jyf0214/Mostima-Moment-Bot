@@ -1,19 +1,28 @@
 /**
  * 机器人配置
  *
- * Bot slug 始终通过 GitHub App ID 调用 GitHub API 获取（GET /app），不依赖任何环境变量。
- * 结果缓存在内存中，避免重复 API 调用。
+ * getBotSlug() 同步返回环境变量值（用于静态规则初始化）
+ * resolveBotSlug() 异步获取完整 slug（环境变量 → GitHub API）
  */
 
 import { fetchBotSlug } from '@/lib/github/auth';
 
-/** 异步获取完整 slug（GitHub API 自动获取 + 内存缓存） */
+/** 同步获取 slug（仅环境变量，用于模块级常量初始化） */
+export function getBotSlug(): string {
+  return process.env.GITHUB_APP_SLUG || '';
+}
+
+/** 异步获取完整 slug（环境变量 → GitHub API 自动获取） */
 export async function resolveBotSlug(): Promise<string> {
   return await fetchBotSlug();
 }
 
-/** 返回 @机器人名称 格式（异步，用于规则匹配） */
-export async function getBotMention(): Promise<string> {
-  const slug = await resolveBotSlug();
-  return `@${slug}`;
+/** 返回 @机器人名称 格式（同步版本，用于规则匹配） */
+export function getBotMention(): string {
+  return `@${getBotSlug()}`;
+}
+
+/** 返回 /fix 命令的完整前缀（同步版本） */
+export function getFixCommand(): string {
+  return `${getBotMention()} /fix`;
 }

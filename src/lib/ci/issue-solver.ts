@@ -13,7 +13,7 @@ import {
   buildIssueFixResumePrompt,
   buildIssueFixReply,
 } from '../qwen/prompts';
-import { getBotMention } from './config';
+import { getFixCommand, getBotMention } from './config';
 import { validateBranchName, validateIssueNumber } from '../git/workspace';
 import type { LogCollector } from './log-collector';
 
@@ -32,31 +32,19 @@ interface IssuePayload {
  *
  * 触发条件：
  * 1. Issue 被贴上 `auto-fix` 标签
- * 2. 评论以 `@{botSlug} /fix` 开头，且评论者是 OWNER/MEMBER/COLLABORATOR
+ * 2. 评论以 `@{GITHUB_APP_SLUG} /fix` 开头，且评论者是 OWNER/MEMBER/COLLABORATOR
  */
-export async function shouldTriggerIssueFix(
-  eventName: string,
-  payload: IssuePayload,
-  fixCmdOverride?: string
-): Promise<boolean> {
+export function shouldTriggerIssueFix(eventName: string, payload: IssuePayload): boolean {
   if (eventName === 'issues' && payload.label?.name === 'auto-fix') {
-    logger.info(`[Issue Solver] Triggered by label "auto-fix" on Issue #${payload.issue.number}`);
     return true;
   }
 
   if (eventName === 'issue_comment') {
     const body = payload.comment?.body || '';
     const assoc = payload.comment?.author_association || '';
-    const fixCmd = fixCmdOverride || `${await getBotMention()} /fix`;
+    const fixCmd = getFixCommand();
     const isFixCommand = body.startsWith(fixCmd);
     const isAuthorized = ['OWNER', 'MEMBER', 'COLLABORATOR'].includes(assoc);
-
-    logger.info(
-      `[Issue Solver] issue_comment check: ` +
-        `body="${body.slice(0, 80)}", fixCmd="${fixCmd}", ` +
-        `isFixCommand=${isFixCommand}, authorAssoc="${assoc}", isAuthorized=${isAuthorized}`
-    );
-
     return isFixCommand && isAuthorized;
   }
 
@@ -169,9 +157,8 @@ export async function solveIssue(
   let prompt = '';
 
   if (isResume && eventName === 'issue_comment') {
-    const botMention = await getBotMention();
     const userFeedback = commentBody
-      .replace(new RegExp(`^${botMention}\\s*\\/fix\\s*`, 'i'), '')
+      .replace(new RegExp(`^${getBotMention()}\\s*\\/fix\\s*`, 'i'), '')
       .trim();
     prompt = buildIssueFixResumePrompt(prBranch, userFeedback);
     logCollector?.addMessage('Resuming with user feedback...');

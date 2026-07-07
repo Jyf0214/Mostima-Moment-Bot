@@ -5,12 +5,12 @@
  * 1. js-ci.yml    → push to main/master + PR to main/master → CI 验证
  * 2. webpack.yml  → push to main + PR to main → 构建检查
  * 3. qwen-security-auditor.yml → PR opened/synchronize → 安全审计
- * 4. qwen-issue-solver.yml → Issue labeled auto-fix / comment @{botSlug} /fix → 自动修复
+ * 4. qwen-issue-solver.yml → Issue labeled auto-fix / comment @{GITHUB_APP_SLUG} /fix → 自动修复
  * 5. qwen-scheduled-scanner.yml → 定期巡检
  */
 
 import type { TriggerRule } from './types';
-import { getBotMention } from '@/lib/ci/config';
+import { getBotSlug } from '@/lib/ci/config';
 
 /**
  * CI 验证规则（对应 js-ci.yml）
@@ -56,13 +56,12 @@ export const SECURITY_AUDIT_RULE: TriggerRule = {
 
 /**
  * 自动修复规则（对应 qwen-issue-solver.yml）
- * 触发条件：Issue 被贴 auto-fix 标签，或评论 @{botSlug} /fix
+ * 触发条件：Issue 被贴 auto-fix 标签，或评论 @{GITHUB_APP_SLUG} /fix
  *
- * 使用异步函数生成，因为 commentPattern 依赖运行时通过 GitHub API 获取的 bot slug。
+ * 使用函数生成，因为 commentPattern 依赖运行时的 GITHUB_APP_SLUG 配置。
  */
-export async function getAutoFixRule(): Promise<TriggerRule> {
-  const botMention = await getBotMention();
-  const botSlug = botMention.slice(1); // 去掉 @ 前缀
+export function getAutoFixRule(): TriggerRule {
+  const botSlug = getBotSlug();
   return {
     id: 'auto-fix',
     name: 'Autonomous Issue Solver',
@@ -104,6 +103,6 @@ export const BUILD_CHECK_RULE: TriggerRule = {
 /**
  * 所有默认规则
  */
-export async function getDefaultRules(): Promise<TriggerRule[]> {
-  return [CI_VERIFICATION_RULE, SECURITY_AUDIT_RULE, await getAutoFixRule(), BUILD_CHECK_RULE];
+export function getDefaultRules(): TriggerRule[] {
+  return [CI_VERIFICATION_RULE, SECURITY_AUDIT_RULE, getAutoFixRule(), BUILD_CHECK_RULE];
 }

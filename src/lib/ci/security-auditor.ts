@@ -139,7 +139,7 @@ export async function auditPR(
     logCollector?.appendOutput(`Vulnerabilities found:\n${reportContent.slice(-2000)}\n`);
 
     if (cycleCount < 5) {
-      const commentBody = await buildAuditFailComment(cycleCount, reportContent);
+      const commentBody = buildAuditFailComment(cycleCount, reportContent);
       await postPRComment(safePRNumber, commentBody);
       logCollector?.appendOutput('Posted vulnerability report as PR comment\n');
     } else {
