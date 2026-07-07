@@ -37,18 +37,15 @@ COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/next.config.js ./next.config.js
 
-# 获取 npm 全局安装目录并确保 node 用户有写权限
-RUN NPM_GLOBAL_DIR=$(npm config get prefix)/lib/node_modules \
-    && mkdir -p "$NPM_GLOBAL_DIR" \
-    && chown -R node:node "$NPM_GLOBAL_DIR" \
-    && mkdir -p /home/node/.npm \
-    && chown -R node:node /home/node
-
-# 全局安装 qwen CLI（用于 CI 工作流执行代码修复）
-RUN npm install -g @qwen-code/qwen-code@latest
-
-# 切换到 node 用户运行应用
+# 切换到 node 用户（UID=1000）
 USER node
+
+# 配置 npm 使用 node 用户自己的全局目录
+ENV NPM_CONFIG_PREFIX=/home/node/.npm-global
+ENV PATH="/home/node/.npm-global/bin:${PATH}"
+
+# 创建全局目录并安装 qwen CLI（用于 CI 工作流执行代码修复）
+RUN mkdir -p /home/node/.npm-global && npm install -g @qwen-code/qwen-code@latest
 
 ENV PORT=3001
 ENV HOSTNAME="0.0.0.0"
