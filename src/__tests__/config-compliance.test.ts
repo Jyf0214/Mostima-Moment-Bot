@@ -77,7 +77,11 @@ describe('Dockerfile 安全最佳实践', () => {
   });
 
   it('Dockerfile 应使用非 root 用户运行', () => {
-    expect(dockerfile).toContain('USER nextjs');
+    expect(dockerfile).toMatch(/USER\s+\w+/);
+    // Dockerfile 最后一行应该是非 root 用户
+    const lines = dockerfile.trim().split('\n');
+    const lastUserLine = lines.filter((l) => l.match(/^USER\s+/)).pop();
+    expect(lastUserLine).not.toMatch(/^USER\s+root\s*$/);
   });
 
   it('Dockerfile 应配置健康检查', () => {
