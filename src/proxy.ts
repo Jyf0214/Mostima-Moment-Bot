@@ -27,6 +27,7 @@ const publicPaths = [
   '/api/auth/login',
   '/api/auth/callback',
   '/api/auth/status',
+  '/api/auth/api-key-login',
   '/api/webhook/github',
   '/api/health',
   '/api/github/callback',
@@ -132,8 +133,11 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 检查认证 token
-  const token = request.cookies.get('auth_token')?.value;
+  // 检查认证 token（cookie 或 Authorization header）
+  const cookieToken = request.cookies.get('auth_token')?.value;
+  const authHeader = request.headers.get('authorization');
+  const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  const token = cookieToken || bearerToken;
 
   if (!token) {
     // 未登录，检查是否为全新应用

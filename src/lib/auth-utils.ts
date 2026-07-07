@@ -45,13 +45,21 @@ export function verifyTokenWithSecret(token: string, secret: string): JwtPayload
 
 /**
  * 从请求中提取并验证认证令牌（中间件）
+ * 支持两种方式：
+ *   1. Cookie: auth_token=xxx（浏览器场景）
+ *   2. Header: Authorization: Bearer xxx（curl/脚本场景）
  * 返回 null 表示未认证或令牌无效（响应已发送）
  */
 export async function requireAuth(
   req: NextApiRequest,
   res: NextApiResponse
 ): Promise<JwtPayload | null> {
-  const token = req.cookies.auth_token;
+  // 优先从 cookie 读取，其次从 Authorization header 读取
+  const cookieToken = req.cookies.auth_token;
+  const authHeader = req.headers.authorization;
+  const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  const token = cookieToken || bearerToken;
+
   if (!token) {
     res.status(401).json({ error: 'Not authenticated' });
     return null;

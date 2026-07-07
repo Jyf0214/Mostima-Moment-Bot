@@ -68,13 +68,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     { expiresIn: '7d' }
   );
 
-  // 设置 cookie
+  // 设置 cookie（浏览器场景）
   res.setHeader('Set-Cookie', setCookie('auth_token', token, { maxAge: 7 * 24 * 60 * 60 }));
 
-  // GET 请求重定向到仪表盘，POST 请求返回成功
+  // GET 请求重定向到仪表盘，POST 请求返回 token（兼容 curl/脚本场景）
   if (req.method === 'GET') {
     return res.redirect('/dashboard');
   }
 
-  return res.status(200).json({ success: true });
+  return res.status(200).json({ success: true, token });
 }
