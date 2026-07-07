@@ -38,8 +38,12 @@ COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/next.config.js ./next.config.js
 
 # 创建 UID 为 1000 的用户（用于运行应用和安装全局包）
-RUN addgroup --system --gid 1000 appgroup \
-    && adduser --system --uid 1000 --ingroup appgroup appuser
+RUN if ! getent group 1000 >/dev/null 2>&1; then \
+      addgroup --system --gid 1000 appgroup; \
+    fi \
+    && if ! getent passwd 1000 >/dev/null 2>&1; then \
+      adduser --system --uid 1000 --ingroup $(getent group 1000 | cut -d: -f1) appuser; \
+    fi
 
 # 获取 npm 全局安装目录并确保 appuser 有写权限
 RUN NPM_GLOBAL_DIR=$(npm config get prefix)/lib/node_modules \
