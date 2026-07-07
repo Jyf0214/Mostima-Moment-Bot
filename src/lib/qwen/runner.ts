@@ -166,6 +166,35 @@ export async function runQwen(prompt: string, options: RunOptions = {}): Promise
   ensureQwenDir();
   await configureSettings();
 
+  // 预检：确认 qwen CLI 已安装（在 env 构造之前，直接使用 process.env）
+  try {
+    execFileSync('qwen', ['--version'], {
+      stdio: 'pipe',
+      encoding: 'utf-8',
+      env: process.env as NodeJS.ProcessEnv,
+    });
+  } catch (error) {
+    const err = error as NodeJS.ErrnoException;
+    if (err.code === 'ENOENT') {
+      const msg =
+        'qwen CLI 未安装或不在 PATH 中。请确保 Docker 构建时已执行 npm install -g @qwen-code/qwen-code@latest，或在部署环境中手动安装。';
+      logger.error(`[Qwen Runner] ${msg}`);
+      if (logCollector) {
+        logCollector.finishStep('Qwen Execute', {
+          conclusion: 'failure',
+          output: msg,
+        });
+      }
+      return {
+        success: false,
+        output: msg,
+        sessionId: providedSessionId || crypto.randomUUID(),
+        duration: 0,
+        attempts: 1,
+      };
+    }
+  }
+
   const sessionId = providedSessionId || crypto.randomUUID();
   const isResume = forceResume ?? false;
   let attempt = 1;
