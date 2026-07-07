@@ -1,5 +1,165 @@
 import { logger } from './logger';
 import { prisma } from '@/lib/prisma';
+import { PrismaClient } from '@prisma/client';
+
+/**
+ * 不能存入数据库的环境变量
+ * 这些变量需要在启动时通过环境变量提供
+ */
+const EXCLUDED_ENV_VARS = new Set([
+  'ENCRYPTION_KEY', // 加密核心密钥，需要解密数据库数据
+  'DATABASE_URL', // 数据库连接字符串，需要连接数据库
+  'NODE_ENV', // 系统运行模式
+  'HOME', // 用户目录
+]);
+
+/**
+ * 可以存入数据库的环境变量列表
+ */
+const STORABLE_ENV_VARS = [
+  'GITHUB_CLIENT_ID',
+  'GITHUB_CLIENT_SECRET',
+  'JWT_SECRET',
+  'GITHUB_APP_ID',
+  'GITHUB_APP_SLUG',
+  'GITHUB_PRIVATE_KEY_PATH',
+  'UNLIMITED_OPENAI_API_KEY',
+  'QWEN_SETTINGS_JSON',
+  'SCAN_TRIGGER_TOKEN',
+  'APP_URL',
+  'CI_STEP_TIMEOUT_MS',
+  'QWEN_MAX_DURATION_MS',
+  'QWEN_TIMEOUT_MS',
+  'GITHUB_TOKEN',
+  'INTERNAL_API_KEY',
+  'WORKSPACE_DIR',
+  'REPO_OWNER',
+  'REPO_NAME',
+  'COLLABORATORS',
+];
+
+/**
+ * 收集当前环境变量（排除不能存入数据库的变量）
+ */
+function collectEnvVars(): Record<string, string> {
+  const envVars: Record<string, string> = {};
+
+  for (const varName of STORABLE_ENV_VARS) {
+    const value = process.env[varName];
+    if (value !== undefined && value !== '') {
+      envVars[varName] = value;
+    }
+  }
+
+  return envVars;
+}
+
+/**
+ * 从数据库加载环境变量到 process.env
+ * 使用原始 PrismaClient 绕过加密中间件
+ */
+export async function loadEnvVarsFromDatabase(): Promise<boolean> {
+  try {
+    const rawClient = new PrismaClient();
+
+    // 检查数据库运行模式标志
+    const modeConfig = await rawClient.appConfig.findUnique({
+      where: { configKey: 'env_vars_mode' },
+    });
+
+    if (!modeConfig || modeConfig.configValue !== 'true') {
+      await rawClient.$disconnect();
+      return false;
+    }
+
+    // 读取环境变量
+    const envConfig = await rawClient.appConfig.findUnique({
+      where: { configKey: 'env_vars' },
+    });
+
+    if (!envConfig?.configValue) {
+      logger.warn('[Bootstrap] env_vars_mode is true but env_vars is empty');
+      await rawClient.$disconnect();
+      return false;
+    }
+
+    const envVars = JSON.parse(envConfig.configValue) as Record<string, string>;
+
+    // 设置到 process.env（不覆盖已有的环境变量）
+    let loadedCount = 0;
+    for (const [key, value] of Object.entries(envVars)) {
+      if (!EXCLUDED_ENV_VARS.has(key) && !process.env[key]) {
+        process.env[key] = value;
+        loadedCount++;
+      }
+    }
+
+    logger.info(`[Bootstrap] Loaded ${loadedCount} env vars from database`);
+    await rawClient.$disconnect();
+    return true;
+  } catch (error) {
+    logger.error('[Bootstrap] Failed to load env vars from database:', error);
+    return false;
+  }
+}
+
+/**
+ * 保存环境变量到数据库并启用数据库运行模式
+ * 使用原始 PrismaClient 绕过加密中间件
+ */
+export async function saveEnvVarsToDatabase(): Promise<{ success: boolean; count: number }> {
+  try {
+    const rawClient = new PrismaClient();
+
+    // 收集环境变量
+    const envVars = collectEnvVars();
+    const envVarsJson = JSON.stringify(envVars);
+
+    // 保存环境变量
+    await rawClient.appConfig.upsert({
+      where: { configKey: 'env_vars' },
+      update: { configValue: envVarsJson, encrypted: false },
+      create: { configKey: 'env_vars', configValue: envVarsJson, encrypted: false },
+    });
+
+    // 启用数据库运行模式
+    await rawClient.appConfig.upsert({
+      where: { configKey: 'env_vars_mode' },
+      update: { configValue: 'true', encrypted: false },
+      create: { configKey: 'env_vars_mode', configValue: 'true', encrypted: false },
+    });
+
+    await rawClient.$disconnect();
+
+    logger.info(`[Bootstrap] Saved ${Object.keys(envVars).length} env vars to database`);
+    return { success: true, count: Object.keys(envVars).length };
+  } catch (error) {
+    logger.error('[Bootstrap] Failed to save env vars to database:', error);
+    return { success: false, count: 0 };
+  }
+}
+
+/**
+ * 禁用数据库运行模式（清除标志）
+ */
+export async function disableDatabaseMode(): Promise<boolean> {
+  try {
+    const rawClient = new PrismaClient();
+
+    await rawClient.appConfig.upsert({
+      where: { configKey: 'env_vars_mode' },
+      update: { configValue: 'false', encrypted: false },
+      create: { configKey: 'env_vars_mode', configValue: 'false', encrypted: false },
+    });
+
+    await rawClient.$disconnect();
+    logger.info('[Bootstrap] Database mode disabled');
+    return true;
+  } catch (error) {
+    logger.error('[Bootstrap] Failed to disable database mode:', error);
+    return false;
+  }
+}
 
 /**
  * 首次启动自动保存环境变量到数据库
