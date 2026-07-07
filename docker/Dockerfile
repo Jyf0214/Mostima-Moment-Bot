@@ -1,7 +1,7 @@
 # ============================================
 # 构建阶段：安装依赖、生成 Prisma、构建 Next.js
 # ============================================
-FROM node:20-alpine AS builder
+FROM node:24-alpine AS builder
 
 WORKDIR /app
 
