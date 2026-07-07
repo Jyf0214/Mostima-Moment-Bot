@@ -6,15 +6,12 @@
  */
 
 export async function register() {
-  // 仅在服务端执行
-  if (process.env.NEXT_RUNTIME === 'nodejs') {
-    try {
-      const { fetchBotSlug } = await import('@/lib/github/auth');
-      const { logger } = await import('@/lib/logger');
-      const slug = await fetchBotSlug();
-      logger.info(`[Instrumentation] Bot slug preloaded: ${slug}`);
-    } catch {
-      // 预热失败不阻断启动，仅静默跳过
-    }
+  try {
+    const { fetchBotSlug } = await import('@/lib/github/auth');
+    const { logger } = await import('@/lib/logger');
+    const slug = await fetchBotSlug();
+    logger.info(`[Instrumentation] Bot slug preloaded: ${slug}`);
+  } catch {
+    // 预热失败不阻断启动，仅静默跳过
   }
 }
