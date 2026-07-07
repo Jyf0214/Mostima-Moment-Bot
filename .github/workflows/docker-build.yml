@@ -73,16 +73,12 @@ jobs:
             exit 0
           fi
           echo "触发 Hugging Face Space 工厂重建: $HF_SPACE_NAME"
-          RESPONSE=$(curl -s -w "\n%{http_code}" \
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
             -X POST \
             "https://huggingface.co/api/spaces/${HF_SPACE_NAME}/restart" \
             -H "Authorization: Bearer ${HF_TOKEN}" \
             -H "Content-Type: application/json" \
             -d '{"factory_rebuild": true}')
-          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
-          BODY=$(echo "$RESPONSE" | head -n -1)
-          echo "HTTP 状态码: $HTTP_CODE"
-          echo "响应: $BODY"
           if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
             echo "✅ HF Space 工厂重建已触发"
           else
