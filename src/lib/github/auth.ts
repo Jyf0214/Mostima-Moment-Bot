@@ -9,8 +9,11 @@ let cachedSlug: string | null = null;
 // 模块加载时自动预热缓存（服务器启动即触发，无需等待页面访问）
 (async () => {
   try {
-    await fetchBotSlug();
-  } catch {}
+    const slug = await fetchBotSlug();
+    logger.info(`[GitHub Auth] Bot slug loaded: ${slug}`);
+  } catch (err) {
+    logger.warn('[GitHub Auth] Failed to pre-load bot slug:', err);
+  }
 })();
 
 /**
