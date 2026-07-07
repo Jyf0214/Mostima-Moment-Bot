@@ -150,29 +150,35 @@ export default function ApiKeyPage() {
         </ProCard>
       )}
 
-      {/* 新建密钥成功提示 */}
+      {/* 新建密钥成功提示 - 显示完整密钥内容 */}
       {createdKey && (
-        <ProCard className="bg-emerald-50 border-emerald-200">
+        <ProCard className="bg-amber-50 border-amber-300 border-2">
           <div className="flex items-start gap-3">
-            <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0 mt-0.5" />
+            <CheckCircle2 className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="text-sm font-medium text-emerald-700">{t('apiKey.createdSuccess')}</p>
-              <p className="text-xs text-zinc-500 mt-1">{t('apiKey.createdHint')}</p>
-              <div className="mt-3 flex items-center gap-2">
-                <code className="flex-1 px-3 py-2 rounded-lg bg-zinc-100 text-zinc-700 text-xs font-mono break-all">
-                  {createdKey.key}
-                </code>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  icon={
-                    copied ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />
-                  }
-                  onClick={handleCopyKey}
-                  className="text-zinc-500 hover:text-zinc-700 shrink-0"
-                >
-                  {copied ? t('apiKey.copied') : t('apiKey.copy')}
-                </Button>
+              <p className="text-sm font-bold text-amber-800">{t('apiKey.createdSuccess')}</p>
+              <p className="text-xs text-amber-700 mt-1 font-medium">{t('apiKey.createdHint')}</p>
+              <div className="mt-3">
+                <p className="text-xs text-zinc-600 mb-1">API Key:</p>
+                <div className="flex items-center gap-2">
+                  <code
+                    className="flex-1 px-3 py-2.5 rounded-lg bg-white border border-amber-200 text-zinc-900 text-sm font-mono break-all select-all"
+                    style={{ userSelect: 'all' }}
+                  >
+                    {createdKey.key}
+                  </code>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    icon={
+                      copied ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />
+                    }
+                    onClick={handleCopyKey}
+                    className="shrink-0"
+                  >
+                    {copied ? t('apiKey.copied') : t('apiKey.copy')}
+                  </Button>
+                </div>
               </div>
             </div>
             <button
