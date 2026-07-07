@@ -63,13 +63,20 @@ jobs:
         uses: actions/checkout@v4
 
       - name: 触发 HF Space 工厂重建
-        if: github.event_name != 'pull_request' && secrets.HF_TOKEN != ''
+        if: github.event_name != 'pull_request'
+        env:
+          HF_SPACE_NAME: ${{ secrets.HF_SPACE_NAME }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          echo "触发 Hugging Face Space 工厂重建..."
+          if [ -z "$HF_TOKEN" ] || [ -z "$HF_SPACE_NAME" ]; then
+            echo "⚠️ HF_SPACE_NAME 或 HF_TOKEN 未配置，跳过 HF Space 重建"
+            exit 0
+          fi
+          echo "触发 Hugging Face Space 工厂重建: $HF_SPACE_NAME"
           RESPONSE=$(curl -s -w "\n%{http_code}" \
             -X POST \
-            "https://huggingface.co/api/spaces/${{ secrets.HF_SPACE_NAME }}/restart" \
-            -H "Authorization: Bearer ${{ secrets.HF_TOKEN }}" \
+            "https://huggingface.co/api/spaces/${HF_SPACE_NAME}/restart" \
+            -H "Authorization: Bearer ${HF_TOKEN}" \
             -H "Content-Type: application/json" \
             -d '{"factory_rebuild": true}')
           HTTP_CODE=$(echo "$RESPONSE" | tail -1)
