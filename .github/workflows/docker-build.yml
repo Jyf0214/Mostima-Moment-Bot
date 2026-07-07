@@ -62,6 +62,27 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v4
 
+      - name: 触发 HF Space 工厂重建
+        if: github.event_name != 'pull_request' && secrets.HF_TOKEN != ''
+        run: |
+          echo "触发 Hugging Face Space 工厂重建..."
+          RESPONSE=$(curl -s -w "\n%{http_code}" \
+            -X POST \
+            "https://huggingface.co/api/spaces/${{ secrets.HF_SPACE_NAME }}/restart" \
+            -H "Authorization: Bearer ${{ secrets.HF_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{"factory_rebuild": true}')
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+          echo "HTTP 状态码: $HTTP_CODE"
+          echo "响应: $BODY"
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "✅ HF Space 工厂重建已触发"
+          else
+            echo "❌ HF Space 工厂重建失败 (HTTP $HTTP_CODE)"
+            exit 1
+          fi
+
       - name: 设置 Docker Buildx
         uses: docker/setup-buildx-action@v3
 
