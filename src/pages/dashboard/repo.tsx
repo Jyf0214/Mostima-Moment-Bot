@@ -156,7 +156,7 @@ export default function RepoDetailPage() {
               variant="ghost"
               size="sm"
               icon={<ArrowLeft className="h-4 w-4" />}
-              onClick={() => (window.location.href = '/dashboard')}
+              onClick={() => window.history.back()}
               className="text-zinc-500 hover:text-zinc-900"
             >
               {t('repoDetail.back')}

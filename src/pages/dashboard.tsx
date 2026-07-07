@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useRouter } from 'next/router';
 import Image from 'next/image';
 import { logger } from '@/lib/logger';
 import { Button } from '@/components/ui/Button';
@@ -15,8 +16,11 @@ import SettingsPage from '@/components/dashboard/SettingsPage';
 import type { User, ReposData } from '@/components/dashboard/types';
 import { CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-react';
 
+const VALID_PAGES: SidebarPage[] = ['overview', 'repos', 'logs', 'env', 'apikeys', 'settings'];
+
 export default function DashboardPage() {
   const { t } = useTranslation();
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [activePage, setActivePage] = useState<SidebarPage>('overview');
@@ -27,6 +31,31 @@ export default function DashboardPage() {
   const [appConfigured, setAppConfigured] = useState<boolean | null>(null);
   const [installMsg, setInstallMsg] = useState<string | null>(null);
   const [installMsgType, setInstallMsgType] = useState<'success' | 'error'>('success');
+
+  // 从 URL 读取当前页面
+  useEffect(() => {
+    if (!router.isReady) return;
+    const pageParam = router.query.page as string;
+    if (pageParam && VALID_PAGES.includes(pageParam as SidebarPage)) {
+      setActivePage(pageParam as SidebarPage);
+    } else if (!pageParam) {
+      setActivePage('overview');
+    }
+  }, [router.isReady, router.query.page]);
+
+  // 从 URL 读取 logsRepo 参数
+  useEffect(() => {
+    if (!router.isReady) return;
+    const logsRepoParam = router.query.logsRepo as string;
+    if (logsRepoParam) {
+      setLogsRepo(logsRepoParam);
+      setActivePage('logs');
+      // 清除 URL 中的 logsRepo 参数，保留 page 参数
+      router.replace({ pathname: '/dashboard', query: { page: 'logs' } }, undefined, {
+        shallow: true,
+      });
+    }
+  }, [router.isReady, router.query.logsRepo, router]);
 
   const checkAuth = useCallback(async () => {
     try {
@@ -65,18 +94,8 @@ export default function DashboardPage() {
   }, [checkAuth]);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const logsRepoParam = params.get('logsRepo');
-    if (logsRepoParam) {
-      setLogsRepo(logsRepoParam);
-      setActivePage('logs');
-      window.history.replaceState({}, '', '/dashboard');
-    }
-  }, []);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const install = params.get('install');
+    if (!router.isReady) return;
+    const install = router.query.install as string;
     if (install === 'success') {
       setInstallMsg(t('home.installSuccess'));
       setInstallMsgType('success');
@@ -84,8 +103,10 @@ export default function DashboardPage() {
       setInstallMsg(t('home.installError'));
       setInstallMsgType('error');
     }
-    if (install) window.history.replaceState({}, '', '/dashboard');
-  }, [user, t]);
+    if (install) {
+      router.replace({ pathname: '/dashboard' }, undefined, { shallow: true });
+    }
+  }, [router.isReady, router.query.install, router, t]);
 
   const checkAppConfig = useCallback(async () => {
     try {
@@ -141,6 +162,8 @@ export default function DashboardPage() {
         onNavigate={(page) => {
           setActivePage(page);
           setLogsRepo(null);
+          // 更新 URL 路径
+          router.push({ pathname: '/dashboard', query: { page } }, undefined, { shallow: true });
         }}
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
@@ -209,8 +232,18 @@ export default function DashboardPage() {
               reposLoading={reposLoading}
               appConfigured={appConfigured}
               onInstall={() => (window.location.href = '/api/github/install')}
-              onNavigateToRepos={() => setActivePage('repos')}
-              onNavigateToEnv={() => setActivePage('env')}
+              onNavigateToRepos={() => {
+                setActivePage('repos');
+                router.push({ pathname: '/dashboard', query: { page: 'repos' } }, undefined, {
+                  shallow: true,
+                });
+              }}
+              onNavigateToEnv={() => {
+                setActivePage('env');
+                router.push({ pathname: '/dashboard', query: { page: 'env' } }, undefined, {
+                  shallow: true,
+                });
+              }}
             />
           )}
           {activePage === 'repos' && <ReposPage repos={repos} reposLoading={reposLoading} />}
