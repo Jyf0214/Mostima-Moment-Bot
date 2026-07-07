@@ -44,14 +44,10 @@ RUN NPM_GLOBAL_DIR=$(npm config get prefix)/lib/node_modules \
     && mkdir -p /home/node/.npm \
     && chown -R node:node /home/node
 
-# 以 node 身份全局安装 qwen CLI（用于 CI 工作流执行代码修复）
-USER node
+# 全局安装 qwen CLI（用于 CI 工作流执行代码修复）
 RUN npm install -g @qwen-code/qwen-code@latest
 
-# 切回 root 设置应用目录权限
-USER root
-RUN chown -R node:node /app
-
+# 切换到 node 用户运行应用
 USER node
 
 ENV PORT=3001
