@@ -223,8 +223,8 @@ export async function solveIssue(
         logCollector?.finishStep('PR', { conclusion: 'success' });
       } catch (err) {
         logger.info(`[Issue Solver] PR for Issue #${issueNumber} already exists:`, err);
-        logCollector?.appendOutput('PR already exists\n');
-        logCollector?.finishStep('PR', { conclusion: 'success' });
+        logCollector?.appendOutput('PR already exists, skipping creation\n');
+        logCollector?.finishStep('PR', { conclusion: 'skipped' });
       }
     }
 
