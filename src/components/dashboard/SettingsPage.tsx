@@ -13,6 +13,7 @@ import {
   Paintbrush,
   Database,
   RefreshCw,
+  Terminal,
 } from 'lucide-react';
 
 export default function SettingsPage() {
@@ -42,6 +43,10 @@ export default function SettingsPage() {
   const [qwenMsg, setQwenMsg] = useState<string | null>(null);
   const [qwenMsgType, setQwenMsgType] = useState<'success' | 'error'>('success');
   const [qwenConfigured, setQwenConfigured] = useState(false);
+
+  // qwen CLI 安装状态
+  const [qwenCliInstalled, setQwenCliInstalled] = useState<boolean | null>(null);
+  const [qwenCliVersion, setQwenCliVersion] = useState<string | null>(null);
 
   // 数据库运行模式状态
   const [dbModeEnabled, setDbModeEnabled] = useState(false);
@@ -100,6 +105,19 @@ export default function SettingsPage() {
       }
     } catch {
       /* default */
+    }
+  };
+
+  const fetchQwenCliStatus = async () => {
+    try {
+      const res = await fetch('/api/qwen-status');
+      if (res.ok) {
+        const data = await res.json();
+        setQwenCliInstalled(data.installed);
+        setQwenCliVersion(data.version);
+      }
+    } catch {
+      setQwenCliInstalled(false);
     }
   };
 
@@ -168,6 +186,7 @@ export default function SettingsPage() {
     fetchBotInfo();
     fetchHeroConfig();
     fetchQwenSettings();
+    fetchQwenCliStatus();
     fetchDbModeStatus();
   }, []);
 
@@ -474,6 +493,32 @@ export default function SettingsPage() {
         )}
 
         <p className="mt-3 text-xs text-zinc-500">{t('settings.dbModeHint')}</p>
+      </ProCard>
+
+      <ProCard className="bg-white border-zinc-200" padding="p-5">
+        <div className="flex items-center gap-3 mb-4">
+          <Terminal className="h-5 w-5 text-cyan-500" />
+          <h3 className="text-zinc-900 font-medium">{t('settings.qwenCliTitle')}</h3>
+        </div>
+        <div className="flex items-center gap-2">
+          {qwenCliInstalled === null ? (
+            <RefreshCw className="h-4 w-4 text-zinc-400 animate-spin" />
+          ) : qwenCliInstalled ? (
+            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+          ) : (
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
+          )}
+          <span className="text-sm text-zinc-700">
+            {qwenCliInstalled === null
+              ? '...'
+              : qwenCliInstalled
+                ? t('settings.qwenCliInstalled')
+                : t('settings.qwenCliNotInstalled')}
+          </span>
+          {qwenCliVersion && (
+            <span className="text-xs text-zinc-400 font-mono ml-1">({qwenCliVersion})</span>
+          )}
+        </div>
       </ProCard>
 
       <ProCard className="bg-white border-zinc-200" padding="p-5">

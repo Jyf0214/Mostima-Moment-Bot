@@ -233,7 +233,11 @@ export async function runQwen(prompt: string, options: RunOptions = {}): Promise
   }
 
   // 执行单次 qwen 调用（使用 execFileSync 避免 shell 展开风险）
-  function executeQwen(args: string[]): { ok: boolean; output: string } {
+  function executeQwen(args: string[]): {
+    ok: boolean;
+    output: string;
+    notFound: boolean;
+  } {
     try {
       const result = execFileSync('qwen', args, {
         env,
@@ -242,10 +246,19 @@ export async function runQwen(prompt: string, options: RunOptions = {}): Promise
         stdio: ['pipe', 'pipe', 'pipe'],
         encoding: 'utf-8',
       });
-      return { ok: true, output: result };
+      return { ok: true, output: result, notFound: false };
     } catch (error) {
-      const err = error as { stdout?: string; stderr?: string; message?: string };
-      return { ok: false, output: err.stdout || err.stderr || err.message || '' };
+      const err = error as {
+        stdout?: string;
+        stderr?: string;
+        message?: string;
+        code?: string;
+      };
+      return {
+        ok: false,
+        output: err.stdout || err.stderr || err.message || '',
+        notFound: err.code === 'ENOENT',
+      };
     }
   }
 
@@ -255,6 +268,21 @@ export async function runQwen(prompt: string, options: RunOptions = {}): Promise
   logger.info(`[Qwen Runner] Starting (session: ${sessionId}, resume: ${isResume})...`);
   let result = executeQwen(buildArgs(sessionId, prompt, isResume));
   output = result.output;
+
+  // qwen 二进制不存在，直接失败不重试
+  if (result.notFound) {
+    const msg =
+      'qwen CLI 未安装或不在 PATH 中。请确保 Docker 构建时已执行 npm install -g @qwen-code/qwen-code@latest。';
+    logger.error(`[Qwen Runner] ${msg}`);
+    logCollector?.finishStep(stepName, { conclusion: 'failure', output: msg });
+    return {
+      success: false,
+      output: msg,
+      sessionId,
+      duration: Date.now() - startTime,
+      attempts: 1,
+    };
+  }
 
   if (result.ok) {
     success = true;
@@ -305,6 +333,13 @@ export async function runQwen(prompt: string, options: RunOptions = {}): Promise
     const retryStart = Date.now();
     result = executeQwen(buildArgs(sessionId, resumePrompt, true));
     output = result.output;
+
+    // qwen 二进制不存在，停止重试
+    if (result.notFound) {
+      logger.error('[Qwen Runner] qwen binary not found, stopping retries.');
+      logCollector?.appendOutput('[Resume] qwen binary not found, stopping retries\n');
+      break;
+    }
 
     if (result.ok) {
       success = true;

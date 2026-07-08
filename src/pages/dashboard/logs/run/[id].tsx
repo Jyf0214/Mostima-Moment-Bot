@@ -21,6 +21,7 @@ import {
   SkipForward,
   ChevronsUpDown,
   ChevronsDownUp,
+  ExternalLink,
 } from 'lucide-react';
 
 interface RunDetail {
@@ -138,10 +139,6 @@ function formatDuration(duration: number): string {
   if (s < 60) return `${s}s`;
   const m = Math.floor(s / 60);
   return `${m}m ${s % 60}s`;
-}
-
-function shaShort(sha: string): string {
-  return sha.slice(0, 7);
 }
 
 function formatTime(dateStr: string): string {
@@ -346,12 +343,29 @@ function StructuredLogs({
   onCopy: () => void;
   copied: boolean;
 }) {
-  const [expandedSet, setExpandedSet] = useState<Set<string>>(new Set());
-  const [allExpanded, setAllExpanded] = useState(false);
+  const [expandedSet, setExpandedSet] = useState<Set<string>>(() => {
+    // 默认展开所有有输出或子步骤的步骤
+    const all = new Set<string>();
+    const collect = (steps: LogStep[], prefix = '') => {
+      steps.forEach((s, i) => {
+        const key = `${s.name}-${prefix}${i}`;
+        if (s.output || (s.subSteps && s.subSteps.length > 0)) {
+          all.add(key);
+        }
+        if (s.subSteps) collect(s.subSteps, `${key}-`);
+      });
+    };
+    collect(logData.steps);
+    return all;
+  });
+  const [allExpanded, setAllExpanded] = useState(true);
 
   const successCount = logData.steps.filter((s) => s.conclusion === 'success').length;
   const failCount = logData.steps.filter((s) => s.conclusion === 'failure').length;
   const skipCount = logData.steps.filter((s) => s.conclusion === 'skipped').length;
+
+  // 计算总耗时
+  const totalDurationMs = logData.steps.reduce((acc, s) => acc + (s.durationMs || 0), 0);
 
   const toggleAll = () => {
     if (allExpanded) {
@@ -393,6 +407,9 @@ function StructuredLogs({
           <span className="text-zinc-500 font-medium">
             {logData.steps.length} {logData.steps.length === 1 ? 'step' : 'steps'}
           </span>
+          {totalDurationMs > 0 && (
+            <span className="text-zinc-400 tabular-nums">{formatDuration(totalDurationMs)}</span>
+          )}
           {successCount > 0 && (
             <span className="text-emerald-500 flex items-center gap-1">
               <CheckCircle2 className="h-3 w-3" /> {successCount} passed
@@ -470,6 +487,7 @@ export default function RunDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [copiedSha, setCopiedSha] = useState(false);
 
   const fetchRun = useCallback(async () => {
     if (!id) return;
@@ -539,6 +557,17 @@ export default function RunDetailPage() {
     );
   }
 
+  const copySha = async () => {
+    if (!run?.commitSha) return;
+    try {
+      await navigator.clipboard.writeText(run.commitSha);
+      setCopiedSha(true);
+      setTimeout(() => setCopiedSha(false), 2000);
+    } catch {
+      // 剪贴板 API 不可用时静默
+    }
+  };
+
   const cfg = STATUS_CONFIG[run.status] || STATUS_CONFIG.pending;
   const StatusIcon = cfg.icon;
 
@@ -604,20 +633,48 @@ export default function RunDetailPage() {
               <p className="text-zinc-900 font-medium">{run.event}</p>
             </div>
             <div>
+              <span className="text-zinc-400">{t('repoDetail.action')}</span>
+              <p className="text-zinc-900 font-medium">{run.action || '-'}</p>
+            </div>
+            <div>
               <span className="text-zinc-400">{t('repoDetail.triggeredBy')}</span>
               <p className="text-zinc-900 font-medium">
                 {run.triggeredBy ? `@${run.triggeredBy}` : '-'}
               </p>
             </div>
             <div>
-              <span className="text-zinc-400">{t('repoDetail.commit')}</span>
-              <p className="text-zinc-900 font-mono text-xs">
-                {run.commitSha ? shaShort(run.commitSha) : '-'}
-              </p>
-            </div>
-            <div>
               <span className="text-zinc-400">{t('repoDetail.ruleId')}</span>
               <p className="text-zinc-900 font-medium">{run.ruleId || '-'}</p>
+            </div>
+            <div>
+              <span className="text-zinc-400">{t('repoDetail.commit')}</span>
+              {run.commitSha ? (
+                <div className="flex items-center gap-2">
+                  <p className="text-zinc-900 font-mono text-xs">{run.commitSha}</p>
+                  <button
+                    onClick={copySha}
+                    className="text-zinc-400 hover:text-zinc-600 transition-colors"
+                    title="Copy full SHA"
+                  >
+                    {copiedSha ? (
+                      <Check className="h-3.5 w-3.5 text-emerald-500" />
+                    ) : (
+                      <Copy className="h-3.5 w-3.5" />
+                    )}
+                  </button>
+                  <a
+                    href={`https://github.com/${run.repoFullName}/commit/${run.commitSha}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-zinc-400 hover:text-zinc-600 transition-colors"
+                    title="View on GitHub"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                </div>
+              ) : (
+                <p className="text-zinc-900 font-medium">-</p>
+              )}
             </div>
             <div>
               <span className="text-zinc-400">{t('repoDetail.duration')}</span>
@@ -643,10 +700,26 @@ export default function RunDetailPage() {
                 {run.completedAt ? formatTime(run.completedAt) : '-'}
               </p>
             </div>
-            <div className="col-span-2">
+            <div>
               <span className="text-zinc-400">{t('repoDetail.createdAt')}</span>
               <p className="text-zinc-900 font-medium">{formatTime(run.createdAt)}</p>
             </div>
+            {run.prNumber && (
+              <div>
+                <span className="text-zinc-400">Pull Request</span>
+                <p>
+                  <a
+                    href={`https://github.com/${run.repoFullName}/pull/${run.prNumber}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-500 hover:text-blue-700 font-medium inline-flex items-center gap-1"
+                  >
+                    PR #{run.prNumber}
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </p>
+              </div>
+            )}
           </div>
         </ProCard>
 
