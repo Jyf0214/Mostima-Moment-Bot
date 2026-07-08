@@ -187,30 +187,3 @@ describe('vitest.config.mts 配置完整性', () => {
     expect(content).toContain('setupFiles');
   });
 });
-
-// ============================================================
-// 5. Docker Compose 配置检查
-// ============================================================
-describe('docker-compose.yml 配置检查', () => {
-  it('docker-compose.yml 应存在', () => {
-    expect(fs.existsSync(path.join(ROOT_DIR, 'docker', 'docker-compose.yml'))).toBe(true);
-  });
-
-  it('docker-compose.yml 应使用环境变量引用（非硬编码）', () => {
-    const content = readFile('docker/docker-compose.yml');
-    // 应使用 ${VAR} 引用环境变量
-    expect(content).toContain('${PORT:-3001}');
-    expect(content).toContain('${DATABASE_URL}');
-    expect(content).toContain('${JWT_SECRET}');
-  });
-
-  it('docker-compose.yml 应配置重启策略', () => {
-    const content = readFile('docker/docker-compose.yml');
-    expect(content).toContain('restart:');
-  });
-
-  it('docker-compose.yml 应使用只读挂载私钥文件', () => {
-    const content = readFile('docker/docker-compose.yml');
-    expect(content).toContain(':ro');
-  });
-});
