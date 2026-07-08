@@ -15,6 +15,7 @@ import { getFixCommand } from '@/lib/ci/config';
 import { auditPR } from '@/lib/ci/security-auditor';
 import { recordCiRun, updateCiRun, flushLogs } from '@/lib/ci/run-logger';
 import { LogCollector } from '@/lib/ci/log-collector';
+import { getOrCreateWorkspace } from '@/lib/git/workspace';
 
 export const config = {
   api: {
@@ -85,7 +86,7 @@ async function handlePREvent(
   const ciLogger = new LogCollector();
 
   // fire-and-forget：不阻塞 webhook 响应
-  handlePullRequest(prPayload as unknown as PRPayload, ciLogger)
+  handlePullRequest(prPayload as unknown as PRPayload, ciLogger, workspaceDir)
     .then(async () => {
       logger.info(`[Webhook] CI pipeline completed for PR #${prPayload.pull_request.number}`);
       // CI 流水线完成后刷新日志（暂不更新数据库，等审计完成后一起更新）
@@ -199,7 +200,7 @@ async function handleIssueEvent(
 
   // issue_comment 重试逻辑
   if (event === 'issue_comment') {
-    await handleIssueComment(payload as unknown as CommentPayload);
+    await handleIssueComment(payload as unknown as CommentPayload, undefined, workspaceDir);
   }
 }
 
@@ -294,9 +295,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'Invalid JSON payload' });
   }
 
-  const workspaceDir = process.env.WORKSPACE_DIR || '.';
+  const repoFullName = getRepoFullName(payload);
 
-  // 3. 事件路由
+  // 3. 获取工作区（克隆或更新目标仓库）
+  let workspaceDir: string;
+  try {
+    workspaceDir = repoFullName
+      ? await getOrCreateWorkspace(repoFullName)
+      : process.env.WORKSPACE_DIR || '.';
+  } catch (err) {
+    logger.error(`[Webhook] Failed to prepare workspace: ${repoFullName}`, err);
+    return res.status(500).json({ error: 'Failed to prepare workspace' });
+  }
+
+  // 4. 事件路由
   try {
     switch (event) {
       case 'pull_request':

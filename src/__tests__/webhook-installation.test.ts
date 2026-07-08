@@ -36,6 +36,9 @@ vi.mock('@/lib/ci/issue-solver', () => ({
 vi.mock('@/lib/ci/security-auditor', () => ({
   auditPR: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock('@/lib/git/workspace', () => ({
+  getOrCreateWorkspace: vi.fn().mockResolvedValue('/tmp/test-workspace'),
+}));
 
 import handler from '@/pages/api/webhook/github';
 

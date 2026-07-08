@@ -10,8 +10,14 @@ export type { PRPayload, CommentPayload, WorkflowPayload, CheckResult };
 
 /**
  * 执行完整的 CI 检查流程
+ *
+ * @param logCollector - 日志收集器
+ * @param workspaceDir - 工作区目录（可选，不传则使用环境变量）
  */
-export async function runCIChecks(logCollector?: LogCollector): Promise<CheckResult[]> {
+export async function runCIChecks(
+  logCollector?: LogCollector,
+  workspaceDir?: string
+): Promise<CheckResult[]> {
   const steps = [
     { name: 'Dependencies', command: 'npm ci' },
     { name: 'Lint', command: 'npm run lint' },
@@ -20,10 +26,10 @@ export async function runCIChecks(logCollector?: LogCollector): Promise<CheckRes
   ];
 
   const results: CheckResult[] = [];
-  const workspaceDir = process.env.WORKSPACE_DIR || '.';
+  const cwd = workspaceDir || process.env.WORKSPACE_DIR || '.';
 
   for (const step of steps) {
-    const result = await executeCheckStep(step.name, step.command, workspaceDir, logCollector);
+    const result = await executeCheckStep(step.name, step.command, cwd, logCollector);
     results.push(result);
 
     // 如果失败，后续步骤标记为 SKIP
@@ -41,10 +47,15 @@ export async function runCIChecks(logCollector?: LogCollector): Promise<CheckRes
 
 /**
  * 处理 pull_request 事件
+ *
+ * @param payload - PR 事件 payload
+ * @param logCollector - 日志收集器
+ * @param workspaceDir - 工作区目录（可选，不传则使用环境变量）
  */
 export async function handlePullRequest(
   payload: PRPayload,
-  logCollector?: LogCollector
+  logCollector?: LogCollector,
+  workspaceDir?: string
 ): Promise<void> {
   const prNumber = payload.pull_request?.number;
   if (typeof prNumber !== 'number') {
@@ -59,7 +70,7 @@ export async function handlePullRequest(
     // 1. 切换分支
     logCollector?.startStep('Checkout', `git fetch & checkout PR #${prNumber}`);
     try {
-      await checkoutPRBranch(prNumber);
+      await checkoutPRBranch(prNumber, workspaceDir);
       logCollector?.finishStep('Checkout', { conclusion: 'success' });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -69,7 +80,7 @@ export async function handlePullRequest(
 
     // 2. 执行 CI 检查
     logCollector?.addMessage('Running CI checks...');
-    const results = await runCIChecks(logCollector);
+    const results = await runCIChecks(logCollector, workspaceDir);
 
     // 3. 生成报告
     const report = generatePRReport(prNumber, results);
@@ -100,10 +111,15 @@ export async function handlePullRequest(
 
 /**
  * 处理 issue_comment 事件（手动重试）
+ *
+ * @param payload - 评论事件 payload
+ * @param logCollector - 日志收集器
+ * @param workspaceDir - 工作区目录（可选，不传则使用环境变量）
  */
 export async function handleIssueComment(
   payload: CommentPayload,
-  logCollector?: LogCollector
+  logCollector?: LogCollector,
+  workspaceDir?: string
 ): Promise<void> {
   const commentBody = payload.comment?.body;
   const issueNumber = payload.issue?.number;
@@ -125,7 +141,7 @@ export async function handleIssueComment(
   const trimmedBody = commentBody.trimStart();
   if (trimmedBody.startsWith('/rebuild') || trimmedBody.startsWith('/retry')) {
     logger.info(`Manual rebuild triggered for PR #${issueNumber} by ${commenter}`);
-    await handlePullRequest({ pull_request: { number: issueNumber } }, logCollector);
+    await handlePullRequest({ pull_request: { number: issueNumber } }, logCollector, workspaceDir);
   }
 }
 
