@@ -1,7 +1,7 @@
 /**
  * 统一日志工具模块
  *
- * 生产环境只输出 warn 和 error 级别，开发环境输出所有级别。
+ * 生产环境输出 info、warn 和 error 级别，开发环境输出所有级别。
  * 通过 process.env.NODE_ENV 控制日志级别。
  */
 
@@ -21,10 +21,8 @@ export const logger = {
   },
 
   info(message: string, ...args: unknown[]): void {
-    if (isDev) {
-      // eslint-disable-next-line no-console
-      console.info(formatMessage('info', message), ...args);
-    }
+    // eslint-disable-next-line no-console
+    console.info(formatMessage('info', message), ...args);
   },
 
   warn(message: string, ...args: unknown[]): void {
