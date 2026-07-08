@@ -50,6 +50,9 @@ ENV PATH="/home/node/.npm-global/bin:${PATH}"
 # 安装 qwen CLI（用于 CI 工作流执行代码修复）
 RUN npm install -g @qwen-code/qwen-code@latest
 
+# 安装 GitHub CLI（用于仓库克隆）
+RUN apk add --no-cache gh
+
 ENV PORT=3001
 ENV HOSTNAME="0.0.0.0"
 
