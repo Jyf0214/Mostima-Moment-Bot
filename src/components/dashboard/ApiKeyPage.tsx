@@ -152,17 +152,19 @@ export default function ApiKeyPage() {
 
       {/* 新建密钥成功提示 - 显示完整密钥内容 */}
       {createdKey && (
-        <ProCard className="bg-amber-50 border-amber-300 border-2">
+        <ProCard className="bg-red-50 border-red-300 border-2">
           <div className="flex items-start gap-3">
-            <CheckCircle2 className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+            <div className="h-6 w-6 rounded-full bg-red-100 flex items-center justify-center shrink-0 mt-0.5">
+              <span className="text-red-600 text-lg font-bold">!</span>
+            </div>
             <div className="flex-1">
-              <p className="text-sm font-bold text-amber-800">{t('apiKey.createdSuccess')}</p>
-              <p className="text-xs text-amber-700 mt-1 font-medium">{t('apiKey.createdHint')}</p>
+              <p className="text-sm font-bold text-red-800">{t('apiKey.createdSuccess')}</p>
+              <p className="text-xs text-red-700 mt-1 font-medium">⚠️ {t('apiKey.createdHint')}</p>
               <div className="mt-3">
                 <p className="text-xs text-zinc-600 mb-1">API Key:</p>
                 <div className="flex items-center gap-2">
                   <code
-                    className="flex-1 px-3 py-2.5 rounded-lg bg-white border border-amber-200 text-zinc-900 text-sm font-mono break-all select-all"
+                    className="flex-1 px-3 py-2.5 rounded-lg bg-white border border-red-200 text-zinc-900 text-sm font-mono break-all select-all"
                     style={{ userSelect: 'all' }}
                   >
                     {createdKey.key}
@@ -236,7 +238,12 @@ export default function ApiKeyPage() {
               >
                 <Key className="h-4 w-4 text-zinc-500 shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-zinc-900 truncate">{key.name}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium text-zinc-900 truncate">{key.name}</p>
+                    <span className="text-xs text-zinc-400 font-mono">
+                      ****{key.id.toString().slice(-4)}
+                    </span>
+                  </div>
                   <div className="flex items-center gap-3 mt-1">
                     <span className="text-xs text-zinc-400">
                       {t('apiKey.createdAt')} {timeAgo(key.createdAt)}
@@ -266,19 +273,33 @@ export default function ApiKeyPage() {
 
       {/* 使用说明 */}
       <ProCard title={t('apiKey.usageTitle')}>
-        <div className="space-y-3">
-          <div>
-            <p className="text-xs font-medium text-zinc-600 mb-1">{t('apiKey.usageBrowser')}</p>
-            <code className="block px-3 py-2 rounded-lg bg-zinc-100 text-zinc-700 text-xs font-mono break-all">
-              https://your-domain.com/api/auth/api-key-login?key=YOUR_API_KEY
+        <div className="space-y-4">
+          <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-4">
+            <p className="text-xs font-bold text-emerald-800 mb-2">
+              {t('apiKey.usageRecommended')}
+            </p>
+            <code className="block px-3 py-2 rounded-lg bg-white border border-emerald-200 text-zinc-700 text-xs font-mono break-all">
+              {`curl -H "Authorization: Bearer YOUR_API_KEY" https://your-domain.com/api/ci/runs`}
             </code>
+            <p className="text-xs text-emerald-700 mt-2">{t('apiKey.usageRecommendedDesc')}</p>
           </div>
+
           <div>
-            <p className="text-xs font-medium text-zinc-600 mb-1">{t('apiKey.usageApi')}</p>
-            <code className="block px-3 py-2 rounded-lg bg-zinc-100 text-zinc-700 text-xs font-mono">
-              POST /api/auth/api-key-login{'\n'}
-              {'{"apiKey": "YOUR_API_KEY"}'}
-            </code>
+            <p className="text-xs font-medium text-zinc-600 mb-2">{t('apiKey.usageOther')}</p>
+            <div className="space-y-2">
+              <div className="rounded-lg bg-zinc-50 p-3">
+                <p className="text-xs text-zinc-600 mb-1">{t('apiKey.usageGetJwt')}</p>
+                <code className="block px-2 py-1.5 rounded bg-white border border-zinc-200 text-zinc-700 text-xs font-mono">
+                  {`POST /api/auth/api-key-login\n{"apiKey": "YOUR_API_KEY"}`}
+                </code>
+              </div>
+              <div className="rounded-lg bg-zinc-50 p-3">
+                <p className="text-xs text-zinc-600 mb-1">{t('apiKey.usageUseJwt')}</p>
+                <code className="block px-2 py-1.5 rounded bg-white border border-zinc-200 text-zinc-700 text-xs font-mono">
+                  {`curl -H "Authorization: Bearer JWT_TOKEN" https://your-domain.com/api/ci/runs`}
+                </code>
+              </div>
+            </div>
           </div>
         </div>
       </ProCard>

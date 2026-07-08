@@ -92,17 +92,17 @@ function shaShort(sha: string | null): string {
   return sha.slice(0, 7);
 }
 
-export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string | null }) {
+export default function WorkflowLogsPage() {
   const { t } = useTranslation();
 
-  // 从 URL 参数或 initialRepo 初始化，优先使用 URL 参数
+  // 从 URL 参数初始化仓库
   const getInitialRepo = () => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const urlRepo = params.get('repo');
       if (urlRepo) return urlRepo;
     }
-    return initialRepo || null;
+    return null;
   };
 
   // 列表/详情视图切换
@@ -192,16 +192,6 @@ export default function WorkflowLogsPage({ initialRepo }: { initialRepo?: string
     if (!selectedRepo) fetchRepos();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchRepos 变化不应触发重新获取
   }, [selectedRepo]);
-
-  // 同步外部传入的 initialRepo 变化
-  useEffect(() => {
-    if (initialRepo) {
-      setSelectedRepo(initialRepo);
-      setPage(0);
-      setFilterStatus('');
-      setFilterEvent('');
-    }
-  }, [initialRepo]);
 
   useEffect(() => {
     if (selectedRepo) fetchRuns();

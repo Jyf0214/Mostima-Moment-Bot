@@ -24,7 +24,6 @@ export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [activePage, setActivePage] = useState<SidebarPage>('overview');
-  const [logsRepo, setLogsRepo] = useState<string | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [repos, setRepos] = useState<ReposData | null>(null);
   const [reposLoading, setReposLoading] = useState(false);
@@ -32,7 +31,7 @@ export default function DashboardPage() {
   const [installMsg, setInstallMsg] = useState<string | null>(null);
   const [installMsgType, setInstallMsgType] = useState<'success' | 'error'>('success');
 
-  // 从 URL 读取当前页面
+  // 从 URL 读取当前页面（仅用于初始状态设置）
   useEffect(() => {
     if (!router.isReady) return;
     const pageParam = router.query.page as string;
@@ -42,20 +41,6 @@ export default function DashboardPage() {
       setActivePage('overview');
     }
   }, [router.isReady, router.query.page]);
-
-  // 从 URL 读取 logsRepo 参数
-  useEffect(() => {
-    if (!router.isReady) return;
-    const logsRepoParam = router.query.logsRepo as string;
-    if (logsRepoParam) {
-      setLogsRepo(logsRepoParam);
-      setActivePage('logs');
-      // 清除 URL 中的 logsRepo 参数，保留 page 参数
-      router.replace({ pathname: '/dashboard', query: { page: 'logs' } }, undefined, {
-        shallow: true,
-      });
-    }
-  }, [router.isReady, router.query.logsRepo, router]);
 
   const checkAuth = useCallback(async () => {
     try {
@@ -161,9 +146,12 @@ export default function DashboardPage() {
         activePage={activePage}
         onNavigate={(page) => {
           setActivePage(page);
-          setLogsRepo(null);
-          // 更新 URL 路径
-          router.push({ pathname: '/dashboard', query: { page } }, undefined, { shallow: true });
+          // 使用独立路由
+          if (page === 'overview') {
+            router.push('/dashboard', undefined, { shallow: true });
+          } else {
+            router.push(`/dashboard/${page}`, undefined, { shallow: true });
+          }
         }}
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
@@ -234,22 +222,18 @@ export default function DashboardPage() {
               onInstall={() => (window.location.href = '/api/github/install')}
               onNavigateToRepos={() => {
                 setActivePage('repos');
-                router.push({ pathname: '/dashboard', query: { page: 'repos' } }, undefined, {
-                  shallow: true,
-                });
+                router.push('/dashboard/repos', undefined, { shallow: true });
               }}
               onNavigateToEnv={() => {
                 setActivePage('env');
-                router.push({ pathname: '/dashboard', query: { page: 'env' } }, undefined, {
-                  shallow: true,
-                });
+                router.push('/dashboard/env', undefined, { shallow: true });
               }}
             />
           )}
           {activePage === 'repos' && (
             <ReposPage repos={repos} reposLoading={reposLoading} onRefresh={loadRepos} />
           )}
-          {activePage === 'logs' && <WorkflowLogsPage initialRepo={logsRepo} />}
+          {activePage === 'logs' && <WorkflowLogsPage />}
           {activePage === 'env' && <EnvVarsPage />}
           {activePage === 'apikeys' && <ApiKeyPage />}
           {activePage === 'settings' && <SettingsPage />}

@@ -1,5 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
+import { prisma } from './prisma';
 
 /**
  * 统一的 JWT 载荷接口
@@ -48,6 +50,7 @@ export function verifyTokenWithSecret(token: string, secret: string): JwtPayload
  * 支持两种方式：
  *   1. Cookie: auth_token=xxx（浏览器场景）
  *   2. Header: Authorization: Bearer xxx（curl/脚本场景）
+ *   3. Header: Authorization: Bearer manticore_xxx（API Key 直接认证）
  * 返回 null 表示未认证或令牌无效（响应已发送）
  */
 export async function requireAuth(
@@ -64,12 +67,63 @@ export async function requireAuth(
     res.status(401).json({ error: 'Not authenticated' });
     return null;
   }
+
+  // 检查是否是 API Key（以 manticore_ 开头）
+  if (token.startsWith('manticore_')) {
+    return verifyApiKey(token, res);
+  }
+
+  // 否则作为 JWT token 验证
   try {
     return verifyAuthToken(token);
   } catch {
     res.status(401).json({ error: 'Invalid token' });
     return null;
   }
+}
+
+/**
+ * 验证 API Key 并返回 JwtPayload
+ * API Key 格式：manticore_ + 64位十六进制
+ */
+async function verifyApiKey(apiKey: string, res: NextApiResponse): Promise<JwtPayload | null> {
+  // 验证 API Key 格式
+  if (!/^manticore_[a-f0-9]{64}$/.test(apiKey)) {
+    res.status(401).json({ error: 'Invalid API key format' });
+    return null;
+  }
+
+  // 计算密钥的 SHA-256 哈希
+  const keyHash = crypto.createHash('sha256').update(apiKey).digest('hex');
+
+  // 查找密钥
+  const apiKeyRecord = await prisma.apiKey.findUnique({
+    where: { keyHash },
+    include: { admin: true },
+  });
+
+  if (!apiKeyRecord || !apiKeyRecord.isActive) {
+    res.status(401).json({ error: 'Invalid API key' });
+    return null;
+  }
+
+  // 更新最后使用时间（异步，不阻塞响应）
+  prisma.apiKey
+    .update({
+      where: { id: apiKeyRecord.id },
+      data: { lastUsedAt: new Date() },
+    })
+    .catch(() => {
+      // 忽略更新错误，不影响认证
+    });
+
+  // 返回 JwtPayload 格式
+  return {
+    githubId: apiKeyRecord.admin.githubId,
+    githubLogin: apiKeyRecord.admin.githubLogin,
+    avatarUrl: apiKeyRecord.admin.avatarUrl || '',
+    isAdmin: true,
+  };
 }
 
 /**

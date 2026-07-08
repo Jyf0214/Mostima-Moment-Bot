@@ -3,26 +3,33 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { getJwtSecret } from '@/lib/auth-utils';
-import { setCookie } from '@/lib/cookie';
 import { checkRateLimit } from '@/lib/rate-limit';
 
 /**
- * API 密钥登录
+ * API 密钥登录（仅支持 POST）
  * POST /api/auth/api-key-login  { apiKey: "xxx" }
- * GET  /api/auth/api-key-login?key=xxx （浏览器直接访问）
+ *
+ * 注意：API Key 现在可以直接用于 API 调用（作为 Bearer Token），
+ * 此端点仅用于需要 JWT token 的场景（如浏览器 cookie 认证）。
+ * 推荐直接使用 API Key：Authorization: Bearer manticore_xxx
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // 仅支持 POST 方法
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed. Use POST.' });
+  }
+
   // IP 级别速率限制：每 IP 每分钟最多 10 次尝试
   const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || 'unknown';
   if (!checkRateLimit(`auth-apikey:${clientIp}`, 10, 60_000)) {
     return res.status(429).json({ error: 'Too many requests. Please try again later.' });
   }
 
-  // 从 body 或 query 获取 apiKey
-  const apiKey = req.method === 'POST' ? req.body?.apiKey : req.query?.key;
+  // 从 body 获取 apiKey
+  const apiKey = req.body?.apiKey;
 
   if (!apiKey || typeof apiKey !== 'string') {
-    return res.status(401).json({ error: 'API key required' });
+    return res.status(400).json({ error: 'API key required in request body' });
   }
 
   // 输入长度验证（manticore_ + 64 hex = 75 字符，加上合理余量）
@@ -43,11 +50,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'Invalid API key' });
   }
 
-  // 更新最后使用时间
-  await prisma.apiKey.update({
-    where: { id: apiKeyRecord.id },
-    data: { lastUsedAt: new Date() },
-  });
+  // 更新最后使用时间（异步，不阻塞响应）
+  prisma.apiKey
+    .update({
+      where: { id: apiKeyRecord.id },
+      data: { lastUsedAt: new Date() },
+    })
+    .catch(() => {
+      // 忽略更新错误
+    });
 
   // 签发 JWT
   let JWT_SECRET: string;
@@ -68,13 +79,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     { expiresIn: '7d' }
   );
 
-  // 设置 cookie（浏览器场景）
-  res.setHeader('Set-Cookie', setCookie('auth_token', token, { maxAge: 7 * 24 * 60 * 60 }));
-
-  // GET 请求重定向到仪表盘，POST 请求返回 token（兼容 curl/脚本场景）
-  if (req.method === 'GET') {
-    return res.redirect('/dashboard');
-  }
-
+  // 返回 token（不再设置 cookie，推荐直接使用 API Key）
   return res.status(200).json({ success: true, token });
 }
