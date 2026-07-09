@@ -73,6 +73,9 @@ RUN mkdir -p /home/node/actions-runner && \
 # 安装 qwen CLI（用于 CI 工作流执行代码修复）
 RUN npm install -g @qwen-code/qwen-code@latest
 
+# 修复 /app 目录权限，确保 node 用户可写（prisma db push 需要写入 @prisma/engines）
+RUN chown -R node:node /app
+
 ENV RUNNER_HOME=/home/node/actions-runner
 ENV RUNNER_VERSION=${RUNNER_VERSION}
 ENV PORT=3001
