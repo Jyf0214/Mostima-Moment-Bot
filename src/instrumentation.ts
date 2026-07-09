@@ -4,6 +4,7 @@
  * register() 在服务器启动时执行一次，用于：
  * 1. 预热 bot slug 缓存
  * 2. 启动 GitHub App token 定时刷新服务
+ * 3. 自动恢复之前注册的 GitHub Actions Runner
  */
 
 export async function register() {
@@ -18,6 +19,14 @@ export async function register() {
 
     // 启动 token 定时刷新服务（立即生成一次，然后每 30 分钟刷新）
     startTokenRefresher();
+
+    // 自动恢复之前注册的 GitHub Actions Runner
+    try {
+      const { restoreRunners } = await import('@/lib/runner/service');
+      await restoreRunners();
+    } catch (runnerErr) {
+      logger.warn('[Instrumentation] Runner auto-restore skipped:', runnerErr);
+    }
   } catch {
     // 预热失败不阻断启动，仅静默跳过
   }

@@ -23,6 +23,7 @@ model Admin {
   installations GitHubInstallation[]
   repoConfigs  RepoConfig[]
   apiKeys      ApiKey[]
+  runners      GitHubRunner[]
 
   @@map("admins")
 }
@@ -153,4 +154,31 @@ model ApiKey {
 
   @@index([keyHash])
   @@map("api_keys")
+}
+
+// GitHub Actions 自托管 Runner 表
+model GitHubRunner {
+  id              Int      @id @default(autoincrement())
+  name            String                           // Runner 显示名称
+  scopeType       String   @map("scope_type")      // "repo" 或 "org"
+  scopeTarget     String   @map("scope_target")    // 仓库全名(如 owner/repo) 或组织名
+  labels          String[] @default(["self-hosted", "linux", "x64"])  // Runner 标签
+  status          String   @default("idle")        // idle, running, stopped, error, offline
+  registrationToken String? @map("registration_token") @db.Text  // GitHub 注册令牌（临时）
+  runnerToken     String?  @map("runner_token") @db.Text         // Runner 永久令牌（加密存储）
+  runnerId        Int?     @map("runner_id")       // GitHub Runner 数字 ID
+  pid             Int?                              // PM2 进程 ID
+  workDir         String?  @map("work_dir")        // Runner 工作目录路径
+  lastError       String?  @map("last_error") @db.Text  // 最近一次错误信息
+  adminId         Int      @map("admin_id")
+  installationId  Int?     @map("installation_id") // 关联的 GitHub App 安装 ID
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  admin Admin @relation(fields: [adminId], references: [id])
+
+  @@index([adminId])
+  @@index([status])
+  @@index([scopeType, scopeTarget])
+  @@map("github_runners")
 }

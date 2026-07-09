@@ -10,13 +10,22 @@ import Sidebar, { type SidebarPage } from '@/components/dashboard/Sidebar';
 import OverviewPage from '@/components/dashboard/OverviewPage';
 import ReposPage from '@/components/dashboard/ReposPage';
 import WorkflowLogsPage from '@/components/dashboard/WorkflowLogsPage';
+import RunnersPage from '@/components/dashboard/RunnersPage';
 import EnvVarsPage from '@/components/dashboard/EnvVarsPage';
 import ApiKeyPage from '@/components/dashboard/ApiKeyPage';
 import SettingsPage from '@/components/dashboard/SettingsPage';
 import type { User, ReposData } from '@/components/dashboard/types';
 import { CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-react';
 
-const VALID_PAGES: SidebarPage[] = ['overview', 'repos', 'logs', 'env', 'apikeys', 'settings'];
+const VALID_PAGES: SidebarPage[] = [
+  'overview',
+  'repos',
+  'logs',
+  'runners',
+  'env',
+  'apikeys',
+  'settings',
+];
 
 export default function DashboardPage() {
   const { t } = useTranslation();
@@ -177,6 +186,7 @@ export default function DashboardPage() {
                   {activePage === 'overview' && t('home.dashboard')}
                   {activePage === 'repos' && t('sidebar.repos')}
                   {activePage === 'logs' && t('sidebar.logs')}
+                  {activePage === 'runners' && t('sidebar.runners')}
                   {activePage === 'env' && t('sidebar.envVars')}
                   {activePage === 'apikeys' && t('sidebar.apiKeys')}
                   {activePage === 'settings' && t('sidebar.settings')}
@@ -234,6 +244,7 @@ export default function DashboardPage() {
             <ReposPage repos={repos} reposLoading={reposLoading} onRefresh={loadRepos} />
           )}
           {activePage === 'logs' && <WorkflowLogsPage />}
+          {activePage === 'runners' && <RunnersPage />}
           {activePage === 'env' && <EnvVarsPage />}
           {activePage === 'apikeys' && <ApiKeyPage />}
           {activePage === 'settings' && <SettingsPage />}

@@ -13,9 +13,17 @@ import {
   ChevronRight,
   ScrollText,
   Key,
+  Server,
 } from 'lucide-react';
 
-export type SidebarPage = 'overview' | 'repos' | 'logs' | 'env' | 'apikeys' | 'settings';
+export type SidebarPage =
+  | 'overview'
+  | 'repos'
+  | 'logs'
+  | 'runners'
+  | 'env'
+  | 'apikeys'
+  | 'settings';
 
 interface SidebarProps {
   activePage: SidebarPage;
@@ -30,6 +38,7 @@ const NAV_ITEMS: { id: SidebarPage; icon: React.ElementType; labelKey: string }[
   { id: 'overview', icon: LayoutDashboard, labelKey: 'sidebar.overview' },
   { id: 'repos', icon: Plug, labelKey: 'sidebar.repos' },
   { id: 'logs', icon: ScrollText, labelKey: 'sidebar.logs' },
+  { id: 'runners', icon: Server, labelKey: 'sidebar.runners' },
   { id: 'env', icon: Shield, labelKey: 'sidebar.envVars' },
   { id: 'apikeys', icon: Key, labelKey: 'sidebar.apiKeys' },
   { id: 'settings', icon: Settings, labelKey: 'sidebar.settings' },
