@@ -111,8 +111,8 @@ jobs:
           fi
           echo "触发 Hugging Face Space 工厂重建: $HF_SPACE_NAME"
           HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
-            -X PUT \
-            "https://huggingface.co/api/spaces/${HF_SPACE_NAME}" \
+            -X POST \
+            "https://huggingface.co/api/spaces/${HF_SPACE_NAME}/restart" \
             -H "Authorization: Bearer ${HF_TOKEN}" \
             -H "Content-Type: application/json" \
             -d '{"factory_rebuild": true}')
