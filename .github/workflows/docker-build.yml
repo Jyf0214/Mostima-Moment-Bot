@@ -110,15 +110,12 @@ jobs:
             exit 0
           fi
           echo "触发 Hugging Face Space 工厂重建: $HF_SPACE_NAME"
-          HTTP_CODE=$(curl -s -o /tmp/hf-response.json -w "%{http_code}" \
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
             -X PUT \
             "https://huggingface.co/api/spaces/${HF_SPACE_NAME}" \
             -H "Authorization: Bearer ${HF_TOKEN}" \
             -H "Content-Type: application/json" \
             -d '{"factory_rebuild": true}')
-          echo "HF API 响应 (HTTP $HTTP_CODE):"
-          cat /tmp/hf-response.json
-          echo ""
           if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
             echo "✅ HF Space 工厂重建已触发"
           else
