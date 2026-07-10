@@ -59,6 +59,11 @@ export default function RunnersPage() {
   const [newScopeTarget, setNewScopeTarget] = useState('');
   const [newLabels, setNewLabels] = useState('self-hosted,linux,x64');
 
+  // 仓库列表（从 GitHub API 获取）
+  const [repoOptions, setRepoOptions] = useState<string[]>([]);
+  const [orgOptions, setOrgOptions] = useState<string[]>([]);
+  const [reposLoading, setReposLoading] = useState(false);
+
   const fetchRunners = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -79,6 +84,37 @@ export default function RunnersPage() {
   useEffect(() => {
     fetchRunners();
   }, [fetchRunners]);
+
+  const fetchRepos = useCallback(async () => {
+    setReposLoading(true);
+    try {
+      const res = await fetch('/api/github/repos');
+      if (!res.ok) return;
+      const data = await res.json();
+      const repos: string[] = [];
+      const orgs: string[] = [];
+      for (const r of [...(data.personal || []), ...(data.organization || [])]) {
+        if (r.full_name && !repos.includes(r.full_name)) {
+          repos.push(r.full_name);
+        }
+      }
+      for (const inst of data.installations || []) {
+        if (
+          inst.accountLogin &&
+          inst.accountType === 'Organization' &&
+          !orgs.includes(inst.accountLogin)
+        ) {
+          orgs.push(inst.accountLogin);
+        }
+      }
+      setRepoOptions(repos);
+      setOrgOptions(orgs);
+    } catch {
+      // 静默失败，用户可手动输入
+    } finally {
+      setReposLoading(false);
+    }
+  }, []);
 
   const handleCreate = async () => {
     if (!newName.trim() || !newScopeTarget.trim()) return;
@@ -194,7 +230,10 @@ export default function RunnersPage() {
             variant="default"
             size="sm"
             icon={<Plus className="h-4 w-4" />}
-            onClick={() => setShowForm(!showForm)}
+            onClick={() => {
+              setShowForm(!showForm);
+              if (!showForm) fetchRepos();
+            }}
           >
             {t('runner.addButton')}
           </Button>
@@ -232,7 +271,10 @@ export default function RunnersPage() {
                 </label>
                 <Select
                   value={newScopeType}
-                  onChange={(e) => setNewScopeType(e.target.value as 'repo' | 'org')}
+                  onChange={(e) => {
+                    setNewScopeType(e.target.value as 'repo' | 'org');
+                    setNewScopeTarget('');
+                  }}
                   size="sm"
                 >
                   <option value="repo">{t('runner.scopeRepo')}</option>
@@ -240,20 +282,47 @@ export default function RunnersPage() {
                 </Select>
               </div>
             </div>
-            <Input
-              label={
-                newScopeType === 'repo' ? t('runner.scopeRepoLabel') : t('runner.scopeOrgLabel')
-              }
-              type="text"
-              value={newScopeTarget}
-              onChange={(e) => setNewScopeTarget(e.target.value)}
-              placeholder={
-                newScopeType === 'repo'
-                  ? t('runner.scopeRepoPlaceholder')
-                  : t('runner.scopeOrgPlaceholder')
-              }
-              size="sm"
-            />
+            {newScopeType === 'repo' ? (
+              <div className="w-full">
+                <label className="block text-sm font-medium mb-2 text-zinc-700">
+                  {t('runner.scopeRepoLabel')}
+                </label>
+                <Select
+                  value={newScopeTarget}
+                  onChange={(e) => setNewScopeTarget(e.target.value)}
+                  size="sm"
+                >
+                  <option value="">
+                    {reposLoading ? t('runner.loadingRepos') : t('runner.selectRepo')}
+                  </option>
+                  {repoOptions.map((repo) => (
+                    <option key={repo} value={repo}>
+                      {repo}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            ) : (
+              <div className="w-full">
+                <label className="block text-sm font-medium mb-2 text-zinc-700">
+                  {t('runner.scopeOrgLabel')}
+                </label>
+                <Select
+                  value={newScopeTarget}
+                  onChange={(e) => setNewScopeTarget(e.target.value)}
+                  size="sm"
+                >
+                  <option value="">
+                    {reposLoading ? t('runner.loadingRepos') : t('runner.selectOrg')}
+                  </option>
+                  {orgOptions.map((org) => (
+                    <option key={org} value={org}>
+                      {org}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            )}
             <Input
               label={t('runner.labelsLabel')}
               type="text"
