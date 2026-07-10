@@ -131,7 +131,7 @@ export async function getRegistrationToken(
   }
 
   const data = (await res.json()) as { token: string; expires_at: string };
-  logger.info(
+  logger.debug(
     `[Runner] Registration token obtained for ${scopeType}/${scopeTarget}, expires: ${data.expires_at}`
   );
   return data.token;
@@ -184,7 +184,7 @@ export async function registerRunner(runnerId: number): Promise<void> {
 
   try {
     await execAsync(configCmd, { timeout: 60000 });
-    logger.info(`[Runner] Runner ${runner.id} configured successfully in ${workDir}`);
+    logger.debug(`[Runner] Runner ${runner.id} configured successfully in ${workDir}`);
 
     // 更新数据库
     await prisma.gitHubRunner.update({
@@ -215,7 +215,7 @@ export async function startRunner(runnerId: number): Promise<void> {
   if (!runner) throw new Error(`Runner ${runnerId} not found`);
 
   if (runner.status === RUNNER_STATUS.RUNNING) {
-    logger.info(`[Runner] Runner ${runner.id} is already running`);
+    logger.debug(`[Runner] Runner ${runner.id} is already running`);
     return;
   }
 
@@ -263,7 +263,7 @@ export async function startRunner(runnerId: number): Promise<void> {
       },
     });
 
-    logger.info(`[Runner] Runner ${runner.id} started with PM2 name: ${pm2Name}, pid: ${pid}`);
+    logger.debug(`[Runner] Runner ${runner.id} started with PM2 name: ${pm2Name}, pid: ${pid}`);
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     logger.error(`[Runner] Failed to start runner ${runnerId}:`, errorMsg);
@@ -320,7 +320,7 @@ export async function stopRunner(runnerId: number): Promise<void> {
     },
   });
 
-  logger.info(`[Runner] Runner ${runnerId} stopped and cleaned up`);
+  logger.debug(`[Runner] Runner ${runnerId} stopped and cleaned up`);
 }
 
 /**
@@ -346,7 +346,7 @@ export async function deleteRunner(runnerId: number): Promise<void> {
   }
 
   await prisma.gitHubRunner.delete({ where: { id: runnerId } });
-  logger.info(`[Runner] Runner ${runnerId} deleted`);
+  logger.debug(`[Runner] Runner ${runnerId} deleted`);
 }
 
 /**
@@ -450,23 +450,23 @@ export async function restoreRunners(): Promise<void> {
   });
 
   if (runners.length === 0) {
-    logger.info('[Runner] No runners to restore');
+    logger.debug('[Runner] No runners to restore');
     return;
   }
 
-  logger.info(`[Runner] Restoring ${runners.length} runner(s)...`);
+  logger.debug(`[Runner] Restoring ${runners.length} runner(s)...`);
 
   // 先尝试恢复 PM2 中已有的进程
   try {
     execSync('pm2 resurrect > /dev/null 2>&1', { timeout: 15000 });
-    logger.info('[Runner] PM2 process list resurrected');
+    logger.debug('[Runner] PM2 process list resurrected');
   } catch {
     // PM2 没有保存的进程列表，忽略
   }
 
   for (const runner of runners) {
     try {
-      logger.info(`[Runner] Restoring runner ${runner.id} (${runner.name})...`);
+      logger.debug(`[Runner] Restoring runner ${runner.id} (${runner.name})...`);
 
       // 清除旧的工作目录（容器重启后旧路径已失效）
       await prisma.gitHubRunner.update({
@@ -484,7 +484,7 @@ export async function restoreRunners(): Promise<void> {
       // 重新注册并启动
       await registerRunner(runner.id);
       await startRunner(runner.id);
-      logger.info(`[Runner] Runner ${runner.id} (${runner.name}) restored successfully`);
+      logger.debug(`[Runner] Runner ${runner.id} (${runner.name}) restored successfully`);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
       logger.error(`[Runner] Failed to restore runner ${runner.id} (${runner.name}):`, errorMsg);
@@ -492,5 +492,5 @@ export async function restoreRunners(): Promise<void> {
     }
   }
 
-  logger.info('[Runner] Runner auto-restore complete');
+  logger.debug('[Runner] Runner auto-restore complete');
 }
