@@ -109,15 +109,15 @@ jobs:
             echo "⚠️ HF_SPACE_NAME 或 HF_TOKEN 未配置，跳过 HF Space 重建"
             exit 0
           fi
+
           echo "触发 Hugging Face Space 工厂重建: $HF_SPACE_NAME"
           HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
             -X POST \
-            "https://huggingface.co/api/spaces/${HF_SPACE_NAME}/restart" \
-            -H "Authorization: Bearer ${HF_TOKEN}" \
-            -H "Content-Type: application/json" \
-            -d '{"factory_rebuild": true}')
+            "https://huggingface.co/api/spaces/${HF_SPACE_NAME}/restart?factory=true" \
+            -H "Authorization: Bearer $HF_TOKEN")
+
           if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
-            echo "✅ HF Space 工厂重建已触发"
+            echo "✅ HF Space 工厂重建已成功触发"
           else
             echo "❌ HF Space 工厂重建失败 (HTTP $HTTP_CODE)"
             exit 1
