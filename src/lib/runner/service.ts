@@ -233,21 +233,20 @@ export async function startRunner(runnerId: number): Promise<void> {
 
   // 检查 PM2 是否安装
   try {
-    execSync('pm2 --version', { timeout: 5000 });
+    execSync('pm2 --version > /dev/null 2>&1', { timeout: 5000 });
   } catch {
     throw new Error('PM2 is not installed. Please install pm2 globally.');
   }
 
   // 通过 PM2 启动 Runner
   const pm2Name = `gh-runner-${runner.id}`;
-  const startCmd = `pm2 start ${workDir}/run.sh --name "${pm2Name}" --cwd "${workDir}" --time`;
+  const startCmd = `pm2 start ${workDir}/run.sh --name "${pm2Name}" --cwd "${workDir}" --time > /dev/null 2>&1`;
 
   try {
-    const result = await execAsync(startCmd, { timeout: 30000 });
-    logger.info(`[Runner] PM2 start output: ${result.stdout}`);
+    await execAsync(startCmd, { timeout: 30000 });
 
     // 获取 PM2 进程 ID
-    const listResult = await execAsync(`pm2 jlist`, { timeout: 10000 });
+    const listResult = await execAsync(`pm2 jlist 2>/dev/null`, { timeout: 10000 });
     const processes = JSON.parse(listResult.stdout) as Array<{
       name: string;
       pm_id: number;
@@ -287,8 +286,8 @@ export async function stopRunner(runnerId: number): Promise<void> {
   const pm2Name = `gh-runner-${runner.id}`;
 
   try {
-    await execAsync(`pm2 stop ${pm2Name}`, { timeout: 15000 });
-    await execAsync(`pm2 delete ${pm2Name}`, { timeout: 15000 });
+    await execAsync(`pm2 stop ${pm2Name} > /dev/null 2>&1`, { timeout: 15000 });
+    await execAsync(`pm2 delete ${pm2Name} > /dev/null 2>&1`, { timeout: 15000 });
   } catch {
     // PM2 进程可能已不存在，忽略错误
   }
@@ -366,7 +365,7 @@ export async function refreshRunnerStatus(runnerId: number): Promise<RunnerStatu
   const pm2Name = `gh-runner-${runner.id}`;
 
   try {
-    const result = await execAsync(`pm2 jlist`, { timeout: 10000 });
+    const result = await execAsync(`pm2 jlist 2>/dev/null`, { timeout: 10000 });
     const processes = JSON.parse(result.stdout) as Array<{
       name: string;
       pm2_env: { status: string };
@@ -437,7 +436,7 @@ export async function reregisterRunner(runnerId: number): Promise<void> {
 export async function restoreRunners(): Promise<void> {
   // 检查 PM2 是否可用
   try {
-    execSync('pm2 --version', { timeout: 5000 });
+    execSync('pm2 --version > /dev/null 2>&1', { timeout: 5000 });
   } catch {
     logger.warn('[Runner] PM2 not installed, skipping runner auto-restore');
     return;
@@ -459,7 +458,7 @@ export async function restoreRunners(): Promise<void> {
 
   // 先尝试恢复 PM2 中已有的进程
   try {
-    execSync('pm2 resurrect', { timeout: 15000 });
+    execSync('pm2 resurrect > /dev/null 2>&1', { timeout: 15000 });
     logger.info('[Runner] PM2 process list resurrected');
   } catch {
     // PM2 没有保存的进程列表，忽略
