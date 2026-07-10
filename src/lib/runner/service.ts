@@ -172,7 +172,7 @@ export async function registerRunner(runnerId: number): Promise<void> {
   const labels = runner.labels.join(',');
   const configCmd = [
     `cd ${workDir}`,
-    `&& ./config`,
+    `&& ./config.sh`,
     `--url https://github.com/${runner.scopeType === 'org' ? runner.scopeTarget : runner.scopeTarget}`,
     `--token "${regToken}"`,
     `--name "${runner.name}"`,
@@ -296,7 +296,7 @@ export async function stopRunner(runnerId: number): Promise<void> {
   // 取消 Runner 注册（如果需要）
   if (runner.workDir && fs.existsSync(runner.workDir)) {
     try {
-      const removeCmd = `cd ${runner.workDir} && ./config remove --token "${runner.runnerToken || ''}" --unattended`;
+      const removeCmd = `cd ${runner.workDir} && ./config.sh remove --token "${runner.runnerToken || ''}" --unattended`;
       await execAsync(removeCmd, { timeout: 30000 });
     } catch {
       // Runner 可能已经从 GitHub 端移除，忽略
