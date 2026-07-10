@@ -155,7 +155,6 @@ export default function DashboardPage() {
         activePage={activePage}
         onNavigate={(page) => {
           setActivePage(page);
-          // 使用独立路由
           if (page === 'overview') {
             router.push('/dashboard', undefined, { shallow: true });
           } else {
