@@ -159,7 +159,8 @@
     "noRepos": "No authorized repositories",
     "viewOnGithub": "View on GitHub",
     "enable": "Enable CI/CD",
-    "disable": "Disable CI/CD"
+    "disable": "Disable CI/CD",
+    "toggleFailed": "Toggle failed, please try again"
   },
   "sidebar": {
     "overview": "Overview",

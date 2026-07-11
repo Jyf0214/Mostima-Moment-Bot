@@ -159,7 +159,8 @@
     "noRepos": "暂无授权仓库",
     "viewOnGithub": "在 GitHub 上查看",
     "enable": "启用 CI/CD",
-    "disable": "禁用 CI/CD"
+    "disable": "禁用 CI/CD",
+    "toggleFailed": "切换状态失败，请重试"
   },
   "sidebar": {
     "overview": "概览",
