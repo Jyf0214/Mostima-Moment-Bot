@@ -1,5 +1,5 @@
 import { logger } from '../logger';
-import { execFileSync } from 'child_process';
+import { spawnAsync } from '../exec';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import crypto from 'crypto';
@@ -166,33 +166,32 @@ export async function runQwen(prompt: string, options: RunOptions = {}): Promise
   ensureQwenDir();
   await configureSettings();
 
-  // 预检：确认 qwen CLI 已安装（在 env 构造之前，直接使用 process.env）
+  // 预检：确认 qwen CLI 已安装
   try {
-    execFileSync('qwen', ['--version'], {
-      stdio: 'pipe',
-      encoding: 'utf-8',
+    const preflight = await spawnAsync('qwen', ['--version'], {
       env: process.env as NodeJS.ProcessEnv,
     });
+    if (preflight.exitCode !== 0) {
+      throw new Error('qwen CLI check failed');
+    }
   } catch (error) {
     const err = error as NodeJS.ErrnoException;
-    if (err.code === 'ENOENT') {
-      const msg =
-        'qwen CLI 未安装或不在 PATH 中。请确保 Docker 构建时已执行 npm install -g @qwen-code/qwen-code@latest，或在部署环境中手动安装。';
-      logger.error(`[Qwen Runner] ${msg}`);
-      if (logCollector) {
-        logCollector.finishStep('Qwen Execute', {
-          conclusion: 'failure',
-          output: msg,
-        });
-      }
-      return {
-        success: false,
+    const msg =
+      'qwen CLI 未安装或不在 PATH 中。请确保 Docker 构建时已执行 npm install -g @qwen-code/qwen-code@latest，或在部署环境中手动安装。';
+    logger.error(`[Qwen Runner] ${msg}`);
+    if (logCollector) {
+      logCollector.finishStep('Qwen Execute', {
+        conclusion: 'failure',
         output: msg,
-        sessionId: providedSessionId || crypto.randomUUID(),
-        duration: 0,
-        attempts: 1,
-      };
+      });
     }
+    return {
+      success: false,
+      output: msg,
+      sessionId: providedSessionId || crypto.randomUUID(),
+      duration: 0,
+      attempts: 1,
+    };
   }
 
   const sessionId = providedSessionId || crypto.randomUUID();
@@ -232,31 +231,30 @@ export async function runQwen(prompt: string, options: RunOptions = {}): Promise
     return args;
   }
 
-  // 执行单次 qwen 调用（使用 execFileSync 避免 shell 展开风险）
-  function executeQwen(args: string[]): {
+  // 执行单次 qwen 调用（使用 spawnAsync 异步执行，不阻塞事件循环）
+  async function executeQwen(args: string[]): Promise<{
     ok: boolean;
     output: string;
     notFound: boolean;
-  } {
+  }> {
     try {
-      const result = execFileSync('qwen', args, {
+      const result = await spawnAsync('qwen', args, {
         env,
         timeout,
-        maxBuffer: 50 * 1024 * 1024,
-        stdio: ['pipe', 'pipe', 'pipe'],
-        encoding: 'utf-8',
       });
-      return { ok: true, output: result, notFound: false };
-    } catch (error) {
-      const err = error as {
-        stdout?: string;
-        stderr?: string;
-        message?: string;
-        code?: string;
-      };
+      if (result.exitCode === 0) {
+        return { ok: true, output: result.stdout, notFound: false };
+      }
       return {
         ok: false,
-        output: err.stdout || err.stderr || err.message || '',
+        output: result.stdout || result.stderr || `Exit code: ${result.exitCode}`,
+        notFound: false,
+      };
+    } catch (error) {
+      const err = error as { code?: string; message?: string };
+      return {
+        ok: false,
+        output: err.message || '',
         notFound: err.code === 'ENOENT',
       };
     }
@@ -266,7 +264,7 @@ export async function runQwen(prompt: string, options: RunOptions = {}): Promise
   const stepName = isResume ? 'Qwen Resume' : 'Qwen Execute';
   logCollector?.startStep(stepName, `qwen (session: ${sessionId.slice(0, 8)}...)`);
   logger.info(`[Qwen Runner] Starting (session: ${sessionId}, resume: ${isResume})...`);
-  let result = executeQwen(buildArgs(sessionId, prompt, isResume));
+  let result = await executeQwen(buildArgs(sessionId, prompt, isResume));
   output = result.output;
 
   // qwen 二进制不存在，直接失败不重试
@@ -314,14 +312,14 @@ export async function runQwen(prompt: string, options: RunOptions = {}): Promise
       if (attempt === 2) {
         logger.info('[Qwen Runner] Attempt 2: running /compress-fast...');
         logCollector?.appendOutput('[Compression] Running /compress-fast...\n');
-        executeQwen(buildArgs(sessionId, '/compress-fast', true));
+        await executeQwen(buildArgs(sessionId, '/compress-fast', true));
         logCollector?.appendOutput('[Compression] /compress-fast completed\n');
       } else if (attempt >= 3) {
         logger.info(`[Qwen Runner] Attempt ${attempt}: running /compress-fast + /compress...`);
         logCollector?.appendOutput(`[Compression] Running /compress-fast + /compress...\n`);
-        executeQwen(buildArgs(sessionId, '/compress-fast', true));
+        await executeQwen(buildArgs(sessionId, '/compress-fast', true));
         await sleep(5_000);
-        executeQwen(buildArgs(sessionId, '/compress', true));
+        await executeQwen(buildArgs(sessionId, '/compress', true));
         logCollector?.appendOutput('[Compression] Compression completed\n');
       }
     }
@@ -331,7 +329,7 @@ export async function runQwen(prompt: string, options: RunOptions = {}): Promise
       '由于网络或上下文限制中断，请继续完成所有步骤。对照 todo_checklist.md 继续修复未打勾的项，通过测试后完成代码提交与 PR。';
     logCollector?.appendOutput(`[Resume] Sending recovery prompt...\n`);
     const retryStart = Date.now();
-    result = executeQwen(buildArgs(sessionId, resumePrompt, true));
+    result = await executeQwen(buildArgs(sessionId, resumePrompt, true));
     output = result.output;
 
     // qwen 二进制不存在，停止重试
