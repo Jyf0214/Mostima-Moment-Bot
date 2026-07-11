@@ -1,6 +1,10 @@
 import { logger } from '../logger';
 import { generateJWTAuto } from '../github/auth';
 import { prisma } from '@/lib/prisma';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
 
 /** 定时器 ID，用于清理 */
 let refreshTimer: ReturnType<typeof setInterval> | null = null;
@@ -95,6 +99,17 @@ async function refreshToken(): Promise<void> {
   // 设置为环境变量
   process.env.GITHUB_TOKEN = token;
   process.env.GH_TOKEN = token;
+
+  // 全局刷新 GitHub CLI 登录状态，使所有进程都能使用 gh 命令
+  try {
+    await execAsync(`echo "${token}" | gh auth login --with-token`);
+    logger.info('[Token Refresher] GitHub CLI global auth refreshed successfully');
+  } catch (error) {
+    logger.warn(
+      '[Token Refresher] Failed to refresh GitHub CLI auth (gh may not be installed):',
+      error
+    );
+  }
 
   logger.info('[Token Refresher] GitHub App token refreshed successfully');
 }

@@ -21,6 +21,18 @@ vi.mock('@/lib/logger', () => ({
   },
 }));
 
+vi.mock('child_process', () => ({
+  exec: vi.fn((_cmd: string, cb: (err: Error | null, stdout: string) => void) => cb(null, '')),
+}));
+
+vi.mock('util', () => ({
+  promisify: (fn: Function) => (cmd: string) => {
+    return new Promise((resolve, reject) => {
+      fn(cmd, (err: Error | null, stdout: string) => (err ? reject(err) : resolve(stdout)));
+    });
+  },
+}));
+
 describe('Token Refresher', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
