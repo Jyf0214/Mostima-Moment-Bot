@@ -68,14 +68,14 @@ RUN mkdir -p /home/node/actions-runner && \
     rm /tmp/runner.tar.gz && \
     chmod +x /home/node/actions-runner/run.sh && \
     chmod +x /home/node/actions-runner/config.sh && \
-    chown -R node:node /home/node/actions-runner && \
-    chown -R node:node /usr/local
+    chown -R node:node /home/node/actions-runner 
 
 # 安装 qwen CLI（用于 CI 工作流执行代码修复）
 RUN npm install -g @qwen-code/qwen-code@latest
 
 # 修复 /app 目录权限，确保 node 用户可写（prisma db push 需要写入 @prisma/engines）
 RUN chown -R node:node /app
+RUN chown -R node:node /usr/local
 
 ENV RUNNER_HOME=/home/node/actions-runner
 ENV RUNNER_VERSION=${RUNNER_VERSION}
