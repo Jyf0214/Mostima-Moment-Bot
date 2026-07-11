@@ -59,7 +59,7 @@ export default function DashboardLayout({ activePage, children }: DashboardLayou
     if (page === 'overview') {
       router.push('/dashboard', undefined, { shallow: true });
     } else {
-      router.push(`/dashboard/${page}`, undefined, { shallow: true });
+      router.push({ pathname: '/dashboard', query: { page } }, undefined, { shallow: true });
     }
   };
 

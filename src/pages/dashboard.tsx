@@ -158,7 +158,7 @@ export default function DashboardPage() {
           if (page === 'overview') {
             router.push('/dashboard', undefined, { shallow: true });
           } else {
-            router.push(`/dashboard/${page}`, undefined, { shallow: true });
+            router.push({ pathname: '/dashboard', query: { page } }, undefined, { shallow: true });
           }
         }}
         collapsed={sidebarCollapsed}
@@ -231,11 +231,15 @@ export default function DashboardPage() {
               onInstall={() => (window.location.href = '/api/github/install')}
               onNavigateToRepos={() => {
                 setActivePage('repos');
-                router.push('/dashboard/repos', undefined, { shallow: true });
+                router.push({ pathname: '/dashboard', query: { page: 'repos' } }, undefined, {
+                  shallow: true,
+                });
               }}
               onNavigateToEnv={() => {
                 setActivePage('env');
-                router.push('/dashboard/env', undefined, { shallow: true });
+                router.push({ pathname: '/dashboard', query: { page: 'env' } }, undefined, {
+                  shallow: true,
+                });
               }}
             />
           )}
