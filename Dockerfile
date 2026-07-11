@@ -68,7 +68,7 @@ RUN mkdir -p /home/node/actions-runner && \
     rm /tmp/runner.tar.gz && \
     chmod +x /home/node/actions-runner/run.sh && \
     chmod +x /home/node/actions-runner/config.sh && \
-    chown -R node:node /home/node/actions-runner
+    chown -R node:node /home/node/actions-runner && \
     chown -R node:node /usr/local
 
 # 安装 qwen CLI（用于 CI 工作流执行代码修复）
