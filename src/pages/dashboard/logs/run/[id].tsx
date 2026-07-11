@@ -5,6 +5,7 @@ import { useRouter } from 'next/router';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { ProCard } from '@/components/ui/ProCard';
+import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import {
   ArrowLeft,
   CheckCircle2,
@@ -529,31 +530,31 @@ export default function RunDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-50 flex items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-zinc-200 border-t-blue-500" />
-      </div>
+      <DashboardLayout activePage="logs">
+        <div className="flex items-center justify-center py-12">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-zinc-200 border-t-blue-500" />
+        </div>
+      </DashboardLayout>
     );
   }
 
   if (error || !run) {
     return (
-      <div className="min-h-screen bg-zinc-50">
-        <div className="max-w-3xl mx-auto px-6 py-8">
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={<ArrowLeft className="h-4 w-4" />}
-            onClick={() => router.back()}
-            className="text-zinc-500 hover:text-zinc-900 mb-6"
-          >
-            {t('repoDetail.back')}
-          </Button>
-          <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            <AlertTriangle className="h-4 w-4 shrink-0" />
-            {error || t('repoDetail.notFound') || 'Run not found'}
-          </div>
+      <DashboardLayout activePage="logs">
+        <Button
+          variant="ghost"
+          size="sm"
+          icon={<ArrowLeft className="h-4 w-4" />}
+          onClick={() => router.back()}
+          className="text-zinc-500 hover:text-zinc-900 mb-6"
+        >
+          {t('repoDetail.back')}
+        </Button>
+        <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          {error || t('repoDetail.notFound') || 'Run not found'}
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
@@ -572,215 +573,209 @@ export default function RunDetailPage() {
   const StatusIcon = cfg.icon;
 
   return (
-    <div className="min-h-screen bg-zinc-50">
-      <div className="max-w-3xl mx-auto px-6 py-8">
-        {/* 返回按钮 */}
-        <Button
-          variant="ghost"
-          size="sm"
-          icon={<ArrowLeft className="h-4 w-4" />}
-          onClick={() =>
-            router.push(`/dashboard/logs?repo=${encodeURIComponent(run.repoFullName)}`)
-          }
-          className="text-zinc-500 hover:text-zinc-900 mb-6"
-        >
-          {t('repoDetail.back')}
-        </Button>
+    <DashboardLayout activePage="logs">
+      {/* 返回按钮 */}
+      <Button
+        variant="ghost"
+        size="sm"
+        icon={<ArrowLeft className="h-4 w-4" />}
+        onClick={() => router.push(`/dashboard/logs?repo=${encodeURIComponent(run.repoFullName)}`)}
+        className="text-zinc-500 hover:text-zinc-900 mb-6"
+      >
+        {t('repoDetail.back')}
+      </Button>
 
-        {/* 运行信息卡片 */}
-        <ProCard className="bg-white border-zinc-200 mb-6" padding="p-6">
-          <div className="flex items-start gap-4">
-            <div
-              className={`h-12 w-12 rounded-xl ${cfg.bg} flex items-center justify-center shrink-0 ring-2 ${cfg.ring}`}
-            >
-              <StatusIcon
-                className={`h-6 w-6 ${cfg.color} ${run.status === 'running' ? 'animate-spin' : ''}`}
-              />
+      {/* 运行信息卡片 */}
+      <ProCard className="bg-white border-zinc-200 mb-6" padding="p-6">
+        <div className="flex items-start gap-4">
+          <div
+            className={`h-12 w-12 rounded-xl ${cfg.bg} flex items-center justify-center shrink-0 ring-2 ${cfg.ring}`}
+          >
+            <StatusIcon
+              className={`h-6 w-6 ${cfg.color} ${run.status === 'running' ? 'animate-spin' : ''}`}
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-lg font-bold text-zinc-900">#{run.id}</h1>
+              <span
+                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${cfg.bg} ${cfg.color}`}
+              >
+                {cfg.label}
+              </span>
+              {run.conclusion && <span className="text-xs text-zinc-500">→ {run.conclusion}</span>}
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-lg font-bold text-zinc-900">#{run.id}</h1>
-                <span
-                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${cfg.bg} ${cfg.color}`}
-                >
-                  {cfg.label}
+            <div className="flex items-center gap-4 text-sm text-zinc-500 flex-wrap">
+              <span className="font-medium text-zinc-700">{run.repoFullName}</span>
+              {run.branch && (
+                <span className="inline-flex items-center gap-1">
+                  <GitBranch className="h-3.5 w-3.5" />
+                  {run.branch}
                 </span>
-                {run.conclusion && (
-                  <span className="text-xs text-zinc-500">→ {run.conclusion}</span>
-                )}
-              </div>
-              <div className="flex items-center gap-4 text-sm text-zinc-500 flex-wrap">
-                <span className="font-medium text-zinc-700">{run.repoFullName}</span>
-                {run.branch && (
-                  <span className="inline-flex items-center gap-1">
-                    <GitBranch className="h-3.5 w-3.5" />
-                    {run.branch}
-                  </span>
-                )}
-                {run.prNumber && <span className="text-blue-500">PR #{run.prNumber}</span>}
-                {run.action && <span className="text-zinc-400">{run.action}</span>}
-              </div>
+              )}
+              {run.prNumber && <span className="text-blue-500">PR #{run.prNumber}</span>}
+              {run.action && <span className="text-zinc-400">{run.action}</span>}
             </div>
           </div>
-        </ProCard>
+        </div>
+      </ProCard>
 
-        {/* 详细信息 */}
-        <ProCard className="bg-white border-zinc-200 mb-6" padding="p-6">
-          <h3 className="text-zinc-900 font-semibold mb-4">{t('repoDetail.runInfo')}</h3>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <span className="text-zinc-400">{t('repoDetail.event')}</span>
-              <p className="text-zinc-900 font-medium">{run.event}</p>
-            </div>
-            <div>
-              <span className="text-zinc-400">{t('repoDetail.action')}</span>
-              <p className="text-zinc-900 font-medium">{run.action || '-'}</p>
-            </div>
-            <div>
-              <span className="text-zinc-400">{t('repoDetail.triggeredBy')}</span>
-              <p className="text-zinc-900 font-medium">
-                {run.triggeredBy ? `@${run.triggeredBy}` : '-'}
-              </p>
-            </div>
-            <div>
-              <span className="text-zinc-400">{t('repoDetail.ruleId')}</span>
-              <p className="text-zinc-900 font-medium">{run.ruleId || '-'}</p>
-            </div>
-            <div>
-              <span className="text-zinc-400">{t('repoDetail.commit')}</span>
-              {run.commitSha ? (
-                <div className="flex items-center gap-2">
-                  <p className="text-zinc-900 font-mono text-xs">{run.commitSha}</p>
-                  <button
-                    onClick={copySha}
-                    className="text-zinc-400 hover:text-zinc-600 transition-colors"
-                    title="Copy full SHA"
-                  >
-                    {copiedSha ? (
-                      <Check className="h-3.5 w-3.5 text-emerald-500" />
-                    ) : (
-                      <Copy className="h-3.5 w-3.5" />
-                    )}
-                  </button>
-                  <a
-                    href={`https://github.com/${run.repoFullName}/commit/${run.commitSha}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-zinc-400 hover:text-zinc-600 transition-colors"
-                    title="View on GitHub"
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </a>
-                </div>
-              ) : (
-                <p className="text-zinc-900 font-medium">-</p>
-              )}
-            </div>
-            <div>
-              <span className="text-zinc-400">{t('repoDetail.duration')}</span>
-              <p className="text-zinc-900 font-medium">
-                {run.duration != null ? formatDuration(run.duration) : '-'}
-              </p>
-            </div>
-            <div>
-              <span className="text-zinc-400">{t('repoDetail.botInitiated')}</span>
-              <p className="text-zinc-900 font-medium">
-                {run.isBotInitiated ? t('repoDetail.yes') : t('repoDetail.no')}
-              </p>
-            </div>
-            <div>
-              <span className="text-zinc-400">{t('repoDetail.startedAt')}</span>
-              <p className="text-zinc-900 font-medium">
-                {run.startedAt ? formatTime(run.startedAt) : '-'}
-              </p>
-            </div>
-            <div>
-              <span className="text-zinc-400">{t('repoDetail.completedAt')}</span>
-              <p className="text-zinc-900 font-medium">
-                {run.completedAt ? formatTime(run.completedAt) : '-'}
-              </p>
-            </div>
-            <div>
-              <span className="text-zinc-400">{t('repoDetail.createdAt')}</span>
-              <p className="text-zinc-900 font-medium">{formatTime(run.createdAt)}</p>
-            </div>
-            {run.prNumber && (
-              <div>
-                <span className="text-zinc-400">Pull Request</span>
-                <p>
-                  <a
-                    href={`https://github.com/${run.repoFullName}/pull/${run.prNumber}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-500 hover:text-blue-700 font-medium inline-flex items-center gap-1"
-                  >
-                    PR #{run.prNumber}
-                    <ExternalLink className="h-3 w-3" />
-                  </a>
-                </p>
+      {/* 详细信息 */}
+      <ProCard className="bg-white border-zinc-200 mb-6" padding="p-6">
+        <h3 className="text-zinc-900 font-semibold mb-4">{t('repoDetail.runInfo')}</h3>
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <span className="text-zinc-400">{t('repoDetail.event')}</span>
+            <p className="text-zinc-900 font-medium">{run.event}</p>
+          </div>
+          <div>
+            <span className="text-zinc-400">{t('repoDetail.action')}</span>
+            <p className="text-zinc-900 font-medium">{run.action || '-'}</p>
+          </div>
+          <div>
+            <span className="text-zinc-400">{t('repoDetail.triggeredBy')}</span>
+            <p className="text-zinc-900 font-medium">
+              {run.triggeredBy ? `@${run.triggeredBy}` : '-'}
+            </p>
+          </div>
+          <div>
+            <span className="text-zinc-400">{t('repoDetail.ruleId')}</span>
+            <p className="text-zinc-900 font-medium">{run.ruleId || '-'}</p>
+          </div>
+          <div>
+            <span className="text-zinc-400">{t('repoDetail.commit')}</span>
+            {run.commitSha ? (
+              <div className="flex items-center gap-2">
+                <p className="text-zinc-900 font-mono text-xs">{run.commitSha}</p>
+                <button
+                  onClick={copySha}
+                  className="text-zinc-400 hover:text-zinc-600 transition-colors"
+                  title="Copy full SHA"
+                >
+                  {copiedSha ? (
+                    <Check className="h-3.5 w-3.5 text-emerald-500" />
+                  ) : (
+                    <Copy className="h-3.5 w-3.5" />
+                  )}
+                </button>
+                <a
+                  href={`https://github.com/${run.repoFullName}/commit/${run.commitSha}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-zinc-400 hover:text-zinc-600 transition-colors"
+                  title="View on GitHub"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
               </div>
+            ) : (
+              <p className="text-zinc-900 font-medium">-</p>
             )}
           </div>
-        </ProCard>
-
-        {/* 检查步骤 */}
-        {run.checksRan.length > 0 && (
-          <ProCard className="bg-white border-zinc-200 mb-6" padding="p-6">
-            <h3 className="text-zinc-900 font-semibold mb-4">{t('repoDetail.checkSteps')}</h3>
-            <div className="flex flex-wrap gap-2">
-              {run.checksRan.map((check, i) => (
-                <span
-                  key={`${check}-${i}`}
-                  className="inline-flex items-center gap-1 rounded-full bg-purple-50 px-3 py-1 text-xs text-purple-600"
-                >
-                  {check}
-                </span>
-              ))}
-            </div>
-          </ProCard>
-        )}
-
-        {/* 运行日志 */}
-        <ProCard className="bg-white border-zinc-200" padding="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <ScrollText className="h-4 w-4 text-cyan-500" />
-              <h3 className="text-zinc-900 font-semibold">{t('repoDetail.logs')}</h3>
-            </div>
+          <div>
+            <span className="text-zinc-400">{t('repoDetail.duration')}</span>
+            <p className="text-zinc-900 font-medium">
+              {run.duration != null ? formatDuration(run.duration) : '-'}
+            </p>
           </div>
-          {run.logs ? (
-            logData ? (
-              <StructuredLogs logData={logData} onCopy={copyLogs} copied={copied} />
-            ) : (
-              <div>
-                <div className="flex items-center justify-end mb-2">
-                  <button
-                    onClick={copyLogs}
-                    className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-700 transition-colors"
-                  >
-                    {copied ? (
-                      <>
-                        <Check className="h-3.5 w-3.5 text-emerald-500" />
-                        {t('apiKey.copied')}
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="h-3.5 w-3.5" />
-                        {t('apiKey.copy')}
-                      </>
-                    )}
-                  </button>
-                </div>
-                <pre className="bg-zinc-50 border border-zinc-200 rounded-lg p-4 text-xs text-zinc-700 font-mono overflow-x-auto max-h-96 overflow-y-auto whitespace-pre-wrap break-all">
-                  {run.logs}
-                </pre>
-              </div>
-            )
-          ) : (
-            <p className="text-zinc-400 text-sm">{t('repoDetail.noLogs')}</p>
+          <div>
+            <span className="text-zinc-400">{t('repoDetail.botInitiated')}</span>
+            <p className="text-zinc-900 font-medium">
+              {run.isBotInitiated ? t('repoDetail.yes') : t('repoDetail.no')}
+            </p>
+          </div>
+          <div>
+            <span className="text-zinc-400">{t('repoDetail.startedAt')}</span>
+            <p className="text-zinc-900 font-medium">
+              {run.startedAt ? formatTime(run.startedAt) : '-'}
+            </p>
+          </div>
+          <div>
+            <span className="text-zinc-400">{t('repoDetail.completedAt')}</span>
+            <p className="text-zinc-900 font-medium">
+              {run.completedAt ? formatTime(run.completedAt) : '-'}
+            </p>
+          </div>
+          <div>
+            <span className="text-zinc-400">{t('repoDetail.createdAt')}</span>
+            <p className="text-zinc-900 font-medium">{formatTime(run.createdAt)}</p>
+          </div>
+          {run.prNumber && (
+            <div>
+              <span className="text-zinc-400">Pull Request</span>
+              <p>
+                <a
+                  href={`https://github.com/${run.repoFullName}/pull/${run.prNumber}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-500 hover:text-blue-700 font-medium inline-flex items-center gap-1"
+                >
+                  PR #{run.prNumber}
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              </p>
+            </div>
           )}
+        </div>
+      </ProCard>
+
+      {/* 检查步骤 */}
+      {run.checksRan.length > 0 && (
+        <ProCard className="bg-white border-zinc-200 mb-6" padding="p-6">
+          <h3 className="text-zinc-900 font-semibold mb-4">{t('repoDetail.checkSteps')}</h3>
+          <div className="flex flex-wrap gap-2">
+            {run.checksRan.map((check, i) => (
+              <span
+                key={`${check}-${i}`}
+                className="inline-flex items-center gap-1 rounded-full bg-purple-50 px-3 py-1 text-xs text-purple-600"
+              >
+                {check}
+              </span>
+            ))}
+          </div>
         </ProCard>
-      </div>
-    </div>
+      )}
+
+      {/* 运行日志 */}
+      <ProCard className="bg-white border-zinc-200" padding="p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <ScrollText className="h-4 w-4 text-cyan-500" />
+            <h3 className="text-zinc-900 font-semibold">{t('repoDetail.logs')}</h3>
+          </div>
+        </div>
+        {run.logs ? (
+          logData ? (
+            <StructuredLogs logData={logData} onCopy={copyLogs} copied={copied} />
+          ) : (
+            <div>
+              <div className="flex items-center justify-end mb-2">
+                <button
+                  onClick={copyLogs}
+                  className="inline-flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-700 transition-colors"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="h-3.5 w-3.5 text-emerald-500" />
+                      {t('apiKey.copied')}
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3.5 w-3.5" />
+                      {t('apiKey.copy')}
+                    </>
+                  )}
+                </button>
+              </div>
+              <pre className="bg-zinc-50 border border-zinc-200 rounded-lg p-4 text-xs text-zinc-700 font-mono overflow-x-auto max-h-96 overflow-y-auto whitespace-pre-wrap break-all">
+                {run.logs}
+              </pre>
+            </div>
+          )
+        ) : (
+          <p className="text-zinc-400 text-sm">{t('repoDetail.noLogs')}</p>
+        )}
+      </ProCard>
+    </DashboardLayout>
   );
 }
