@@ -111,6 +111,14 @@ async function refreshToken(): Promise<void> {
     );
   }
 
+  // 配置 git credential helper，使 git fetch/pull/push 等命令自动使用 GitHub App token 认证
+  try {
+    await execAsync('gh auth setup-git');
+    logger.info('[Token Refresher] Git credential helper configured via gh auth setup-git');
+  } catch (error) {
+    logger.warn('[Token Refresher] Failed to configure git credential helper:', error);
+  }
+
   logger.info('[Token Refresher] GitHub App token refreshed successfully');
 }
 
