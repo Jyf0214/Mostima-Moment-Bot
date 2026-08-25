@@ -19,16 +19,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // 检查数据库是否有数据
   let dbHasData = false;
+  let dbError = false;
   try {
     const adminCount = await prisma.admin.count();
     const configCount = await prisma.appConfig.count();
     dbHasData = adminCount > 0 || configCount > 0;
   } catch {
-    // 数据库连接失败
+    // 数据库连接失败：无法判断库内是否有数据
+    dbError = true;
   }
 
-  // 根据数据库状态决定 Tier 2 是否必需
-  const tier2Required = !dbHasData;
+  // 根据数据库状态决定 Tier 2 是否必需。
+  // 数据库故障时不能假定「库里没数据」——若 GITHUB_CLIENT_ID 等实际存在
+  // 于数据库运行模式中，误判会把已登录用户中途踢到 /env-error，
+  // 因此故障时按「Tier 2 非必需」处理，并通过 dbError 字段告知调用方。
+  const tier2Required = !dbHasData && !dbError;
 
   const ALL_VARS = [
     {
@@ -100,6 +105,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   return res.status(200).json({
     isConfigured,
     dbHasData,
+    dbError,
     missing,
     present,
     message: isConfigured

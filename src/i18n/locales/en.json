@@ -1,7 +1,10 @@
 {
   "app": {
     "title": "Mostima Moment Bot",
-    "description": "CI/CD automation bot"
+    "description": "CI/CD automation bot",
+    "envCheckFailedTitle": "Environment check failed",
+    "envCheckFailedDesc": "Unable to verify app configuration. Check your network and retry.",
+    "dbUnavailableDesc": "Database is temporarily unavailable. Please retry."
   },
   "home": {
     "welcome": "Welcome",
@@ -133,7 +136,8 @@
     "noResults": "No matching repos found",
     "error": "Error",
     "prev": "Prev",
-    "next": "Next"
+    "next": "Next",
+    "loadReposFailed": "Failed to load repositories"
   },
   "workflowLogs": {
     "statusFilter": "Status",
@@ -145,14 +149,19 @@
     "statusCancelled": "Cancelled",
     "eventIssueLabel": "Issue (Label)",
     "eventIssueComment": "Issue (Comment)",
-    "eventSecurityAudit": "Security Audit"
+    "eventSecurityAudit": "Security Audit",
+    "loadRunsFailed": "Failed to load runs",
+    "filterEmpty": "No runs match the current filters"
   },
   "common": {
     "secondsAgo": "{{count}}s ago",
     "minutesAgo": "{{count}}m ago",
     "hoursAgo": "{{count}}h ago",
     "daysAgo": "{{count}}d ago",
-    "close": "Close"
+    "close": "Close",
+    "retry": "Retry",
+    "copyFailed": "Copy failed, please copy manually",
+    "noResults": "No matching results"
   },
   "repos": {
     "noData": "Unable to load repository data",
@@ -211,7 +220,10 @@
     "completedAt": "Completed At",
     "createdAt": "Created At",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "resetConfirm": "Reset to default rules? Your custom configuration will be overwritten.",
+    "unsavedChanges": "Unsaved changes",
+    "repoSettings": "Repo settings"
   },
   "envPage": {
     "title": "Environment Variables",
@@ -225,7 +237,8 @@
     "missingLabel": "Missing",
     "search": "Search variable name or usage...",
     "howToGet": "How to get",
-    "loadFailed": "Failed to load environment variable status"
+    "loadFailed": "Failed to load environment variable status",
+    "noMatch": "No matching environment variables"
   },
   "apiKey": {
     "title": "API Keys",
@@ -432,7 +445,9 @@
     "dbModeEnableFailed": "Failed to enable database mode",
     "dbModeDisabled": "Database mode disabled",
     "dbModeDisableFailed": "Failed to disable database mode",
-    "dbModeHint": "When enabled, only ENCRYPTION_KEY and DATABASE_URL are needed on next startup."
+    "dbModeHint": "When enabled, only ENCRYPTION_KEY and DATABASE_URL are needed on next startup.",
+    "statusUnknown": "Unknown",
+    "qwenSaveBlockedHint": "A configuration already exists. Paste a new config to overwrite it, or use Clear to reset."
   },
   "api": {
     "methodNotAllowed": "Method not allowed",
@@ -507,6 +522,27 @@
     "repoScopeTitle": "Repository Scope",
     "repoScopeDesc": "Runner only accepts GitHub Actions workflow jobs from the specified repository",
     "orgScopeTitle": "Organization Scope",
-    "orgScopeDesc": "Runner accepts GitHub Actions workflow jobs from all repositories in the organization"
+    "orgScopeDesc": "Runner accepts GitHub Actions workflow jobs from all repositories in the organization",
+    "reposLoadFailed": "Failed to load repositories. Enter a name manually.",
+    "scopeTargetManualPlaceholder": "owner/repo or org name",
+    "createSuccess": "Runner created"
+  },
+  "auth": {
+    "checkFailedRedirecting": "Session validation failed. Redirecting to home…"
+  },
+  "runDetail": {
+    "stepsCount": "{{count}} steps",
+    "passed": "passed",
+    "failed": "failed",
+    "skipped": "skipped",
+    "expandAll": "Expand all",
+    "collapseAll": "Collapse all",
+    "copyJson": "Copy JSON",
+    "output": "Output",
+    "statusSuccess": "Success",
+    "statusFailure": "Failure",
+    "statusRunning": "Running",
+    "statusPending": "Pending",
+    "statusCancelled": "Cancelled"
   }
 }

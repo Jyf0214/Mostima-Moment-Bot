@@ -28,6 +28,15 @@ body {
   cursor: not-allowed;
 }
 
+@keyframes progress-slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+
+.animate-progress-slide {
+  animation: progress-slide 1s ease-in-out infinite;
+}
+
 *:focus-visible {
   outline: 2px solid rgb(113 113 122);
   outline-offset: 2px;

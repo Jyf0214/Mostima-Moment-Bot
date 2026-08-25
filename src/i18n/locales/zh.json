@@ -1,7 +1,10 @@
 {
   "app": {
     "title": "Mostima 时刻机器人",
-    "description": "CI/CD 自动化机器人"
+    "description": "CI/CD 自动化机器人",
+    "envCheckFailedTitle": "环境检查失败",
+    "envCheckFailedDesc": "无法确认应用配置，请检查网络后重试",
+    "dbUnavailableDesc": "数据库暂时不可用，请稍后重试"
   },
   "home": {
     "welcome": "欢迎",
@@ -133,7 +136,8 @@
     "noResults": "没有找到匹配的仓库",
     "error": "错误",
     "prev": "上一页",
-    "next": "下一页"
+    "next": "下一页",
+    "loadReposFailed": "仓库列表加载失败"
   },
   "workflowLogs": {
     "statusFilter": "状态",
@@ -145,14 +149,19 @@
     "statusCancelled": "已取消",
     "eventIssueLabel": "Issue（标签）",
     "eventIssueComment": "Issue（评论）",
-    "eventSecurityAudit": "安全审计"
+    "eventSecurityAudit": "安全审计",
+    "loadRunsFailed": "运行记录加载失败",
+    "filterEmpty": "没有符合筛选条件的运行记录"
   },
   "common": {
     "secondsAgo": "{{count}}秒前",
     "minutesAgo": "{{count}}分钟前",
     "hoursAgo": "{{count}}小时前",
     "daysAgo": "{{count}}天前",
-    "close": "关闭"
+    "close": "关闭",
+    "retry": "重试",
+    "copyFailed": "复制失败，请手动复制",
+    "noResults": "没有匹配的结果"
   },
   "repos": {
     "noData": "无法加载仓库数据",
@@ -211,7 +220,10 @@
     "completedAt": "完成时间",
     "createdAt": "创建时间",
     "yes": "是",
-    "no": "否"
+    "no": "否",
+    "resetConfirm": "确定恢复默认规则吗？将覆盖当前自定义配置",
+    "unsavedChanges": "有未保存的更改",
+    "repoSettings": "仓库配置"
   },
   "envPage": {
     "title": "环境变量配置",
@@ -225,7 +237,8 @@
     "missingLabel": "未配置",
     "search": "搜索变量名或用途...",
     "howToGet": "获取方式",
-    "loadFailed": "加载环境变量状态失败"
+    "loadFailed": "加载环境变量状态失败",
+    "noMatch": "没有匹配的环境变量"
   },
   "apiKey": {
     "title": "API 密钥",
@@ -432,7 +445,9 @@
     "dbModeEnableFailed": "启用数据库模式失败",
     "dbModeDisabled": "数据库模式已禁用",
     "dbModeDisableFailed": "禁用数据库模式失败",
-    "dbModeHint": "启用后，下次启动只需提供 ENCRYPTION_KEY 和 DATABASE_URL 即可运行。"
+    "dbModeHint": "启用后，下次启动只需提供 ENCRYPTION_KEY 和 DATABASE_URL 即可运行。",
+    "statusUnknown": "状态未知",
+    "qwenSaveBlockedHint": "已存在配置。为防止误覆盖，请先粘贴新配置再保存；如需清空请使用「清除配置」。"
   },
   "api": {
     "methodNotAllowed": "Method not allowed",
@@ -507,6 +522,27 @@
     "repoScopeTitle": "仓库作用域",
     "repoScopeDesc": "Runner 仅接收指定仓库的 GitHub Actions 工作流任务",
     "orgScopeTitle": "组织作用域",
-    "orgScopeDesc": "Runner 接收整个组织下所有仓库的 GitHub Actions 工作流任务"
+    "orgScopeDesc": "Runner 接收整个组织下所有仓库的 GitHub Actions 工作流任务",
+    "reposLoadFailed": "仓库列表加载失败，可手动输入名称",
+    "scopeTargetManualPlaceholder": "owner/repo 或组织名",
+    "createSuccess": "Runner 创建成功"
+  },
+  "auth": {
+    "checkFailedRedirecting": "登录状态验证失败，即将返回首页…"
+  },
+  "runDetail": {
+    "stepsCount": "{{count}} 个步骤",
+    "passed": "通过",
+    "failed": "失败",
+    "skipped": "跳过",
+    "expandAll": "全部展开",
+    "collapseAll": "全部收起",
+    "copyJson": "复制 JSON",
+    "output": "输出",
+    "statusSuccess": "成功",
+    "statusFailure": "失败",
+    "statusRunning": "运行中",
+    "statusPending": "等待中",
+    "statusCancelled": "已取消"
   }
 }

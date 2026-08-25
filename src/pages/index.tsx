@@ -2,6 +2,7 @@
 
 import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import { useTranslation } from 'react-i18next';
 import { HeroBanner } from '@/components/ui/HeroBanner';
 import { Button } from '@/components/ui/Button';
@@ -35,43 +36,49 @@ function GithubIcon({ size = 24 }: { size?: number }) {
 
 export default function HomePage() {
   const { t } = useTranslation();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [heroGradient, setHeroGradient] = useState('from-blue-50 via-transparent to-purple-50');
   const [heroImageUrl, setHeroImageUrl] = useState('');
 
-  const fetchHeroConfig = async () => {
-    try {
-      const res = await fetch('/api/site-config');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.hero_gradient) setHeroGradient(data.hero_gradient);
-        if (data.hero_image_url) setHeroImageUrl(data.hero_image_url);
-      }
-    } catch {
-      // 使用默认值
-    }
-  };
-
-  const checkStatus = async () => {
-    try {
-      const response = await fetch('/api/auth/me');
-      if (response.ok) {
-        const data = await response.json();
-        if (data.githubId) {
-          window.location.href = '/dashboard';
-          return;
-        }
-      }
-    } catch (err) {
-      logger.error('Failed to check status:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    checkStatus();
-    fetchHeroConfig();
+    // 登录态与站点配置只在首次挂载时获取一次
+
+    const fetchHeroConfig = async () => {
+      try {
+        const res = await fetch('/api/site-config');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.hero_gradient) setHeroGradient(data.hero_gradient);
+          if (data.hero_image_url) setHeroImageUrl(data.hero_image_url);
+        }
+      } catch {
+        // 使用默认值
+      }
+    };
+
+    const checkStatus = async () => {
+      try {
+        const response = await fetch('/api/auth/me');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.githubId) {
+            // 客户端路由跳转：避免整页重载后 _app 门控与登录检查再跑一遍
+            router.replace('/dashboard');
+            return;
+          }
+        }
+      } catch (err) {
+        logger.error('Failed to check status:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void checkStatus();
+    void fetchHeroConfig();
+    // 路由实例每次渲染都是新对象，不能作为依赖；本 effect 只需挂载时执行一次
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (loading) {
