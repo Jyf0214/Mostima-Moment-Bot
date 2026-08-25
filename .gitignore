@@ -31,8 +31,8 @@ yarn-error.log*
 # vercel
 .vercel
 
-# qwen skills
-.qwen/skills/**
+# qwen 本地配置（Qwen Code 会话数据，不入库）
+.qwen/
 
 # typescript
 *.tsbuildinfo
