@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { AlertTriangle, X, Check, RefreshCw, Info, ShieldAlert, Database, Key } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { StatusCard } from '@/components/ui/StatusCard';
+import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { PageContainer } from '@/components/ui/PageContainer';
 import { ProCard } from '@/components/ui/ProCard';
 
@@ -26,7 +27,6 @@ interface EnvStatus {
 
 export default function EnvErrorPage() {
   const { t } = useTranslation();
-  const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
   const [envStatus, setEnvStatus] = useState<EnvStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +46,6 @@ export default function EnvErrorPage() {
       setError(err instanceof Error ? err.message : t('envError.checkFailed'));
     } finally {
       setRunning(false);
-      setLoading(false);
     }
   }, [t]);
 
@@ -85,8 +84,8 @@ export default function EnvErrorPage() {
             </Button>
           </div>
 
-          {/* 加载中 */}
-          {loading && !running && (
+          {/* 检测期间（尚无任何结果）显示大号加载状态，避免 spinner 只闪一帧 */}
+          {!envStatus && !error && (
             <div className="flex items-center justify-center py-12">
               <div className="flex flex-col items-center gap-3">
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-400 border-t-transparent" />
@@ -97,14 +96,12 @@ export default function EnvErrorPage() {
 
           {/* 错误 */}
           {error && (
-            <ProCard>
-              <StatusCard
-                icon={<X className="h-4 w-4" />}
-                title={t('dashboard.error')}
-                status={error}
-                statusType="error"
-              />
-            </ProCard>
+            <ErrorAlert
+              message={error}
+              title={t('dashboard.error')}
+              onRetry={() => void checkEnvStatus()}
+              retryLabel={t('common.retry')}
+            />
           )}
 
           {/* 检测结果 */}

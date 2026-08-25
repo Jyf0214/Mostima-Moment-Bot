@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'next/router';
-import Image from 'next/image';
 import { logger } from '@/lib/logger';
+import { apiErrorMessage, apiJson, isUnauthorized, redirectToHome } from '@/lib/api-client';
 import { Button } from '@/components/ui/Button';
-import Sidebar, { type SidebarPage } from '@/components/dashboard/Sidebar';
+import { ErrorAlert } from '@/components/ui/ErrorAlert';
+import type { SidebarPage } from '@/components/dashboard/Sidebar';
 import OverviewPage from '@/components/dashboard/OverviewPage';
 import ReposPage from '@/components/dashboard/ReposPage';
 import WorkflowLogsPage from '@/components/dashboard/WorkflowLogsPage';
@@ -14,7 +15,8 @@ import RunnersPage from '@/components/dashboard/RunnersPage';
 import EnvVarsPage from '@/components/dashboard/EnvVarsPage';
 import ApiKeyPage from '@/components/dashboard/ApiKeyPage';
 import SettingsPage from '@/components/dashboard/SettingsPage';
-import type { User, ReposData } from '@/components/dashboard/types';
+import DashboardLayout from '@/components/dashboard/DashboardLayout';
+import type { ReposData } from '@/components/dashboard/types';
 import { CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-react';
 
 const VALID_PAGES: SidebarPage[] = [
@@ -30,66 +32,74 @@ const VALID_PAGES: SidebarPage[] = [
 export default function DashboardPage() {
   const { t } = useTranslation();
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
   const [activePage, setActivePage] = useState<SidebarPage>('overview');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [repos, setRepos] = useState<ReposData | null>(null);
-  const [reposLoading, setReposLoading] = useState(false);
+  // 初值 true：避免鉴权完成前先闪一帧「无法加载数据」空状态
+  const [reposLoading, setReposLoading] = useState(true);
+  const [reposError, setReposError] = useState<string | null>(null);
   const [appConfigured, setAppConfigured] = useState<boolean | null>(null);
   const [installMsg, setInstallMsg] = useState<string | null>(null);
   const [installMsgType, setInstallMsgType] = useState<'success' | 'error'>('success');
+  // 用户数据只在鉴权成功后拉取一次；后续更新走各页面的手动刷新
+  const dataLoadedRef = useRef(false);
 
-  // 从 URL 读取当前页面（仅用于初始状态设置）
+  // 从 URL 读取当前页面；非法 page 参数重置为概览并清理 URL，
+  // 避免「地址栏是 ?page=bogus、界面却停在旧 tab」的不一致
   useEffect(() => {
     if (!router.isReady) return;
-    const pageParam = router.query.page as string;
+    const pageParam = router.query.page as string | undefined;
     if (pageParam && VALID_PAGES.includes(pageParam as SidebarPage)) {
       setActivePage(pageParam as SidebarPage);
     } else if (!pageParam) {
       setActivePage('overview');
+    } else {
+      setActivePage('overview');
+      router.replace('/dashboard', undefined, { shallow: true });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 仅依赖 query.page 变化
   }, [router.isReady, router.query.page]);
 
-  const checkAuth = useCallback(async () => {
+  const checkAppConfig = useCallback(async () => {
     try {
-      const response = await fetch('/api/auth/me');
-      if (!response.ok) {
-        setInstallMsg(t('home.checkStatusFailed'));
-        setInstallMsgType('error');
-        setTimeout(() => {
-          window.location.href = '/';
-        }, 1500);
+      // 保留原始语义：只有 500（服务端判定未配置）才算未配置，
+      // 其他响应（含重定向/4xx）都视为已配置
+      const res = await fetch('/api/github/install');
+      setAppConfigured(res.status !== 500);
+    } catch (err) {
+      logger.error('Failed to check app configuration:', err);
+      setAppConfigured(false);
+    }
+  }, []);
+
+  const loadRepos = useCallback(async () => {
+    setReposLoading(true);
+    setReposError(null);
+    try {
+      const data = await apiJson<ReposData>('/api/github/repos');
+      setRepos(data);
+    } catch (err) {
+      if (isUnauthorized(err)) {
+        redirectToHome();
         return;
       }
-      const data = await response.json();
-      if (!data.githubId) {
-        setInstallMsg(t('home.checkStatusFailed'));
-        setInstallMsgType('error');
-        setTimeout(() => {
-          window.location.href = '/';
-        }, 1500);
-        return;
-      }
-      setUser(data);
-    } catch {
-      setInstallMsg(t('home.checkStatusFailed'));
-      setInstallMsgType('error');
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 1500);
+      logger.error('Failed to load repos:', err);
+      // 加载失败必须显式提示，不能静默成「暂无数据」误导用户
+      setReposError(apiErrorMessage(err, t('dashboard.loadReposFailed')));
     } finally {
-      setLoading(false);
+      setReposLoading(false);
     }
   }, [t]);
 
-  useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
+  const handleUserLoaded = useCallback(() => {
+    if (dataLoadedRef.current) return;
+    dataLoadedRef.current = true;
+    void checkAppConfig();
+    void loadRepos();
+  }, [checkAppConfig, loadRepos]);
 
   useEffect(() => {
     if (!router.isReady) return;
-    const install = router.query.install as string;
+    const install = router.query.install as string | undefined;
     if (install === 'success') {
       setInstallMsg(t('home.installSuccess'));
       setInstallMsgType('success');
@@ -100,159 +110,80 @@ export default function DashboardPage() {
     if (install) {
       router.replace({ pathname: '/dashboard' }, undefined, { shallow: true });
     }
-  }, [router.isReady, router.query.install, router, t]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 仅依赖 install 参数变化
+  }, [router.isReady, router.query.install]);
 
-  const checkAppConfig = useCallback(async () => {
-    try {
-      const res = await fetch('/api/github/install');
-      setAppConfigured(res.status !== 500);
-    } catch {
-      logger.error('Failed to check app configuration');
-      setAppConfigured(false);
-    }
-  }, []);
-
-  const loadRepos = useCallback(async () => {
-    setReposLoading(true);
-    try {
-      const res = await fetch('/api/github/repos');
-      if (res.ok) setRepos(await res.json());
-    } catch {
-      setInstallMsg(t('home.checkStatusFailed'));
-      setInstallMsgType('error');
-    } finally {
-      setReposLoading(false);
-    }
-  }, [t]);
-
-  useEffect(() => {
-    if (user) {
-      checkAppConfig();
-      loadRepos();
-    }
-  }, [user, checkAppConfig, loadRepos]);
-
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-    } catch {
-      logger.error('Logout request failed, redirecting anyway');
-    }
-    window.location.href = '/';
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-50">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-zinc-200 border-t-blue-500" />
-      </div>
-    );
-  }
+  const navigateTo = useCallback(
+    (page: SidebarPage) => {
+      setActivePage(page);
+      router.push({ pathname: '/dashboard', query: { page } }, undefined, { shallow: true });
+    },
+    [router]
+  );
 
   return (
-    <div className="h-screen bg-zinc-50 flex overflow-hidden">
-      <Sidebar
-        activePage={activePage}
-        onNavigate={(page) => {
-          setActivePage(page);
-          if (page === 'overview') {
-            router.push('/dashboard', undefined, { shallow: true });
-          } else {
-            router.push({ pathname: '/dashboard', query: { page } }, undefined, { shallow: true });
-          }
-        }}
-        collapsed={sidebarCollapsed}
-        onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
-        userLogin={user?.githubLogin || ''}
-        onLogout={handleLogout}
-      />
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-6 sm:p-8 max-w-5xl">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              {user?.avatarUrl && (
-                <Image
-                  src={user.avatarUrl}
-                  alt={user.githubLogin}
-                  width={40}
-                  height={40}
-                  className="h-10 w-10 rounded-full ring-2 ring-zinc-200"
-                  unoptimized
-                />
-              )}
-              <div>
-                <h1 className="text-xl font-bold text-zinc-900">
-                  {activePage === 'overview' && t('home.dashboard')}
-                  {activePage === 'repos' && t('sidebar.repos')}
-                  {activePage === 'logs' && t('sidebar.logs')}
-                  {activePage === 'runners' && t('sidebar.runners')}
-                  {activePage === 'env' && t('sidebar.envVars')}
-                  {activePage === 'apikeys' && t('sidebar.apiKeys')}
-                  {activePage === 'settings' && t('sidebar.settings')}
-                </h1>
-                <p className="text-zinc-500 text-xs">@{user?.githubLogin}</p>
-              </div>
-            </div>
-            {activePage === 'repos' && (
-              <Button
-                variant="ghost"
-                size="sm"
-                icon={<RefreshCw className={`h-3.5 w-3.5 ${reposLoading ? 'animate-spin' : ''}`} />}
-                onClick={loadRepos}
-                className="text-zinc-500 hover:text-zinc-700"
-              >
-                {t('dashboard.refresh')}
-              </Button>
-            )}
-          </div>
-
-          {installMsg && (
-            <div
-              className={`mb-6 flex items-center gap-3 rounded-xl border px-4 py-3 text-sm ${
-                installMsgType === 'success'
-                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                  : 'border-red-200 bg-red-50 text-red-700'
-              }`}
-            >
-              {installMsgType === 'success' ? (
-                <CheckCircle2 className="h-4 w-4 shrink-0" />
-              ) : (
-                <AlertTriangle className="h-4 w-4 shrink-0" />
-              )}
-              {installMsg}
-            </div>
+    <DashboardLayout
+      activePage={activePage}
+      onUserLoaded={handleUserLoaded}
+      headerAction={
+        activePage === 'repos' ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<RefreshCw className={`h-3.5 w-3.5 ${reposLoading ? 'animate-spin' : ''}`} />}
+            onClick={() => void loadRepos()}
+            className="text-zinc-500 hover:text-zinc-700"
+          >
+            {t('dashboard.refresh')}
+          </Button>
+        ) : undefined
+      }
+    >
+      {installMsg && (
+        <div
+          className={`mb-6 flex items-center gap-3 rounded-xl border px-4 py-3 text-sm ${
+            installMsgType === 'success'
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+              : 'border-red-200 bg-red-50 text-red-700'
+          }`}
+        >
+          {installMsgType === 'success' ? (
+            <CheckCircle2 className="h-4 w-4 shrink-0" />
+          ) : (
+            <AlertTriangle className="h-4 w-4 shrink-0" />
           )}
-
-          {activePage === 'overview' && (
-            <OverviewPage
-              repos={repos}
-              reposLoading={reposLoading}
-              appConfigured={appConfigured}
-              onInstall={() => (window.location.href = '/api/github/install')}
-              onNavigateToRepos={() => {
-                setActivePage('repos');
-                router.push({ pathname: '/dashboard', query: { page: 'repos' } }, undefined, {
-                  shallow: true,
-                });
-              }}
-              onNavigateToEnv={() => {
-                setActivePage('env');
-                router.push({ pathname: '/dashboard', query: { page: 'env' } }, undefined, {
-                  shallow: true,
-                });
-              }}
-            />
-          )}
-          {activePage === 'repos' && (
-            <ReposPage repos={repos} reposLoading={reposLoading} onRefresh={loadRepos} />
-          )}
-          {activePage === 'logs' && <WorkflowLogsPage />}
-          {activePage === 'runners' && <RunnersPage />}
-          {activePage === 'env' && <EnvVarsPage />}
-          {activePage === 'apikeys' && <ApiKeyPage />}
-          {activePage === 'settings' && <SettingsPage />}
+          {installMsg}
         </div>
-      </div>
-    </div>
+      )}
+
+      {reposError && (
+        <div className="mb-6">
+          <ErrorAlert
+            message={reposError}
+            onRetry={() => void loadRepos()}
+            retryLabel={t('common.retry')}
+          />
+        </div>
+      )}
+
+      {activePage === 'overview' && (
+        <OverviewPage
+          repos={repos}
+          reposLoading={reposLoading}
+          appConfigured={appConfigured}
+          onInstall={() => (window.location.href = '/api/github/install')}
+          onNavigateToRepos={() => navigateTo('repos')}
+          onNavigateToEnv={() => navigateTo('env')}
+        />
+      )}
+      {activePage === 'repos' && (
+        <ReposPage repos={repos} reposLoading={reposLoading} onRefresh={loadRepos} />
+      )}
+      {activePage === 'logs' && <WorkflowLogsPage />}
+      {activePage === 'runners' && <RunnersPage />}
+      {activePage === 'env' && <EnvVarsPage />}
+      {activePage === 'apikeys' && <ApiKeyPage />}
+      {activePage === 'settings' && <SettingsPage />}
+    </DashboardLayout>
   );
 }

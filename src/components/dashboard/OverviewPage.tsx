@@ -1,7 +1,9 @@
 'use client';
 
 import { useTranslation } from 'react-i18next';
+import { useRouter } from 'next/router';
 import { ProCard } from '@/components/ui/ProCard';
+import { Skeleton } from '@/components/ui/Skeleton';
 import type { ReposData } from './types';
 import { Plug, FolderGit2, CheckCircle2, BarChart3 } from 'lucide-react';
 
@@ -24,8 +26,12 @@ export default function OverviewPage({
   onNavigateToEnv,
 }: OverviewPageProps) {
   const { t } = useTranslation();
-  const hasInstallations = repos && repos.installations && repos.installations.length > 0;
+  const router = useRouter();
+  const hasInstallations = !!(repos && repos.installations && repos.installations.length > 0);
   const totalRepos = repos ? repos.personal.length + repos.organization.length : 0;
+
+  // 数据未就绪时快捷入口保持骨架占位，避免「安装 App」入口闪现后跳变成「仓库」
+  const quickActionReady = repos !== null && appConfigured !== null;
 
   return (
     <div className="space-y-6">
@@ -37,9 +43,13 @@ export default function OverviewPage({
             </div>
             <div>
               <p className="text-zinc-500 text-xs">{t('dashboard.activeInstallations')}</p>
-              <p className="text-xl font-bold text-zinc-900">
-                {reposLoading ? '...' : repos?.installations?.length || 0}
-              </p>
+              {reposLoading && repos === null ? (
+                <Skeleton className="mt-1 h-6 w-10" />
+              ) : (
+                <p className="text-xl font-bold text-zinc-900">
+                  {repos?.installations?.length || 0}
+                </p>
+              )}
             </div>
           </div>
         </ProCard>
@@ -50,7 +60,11 @@ export default function OverviewPage({
             </div>
             <div>
               <p className="text-zinc-500 text-xs">{t('dashboard.totalRepos')}</p>
-              <p className="text-xl font-bold text-zinc-900">{reposLoading ? '...' : totalRepos}</p>
+              {reposLoading && repos === null ? (
+                <Skeleton className="mt-1 h-6 w-10" />
+              ) : (
+                <p className="text-xl font-bold text-zinc-900">{totalRepos}</p>
+              )}
             </div>
           </div>
         </ProCard>
@@ -61,9 +75,11 @@ export default function OverviewPage({
             </div>
             <div>
               <p className="text-zinc-500 text-xs">{t('envPage.configured')}</p>
-              <p className="text-xl font-bold text-zinc-900">
-                {appConfigured === null ? '...' : appConfigured ? '✓' : '—'}
-              </p>
+              {appConfigured === null ? (
+                <Skeleton className="mt-1 h-6 w-10" />
+              ) : (
+                <p className="text-xl font-bold text-zinc-900">{appConfigured ? '✓' : '—'}</p>
+              )}
             </div>
           </div>
         </ProCard>
@@ -72,7 +88,13 @@ export default function OverviewPage({
       <ProCard className="bg-white border-zinc-200" padding="p-5">
         <h3 className="text-sm font-medium text-zinc-500 mb-4">{t('dashboard.quickActions')}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {!hasInstallations && appConfigured !== false ? (
+          {!quickActionReady ? (
+            // 占位卡片：与真实入口同尺寸，数据就绪后无缝替换
+            <div className="p-4 rounded-xl border border-dashed border-zinc-200" aria-hidden="true">
+              <Skeleton className="h-5 w-40 mb-2" />
+              <Skeleton className="h-3 w-56" />
+            </div>
+          ) : !hasInstallations && appConfigured !== false ? (
             <button
               onClick={onInstall}
               aria-label={t('home.installApp')}
@@ -111,7 +133,7 @@ export default function OverviewPage({
             </div>
           </button>
           <button
-            onClick={() => (window.location.href = '/github-test')}
+            onClick={() => router.push('/github-test')}
             aria-label={t('dashboard.testConnection')}
             className="flex items-center gap-3 p-4 rounded-xl bg-white border border-zinc-200 hover:border-zinc-300 hover:shadow-md transition-all text-left"
           >

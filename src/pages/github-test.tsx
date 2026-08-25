@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useRouter } from 'next/router';
 import { CheckCircle2, XCircle, AlertTriangle, RefreshCw, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { ProCard } from '@/components/ui/ProCard';
-import { StatusCard } from '@/components/ui/StatusCard';
+import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { PageContainer } from '@/components/ui/PageContainer';
 
 interface TestResult {
@@ -23,6 +24,7 @@ const STATUS_ICON = {
 
 export default function GitHubTestPage() {
   const { t } = useTranslation();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [results, setResults] = useState<TestResult[]>([]);
   const [running, setRunning] = useState(false);
@@ -31,7 +33,7 @@ export default function GitHubTestPage() {
   const runTests = useCallback(async () => {
     setRunning(true);
     setError(null);
-    setResults([]);
+    // 重跑时保留旧结果，新结果返回后整体替换；期间旧数据半透明展示
 
     try {
       const response = await fetch('/api/github/test');
@@ -66,7 +68,7 @@ export default function GitHubTestPage() {
               variant="ghost"
               size="sm"
               icon={<ArrowLeft className="h-4 w-4" />}
-              onClick={() => (window.location.href = '/dashboard')}
+              onClick={() => router.push('/dashboard')}
             >
               {t('githubTest.backToDashboard')}
             </Button>
@@ -88,7 +90,9 @@ export default function GitHubTestPage() {
             </Button>
           </div>
 
-          {loading && !running && (
+          {/* 初次检测期间（还没有任何结果）显示大号检测中状态；
+              重跑时保留旧结果，仅按钮进入 loading、结果区半透明 */}
+          {(loading || running) && results.length === 0 && (
             <div className="flex items-center justify-center py-12">
               <div className="flex flex-col items-center gap-3">
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-400 border-t-transparent" />
@@ -98,14 +102,12 @@ export default function GitHubTestPage() {
           )}
 
           {error && (
-            <ProCard>
-              <StatusCard
-                icon={<XCircle className="h-4 w-4" />}
-                title={t('dashboard.error')}
-                status={error}
-                statusType="error"
-              />
-            </ProCard>
+            <ErrorAlert
+              message={error}
+              title={t('dashboard.error')}
+              onRetry={() => void runTests()}
+              retryLabel={t('common.retry')}
+            />
           )}
 
           {results.length > 0 && (
@@ -135,7 +137,10 @@ export default function GitHubTestPage() {
                 )}
               </div>
 
-              <ProCard title={t('githubTest.testDetails')}>
+              <ProCard
+                title={t('githubTest.testDetails')}
+                className={running ? 'opacity-60 transition-opacity' : 'transition-opacity'}
+              >
                 <div className="flex flex-col gap-2">
                   {results.map((result) => (
                     <div
