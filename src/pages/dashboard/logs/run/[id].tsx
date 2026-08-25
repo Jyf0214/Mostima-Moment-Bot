@@ -5,7 +5,18 @@ import { useRouter } from 'next/router';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { ProCard } from '@/components/ui/ProCard';
+import { ErrorAlert } from '@/components/ui/ErrorAlert';
+import { Skeleton } from '@/components/ui/Skeleton';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
+import {
+  ApiError,
+  apiErrorMessage,
+  apiJson,
+  isUnauthorized,
+  redirectToHome,
+} from '@/lib/api-client';
+import { copyTextToClipboard } from '@/lib/clipboard';
+import { formatDuration } from '@/lib/time';
 import {
   ArrowLeft,
   CheckCircle2,
@@ -14,7 +25,6 @@ import {
   Loader2,
   GitBranch,
   ScrollText,
-  AlertTriangle,
   Copy,
   Check,
   ChevronRight,
@@ -65,42 +75,42 @@ interface LogData {
 
 const STATUS_CONFIG: Record<
   string,
-  { icon: React.ElementType; color: string; bg: string; label: string; ring: string }
+  { icon: React.ElementType; color: string; bg: string; ring: string; labelKey: string }
 > = {
   success: {
     icon: CheckCircle2,
     color: 'text-emerald-500',
     bg: 'bg-emerald-50',
     ring: 'ring-emerald-200',
-    label: 'Success',
+    labelKey: 'runDetail.statusSuccess',
   },
   failure: {
     icon: XCircle,
     color: 'text-red-500',
     bg: 'bg-red-50',
     ring: 'ring-red-200',
-    label: 'Failure',
+    labelKey: 'runDetail.statusFailure',
   },
   running: {
     icon: Loader2,
     color: 'text-blue-500',
     bg: 'bg-blue-50',
     ring: 'ring-blue-200',
-    label: 'Running',
+    labelKey: 'runDetail.statusRunning',
   },
   pending: {
     icon: Clock,
     color: 'text-amber-500',
     bg: 'bg-amber-50',
     ring: 'ring-amber-200',
-    label: 'Pending',
+    labelKey: 'runDetail.statusPending',
   },
   cancelled: {
     icon: XCircle,
     color: 'text-zinc-400',
     bg: 'bg-zinc-50',
     ring: 'ring-zinc-200',
-    label: 'Cancelled',
+    labelKey: 'runDetail.statusCancelled',
   },
 };
 
@@ -134,22 +144,36 @@ const CONCLUSION_CONFIG: Record<
   },
 };
 
-function formatDuration(duration: number): string {
-  if (duration < 1000) return `${duration}ms`;
-  const s = Math.round(duration / 1000);
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  return `${m}m ${s % 60}s`;
-}
-
-function formatTime(dateStr: string): string {
-  return new Date(dateStr).toLocaleString('zh-CN', {
+/** 本地化时间显示 */
+function formatTime(dateStr: string, locale: string): string {
+  return new Date(dateStr).toLocaleString(locale, {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
+  });
+}
+
+/**
+ * 统一生成步骤展开状态的唯一 key
+ *
+ * prefix 区分层级（子步骤携带父级 key + '/'），name#index 区分同名步骤，
+ * 初始化收集、递归渲染与点击切换必须全部经过此函数，否则会互相串状态。
+ */
+function buildStepKey(prefix: string, name: string, index: number): string {
+  return `${prefix}${name}#${index}`;
+}
+
+/** 收集所有可展开步骤（有输出或子步骤）的 key 到 out */
+function collectExpandableKeys(steps: LogStep[], prefix: string, out: Set<string>): void {
+  steps.forEach((s, i) => {
+    const key = buildStepKey(prefix, s.name, i);
+    if (s.output || (s.subSteps && s.subSteps.length > 0)) {
+      out.add(key);
+    }
+    if (s.subSteps) collectExpandableKeys(s.subSteps, `${key}/`, out);
   });
 }
 
@@ -171,16 +195,21 @@ function StepTimeline({
   step,
   index,
   total,
+  prefix,
   expandedSet,
   onToggle,
 }: {
   step: LogStep;
   index: number;
   total: number;
+  /** 层级前缀：顶层为空串，子步骤传父级 key + '/' */
+  prefix: string;
   expandedSet: Set<string>;
   onToggle: (key: string) => void;
 }) {
-  const stepKey = `${step.name}-${index}`;
+  const { t } = useTranslation();
+  const [outputCopied, setOutputCopied] = useState(false);
+  const stepKey = buildStepKey(prefix, step.name, index);
   const expanded = expandedSet.has(stepKey);
   const conclusion = step.conclusion || (step.status === 'completed' ? 'success' : null);
   const cfg = conclusion ? CONCLUSION_CONFIG[conclusion] : null;
@@ -296,10 +325,11 @@ function StepTimeline({
               <div className="space-y-0">
                 {step.subSteps!.map((sub, i) => (
                   <StepTimeline
-                    key={`${sub.name}-${i}`}
+                    key={buildStepKey(`${stepKey}/`, sub.name, i)}
                     step={sub}
                     index={i}
                     total={step.subSteps!.length}
+                    prefix={`${stepKey}/`}
                     expandedSet={expandedSet}
                     onToggle={onToggle}
                   />
@@ -311,15 +341,24 @@ function StepTimeline({
             {hasOutput && (
               <div className="rounded-lg border border-zinc-200 bg-zinc-50 overflow-hidden">
                 <div className="flex items-center justify-between px-3 py-1.5 border-b border-zinc-200 bg-zinc-100/50">
-                  <span className="text-[10px] text-zinc-500 font-medium">Output</span>
+                  <span className="text-[10px] text-zinc-500 font-medium">
+                    {t('runDetail.output')}
+                  </span>
                   <button
-                    onClick={(e) => {
+                    onClick={async (e) => {
                       e.stopPropagation();
-                      navigator.clipboard.writeText(step.output || '');
+                      const ok = await copyTextToClipboard(step.output || '');
+                      if (!ok) return; // 小图标场景复制失败静默即可
+                      setOutputCopied(true);
+                      setTimeout(() => setOutputCopied(false), 2000);
                     }}
                     className="text-[10px] text-zinc-400 hover:text-zinc-600 transition-colors"
                   >
-                    <Copy className="h-3 w-3" />
+                    {outputCopied ? (
+                      <Check className="h-3 w-3 text-emerald-500" />
+                    ) : (
+                      <Copy className="h-3 w-3" />
+                    )}
                   </button>
                 </div>
                 <pre className="p-3 text-xs text-zinc-700 font-mono overflow-x-auto max-h-64 overflow-y-auto whitespace-pre-wrap break-all leading-relaxed">
@@ -344,19 +383,11 @@ function StructuredLogs({
   onCopy: () => void;
   copied: boolean;
 }) {
+  const { t } = useTranslation();
   const [expandedSet, setExpandedSet] = useState<Set<string>>(() => {
     // 默认展开所有有输出或子步骤的步骤
     const all = new Set<string>();
-    const collect = (steps: LogStep[], prefix = '') => {
-      steps.forEach((s, i) => {
-        const key = `${s.name}-${prefix}${i}`;
-        if (s.output || (s.subSteps && s.subSteps.length > 0)) {
-          all.add(key);
-        }
-        if (s.subSteps) collect(s.subSteps, `${key}-`);
-      });
-    };
-    collect(logData.steps);
+    collectExpandableKeys(logData.steps, '', all);
     return all;
   });
   const [allExpanded, setAllExpanded] = useState(true);
@@ -373,16 +404,7 @@ function StructuredLogs({
       setExpandedSet(new Set());
     } else {
       const all = new Set<string>();
-      const collect = (steps: LogStep[], prefix = '') => {
-        steps.forEach((s, i) => {
-          const key = `${s.name}-${prefix}${i}`;
-          if (s.output || (s.subSteps && s.subSteps.length > 0)) {
-            all.add(key);
-          }
-          if (s.subSteps) collect(s.subSteps, `${key}-`);
-        });
-      };
-      collect(logData.steps);
+      collectExpandableKeys(logData.steps, '', all);
       setExpandedSet(all);
     }
     setAllExpanded(!allExpanded);
@@ -406,24 +428,24 @@ function StructuredLogs({
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3 text-xs">
           <span className="text-zinc-500 font-medium">
-            {logData.steps.length} {logData.steps.length === 1 ? 'step' : 'steps'}
+            {t('runDetail.stepsCount', { count: logData.steps.length })}
           </span>
           {totalDurationMs > 0 && (
             <span className="text-zinc-400 tabular-nums">{formatDuration(totalDurationMs)}</span>
           )}
           {successCount > 0 && (
             <span className="text-emerald-500 flex items-center gap-1">
-              <CheckCircle2 className="h-3 w-3" /> {successCount} passed
+              <CheckCircle2 className="h-3 w-3" /> {successCount} {t('runDetail.passed')}
             </span>
           )}
           {failCount > 0 && (
             <span className="text-red-500 flex items-center gap-1">
-              <XCircle className="h-3 w-3" /> {failCount} failed
+              <XCircle className="h-3 w-3" /> {failCount} {t('runDetail.failed')}
             </span>
           )}
           {skipCount > 0 && (
             <span className="text-zinc-400 flex items-center gap-1">
-              <SkipForward className="h-3 w-3" /> {skipCount} skipped
+              <SkipForward className="h-3 w-3" /> {skipCount} {t('runDetail.skipped')}
             </span>
           )}
         </div>
@@ -435,12 +457,12 @@ function StructuredLogs({
             {allExpanded ? (
               <>
                 <ChevronsDownUp className="h-3 w-3" />
-                Collapse all
+                {t('runDetail.collapseAll')}
               </>
             ) : (
               <>
                 <ChevronsUpDown className="h-3 w-3" />
-                Expand all
+                {t('runDetail.expandAll')}
               </>
             )}
           </button>
@@ -451,12 +473,12 @@ function StructuredLogs({
             {copied ? (
               <>
                 <Check className="h-3 w-3 text-emerald-500" />
-                Copied
+                {t('apiKey.copied')}
               </>
             ) : (
               <>
                 <Copy className="h-3 w-3" />
-                Copy JSON
+                {t('runDetail.copyJson')}
               </>
             )}
           </button>
@@ -467,10 +489,11 @@ function StructuredLogs({
       <div>
         {logData.steps.map((step, i) => (
           <StepTimeline
-            key={`${step.name}-${i}`}
+            key={buildStepKey('', step.name, i)}
             step={step}
             index={i}
             total={logData.steps.length}
+            prefix=""
             expandedSet={expandedSet}
             onToggle={toggleStep}
           />
@@ -481,30 +504,38 @@ function StructuredLogs({
 }
 
 export default function RunDetailPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const router = useRouter();
   const { id } = router.query;
   const [run, setRun] = useState<RunDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // 轮询失败信息：非 null 时停止轮询并展示错误横幅（带重试）
+  const [pollError, setPollError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [copiedSha, setCopiedSha] = useState(false);
+
+  // 时间显示跟随界面语言：zh 系用 zh-CN，其余用 en-US
+  const dateLocale = i18n.language?.startsWith('zh') ? 'zh-CN' : 'en-US';
 
   const fetchRun = useCallback(async () => {
     if (!id) return;
     setLoading(true);
     setError(null);
+    setPollError(null);
     try {
-      const res = await fetch(`/api/ci/runs?id=${id}`);
-      if (res.ok) {
-        setRun(await res.json());
-      } else if (res.status === 404) {
-        setError(t('repoDetail.notFound'));
-      } else {
-        setError(t('home.checkStatusFailed'));
+      const data = await apiJson<RunDetail>(`/api/ci/runs?id=${id}`);
+      setRun(data);
+    } catch (err) {
+      if (isUnauthorized(err)) {
+        redirectToHome();
+        return;
       }
-    } catch {
-      setError(t('home.checkStatusFailed'));
+      setError(
+        err instanceof ApiError && err.status === 404
+          ? t('repoDetail.notFound')
+          : apiErrorMessage(err, t('repoDetail.loadFailed'))
+      );
     } finally {
       setLoading(false);
     }
@@ -514,25 +545,56 @@ export default function RunDetailPage() {
     fetchRun();
   }, [fetchRun]);
 
+  // 轮询单次刷新：静默进行，不置 loading、不清空现有数据
+  const pollRun = useCallback(async () => {
+    if (!id) return;
+    try {
+      const data = await apiJson<RunDetail>(`/api/ci/runs?id=${id}`);
+      setPollError(null);
+      setRun(data);
+    } catch (err) {
+      if (isUnauthorized(err)) {
+        redirectToHome();
+        return;
+      }
+      setPollError(
+        err instanceof ApiError && err.status === 404
+          ? t('repoDetail.notFound')
+          : apiErrorMessage(err, t('repoDetail.loadFailed'))
+      );
+    }
+  }, [id, t]);
+
+  // 运行中/等待中的 run 每 10 秒静默轮询；变为终态、轮询失败或组件卸载时清理
+  useEffect(() => {
+    if (!run || pollError) return;
+    if (run.status !== 'running' && run.status !== 'pending') return;
+    const timer = setInterval(() => {
+      pollRun();
+    }, 10000);
+    return () => clearInterval(timer);
+  }, [run, pollError, pollRun]);
+
   /** 解析结构化日志 */
   const logData = run?.logs ? parseStructuredLogs(run.logs) : null;
 
   const copyLogs = async () => {
     if (!run?.logs) return;
-    try {
-      await navigator.clipboard.writeText(run.logs);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // 剪贴板 API 不可用时静默
-    }
+    const ok = await copyTextToClipboard(run.logs);
+    if (!ok) return; // 剪贴板不可用时静默失败
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   if (loading) {
     return (
       <DashboardLayout activePage="logs">
-        <div className="flex items-center justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-zinc-200 border-t-blue-500" />
+        <div className="space-y-6">
+          <Skeleton className="h-28 w-full rounded-xl" />
+          <Skeleton className="h-64 w-full rounded-xl" />
+          <Skeleton className="h-40 w-full rounded-xl" />
+          <Skeleton className="h-56 w-full rounded-xl" />
+          <Skeleton className="h-64 w-full rounded-xl" />
         </div>
       </DashboardLayout>
     );
@@ -550,23 +612,21 @@ export default function RunDetailPage() {
         >
           {t('repoDetail.back')}
         </Button>
-        <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          <AlertTriangle className="h-4 w-4 shrink-0" />
-          {error || t('repoDetail.notFound') || 'Run not found'}
-        </div>
+        <ErrorAlert
+          message={error || t('repoDetail.notFound')}
+          onRetry={() => void fetchRun()}
+          retryLabel={t('common.retry')}
+        />
       </DashboardLayout>
     );
   }
 
   const copySha = async () => {
     if (!run?.commitSha) return;
-    try {
-      await navigator.clipboard.writeText(run.commitSha);
-      setCopiedSha(true);
-      setTimeout(() => setCopiedSha(false), 2000);
-    } catch {
-      // 剪贴板 API 不可用时静默
-    }
+    const ok = await copyTextToClipboard(run.commitSha);
+    if (!ok) return; // 剪贴板不可用时静默失败
+    setCopiedSha(true);
+    setTimeout(() => setCopiedSha(false), 2000);
   };
 
   const cfg = STATUS_CONFIG[run.status] || STATUS_CONFIG.pending;
@@ -585,6 +645,16 @@ export default function RunDetailPage() {
         {t('repoDetail.back')}
       </Button>
 
+      {/* 轮询失败提示（带重试，重试成功后自动恢复轮询） */}
+      {pollError && (
+        <ErrorAlert
+          message={pollError}
+          onRetry={() => void fetchRun()}
+          retryLabel={t('common.retry')}
+          className="mb-6"
+        />
+      )}
+
       {/* 运行信息卡片 */}
       <ProCard className="bg-white border-zinc-200 mb-6" padding="p-6">
         <div className="flex items-start gap-4">
@@ -601,7 +671,7 @@ export default function RunDetailPage() {
               <span
                 className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${cfg.bg} ${cfg.color}`}
               >
-                {cfg.label}
+                {t(cfg.labelKey)}
               </span>
               {run.conclusion && <span className="text-xs text-zinc-500">→ {run.conclusion}</span>}
             </div>
@@ -687,18 +757,18 @@ export default function RunDetailPage() {
           <div>
             <span className="text-zinc-400">{t('repoDetail.startedAt')}</span>
             <p className="text-zinc-900 font-medium">
-              {run.startedAt ? formatTime(run.startedAt) : '-'}
+              {run.startedAt ? formatTime(run.startedAt, dateLocale) : '-'}
             </p>
           </div>
           <div>
             <span className="text-zinc-400">{t('repoDetail.completedAt')}</span>
             <p className="text-zinc-900 font-medium">
-              {run.completedAt ? formatTime(run.completedAt) : '-'}
+              {run.completedAt ? formatTime(run.completedAt, dateLocale) : '-'}
             </p>
           </div>
           <div>
             <span className="text-zinc-400">{t('repoDetail.createdAt')}</span>
-            <p className="text-zinc-900 font-medium">{formatTime(run.createdAt)}</p>
+            <p className="text-zinc-900 font-medium">{formatTime(run.createdAt, dateLocale)}</p>
           </div>
           {run.prNumber && (
             <div>

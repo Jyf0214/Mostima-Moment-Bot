@@ -5,7 +5,11 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ProCard } from '@/components/ui/ProCard';
-import { StatusCard } from '@/components/ui/StatusCard';
+import { ErrorAlert } from '@/components/ui/ErrorAlert';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { apiErrorMessage, apiJson, isUnauthorized, redirectToHome } from '@/lib/api-client';
+import { copyTextToClipboard } from '@/lib/clipboard';
+import { timeAgo } from '@/lib/time';
 import { RefreshCw, Plus, Trash2, Key, Clock, CheckCircle2, Copy, X } from 'lucide-react';
 
 interface ApiKeyItem {
@@ -23,6 +27,8 @@ interface CreatedKey {
   createdAt: string;
 }
 
+/** 登录态失效（401）统一跳回首页重新登录 */
+
 export default function ApiKeyPage() {
   const { t } = useTranslation();
   const [keys, setKeys] = useState<ApiKeyItem[]>([]);
@@ -32,19 +38,21 @@ export default function ApiKeyPage() {
   const [createdKey, setCreatedKey] = useState<CreatedKey | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  // 复制失败提示（红色小字，2 秒后还原）
+  const [copyFailed, setCopyFailed] = useState(false);
 
   const fetchKeys = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/auth/api-keys');
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
-      }
-      const data = await res.json();
+      const data = await apiJson<{ keys?: ApiKeyItem[] }>('/api/auth/api-keys');
       setKeys(data.keys || []);
-    } catch {
-      setError(t('apiKey.failedToLoad'));
+    } catch (err) {
+      if (isUnauthorized(err)) {
+        redirectToHome();
+        return;
+      }
+      setError(apiErrorMessage(err, t('apiKey.failedToLoad')));
     } finally {
       setLoading(false);
     }
@@ -55,25 +63,26 @@ export default function ApiKeyPage() {
   }, [fetchKeys]);
 
   const handleCreate = async () => {
+    // 输入框 Enter 直接触发本函数，绕过了按钮的防连点，必须自行拦截
+    if (creating) return;
     if (!newKeyName.trim()) return;
     setCreating(true);
     setError(null);
     try {
-      const res = await fetch('/api/auth/api-keys', {
+      const data = await apiJson<CreatedKey>('/api/auth/api-keys', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newKeyName.trim() }),
       });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || `HTTP ${res.status}`);
-      }
-      const data = await res.json();
       setCreatedKey(data);
       setNewKeyName('');
       await fetchKeys();
-    } catch {
-      setError(t('apiKey.failedToCreate'));
+    } catch (err) {
+      if (isUnauthorized(err)) {
+        redirectToHome();
+        return;
+      }
+      setError(apiErrorMessage(err, t('apiKey.failedToCreate')));
     } finally {
       setCreating(false);
     }
@@ -85,33 +94,28 @@ export default function ApiKeyPage() {
       return;
     }
     try {
-      const res = await fetch(`/api/auth/api-keys?id=${id}`, {
-        method: 'DELETE',
-      });
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
-      }
+      await apiJson(`/api/auth/api-keys?id=${id}`, { method: 'DELETE' });
       await fetchKeys();
-    } catch {
-      setError(t('apiKey.failedToDelete'));
+    } catch (err) {
+      if (isUnauthorized(err)) {
+        redirectToHome();
+        return;
+      }
+      setError(apiErrorMessage(err, t('apiKey.failedToDelete')));
     }
   };
 
-  const handleCopyKey = () => {
-    if (createdKey?.key) {
-      navigator.clipboard.writeText(createdKey.key);
+  const handleCopyKey = async () => {
+    if (!createdKey?.key) return;
+    const ok = await copyTextToClipboard(createdKey.key);
+    if (ok) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    } else {
+      // 复制失败必须给出可见反馈，不能让用户误以为已复制
+      setCopyFailed(true);
+      setTimeout(() => setCopyFailed(false), 2000);
     }
-  };
-
-  const timeAgo = (dateStr: string) => {
-    // eslint-disable-next-line react-hooks/purity -- Date.now() is acceptable for display-only time formatting
-    const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-    if (diff < 60) return t('common.secondsAgo', { count: String(diff) });
-    if (diff < 3600) return t('common.minutesAgo', { count: String(Math.floor(diff / 60)) });
-    if (diff < 86400) return t('common.hoursAgo', { count: String(Math.floor(diff / 3600)) });
-    return t('common.daysAgo', { count: String(Math.floor(diff / 86400)) });
   };
 
   return (
@@ -140,14 +144,12 @@ export default function ApiKeyPage() {
 
       {/* 错误提示 */}
       {error && (
-        <ProCard className="bg-red-50 border-red-200">
-          <StatusCard
-            icon={<X className="h-4 w-4" />}
-            title={t('dashboard.error')}
-            status={error}
-            statusType="error"
-          />
-        </ProCard>
+        <ErrorAlert
+          title={t('dashboard.error')}
+          message={error}
+          onRetry={fetchKeys}
+          retryLabel={t('common.retry')}
+        />
       )}
 
       {/* 新建密钥成功提示 - 显示完整密钥内容 */}
@@ -181,6 +183,9 @@ export default function ApiKeyPage() {
                     {copied ? t('apiKey.copied') : t('apiKey.copy')}
                   </Button>
                 </div>
+                {copyFailed && (
+                  <p className="mt-1 text-xs text-red-600">{t('common.copyFailed')}</p>
+                )}
               </div>
             </div>
             <button
@@ -220,9 +225,12 @@ export default function ApiKeyPage() {
 
       {/* 密钥列表 */}
       <ProCard title={`${t('apiKey.existingKeys')} (${keys.length})`}>
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-200 border-t-blue-500" />
+        {loading && keys.length === 0 ? (
+          /* 初载骨架屏；有数据时刷新保持旧列表可见 */
+          <div className="space-y-2">
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} className="h-[72px] w-full rounded-lg" />
+            ))}
           </div>
         ) : keys.length === 0 ? (
           <div className="text-center py-8">
@@ -246,12 +254,12 @@ export default function ApiKeyPage() {
                   </div>
                   <div className="flex items-center gap-3 mt-1">
                     <span className="text-xs text-zinc-400">
-                      {t('apiKey.createdAt')} {timeAgo(key.createdAt)}
+                      {t('apiKey.createdAt')} {timeAgo(key.createdAt, t)}
                     </span>
                     {key.lastUsedAt && (
                       <span className="text-xs text-zinc-400 flex items-center gap-1">
                         <Clock className="h-3 w-3" />
-                        {t('apiKey.lastUsed')} {timeAgo(key.lastUsedAt)}
+                        {t('apiKey.lastUsed')} {timeAgo(key.lastUsedAt, t)}
                       </span>
                     )}
                   </div>

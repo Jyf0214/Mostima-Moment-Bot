@@ -4,10 +4,16 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ProCard } from '@/components/ui/ProCard';
 import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
+import { Textarea } from '@/components/ui/Textarea';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { ErrorAlert } from '@/components/ui/ErrorAlert';
+import { apiErrorMessage, apiJson, isUnauthorized, redirectToHome } from '@/lib/api-client';
 import {
   Plug,
   CheckCircle2,
   AlertTriangle,
+  HelpCircle,
   Lock,
   Settings,
   Paintbrush,
@@ -15,6 +21,30 @@ import {
   RefreshCw,
   Terminal,
 } from 'lucide-react';
+
+/** bot 信息（/api/bot/info 返回结构） */
+interface BotInfo {
+  slug: string;
+  appId: string;
+  mention: string;
+  fixCommand: string;
+  installUrl: string;
+}
+
+/** site-config 两个配置项的展示名，部分失败时用于提示是哪一项写入失败 */
+const HERO_CONFIG_ITEMS = ['gradient', 'image_url'] as const;
+
+/** 登录态失效（401）统一跳回首页重新登录 */
+
+/** 成功提示横幅：与 ErrorAlert 对应的绿色样式 */
+function SuccessBanner({ message }: { message: string }) {
+  return (
+    <div className="mt-3 flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+      <CheckCircle2 className="h-4 w-4 shrink-0" />
+      {message}
+    </div>
+  );
+}
 
 export default function SettingsPage() {
   const { t } = useTranslation();
@@ -25,31 +55,29 @@ export default function SettingsPage() {
   const [uploading, setUploading] = useState(false);
   const [uploadMsg, setUploadMsg] = useState<string | null>(null);
   const [uploadMsgType, setUploadMsgType] = useState<'success' | 'error'>('success');
-  const [botInfo, setBotInfo] = useState<{
-    slug: string;
-    appId: string;
-    mention: string;
-    fixCommand: string;
-    installUrl: string;
-  } | null>(null);
+  const [botInfo, setBotInfo] = useState<BotInfo | null>(null);
 
   const [heroGradient, setHeroGradient] = useState('from-blue-50 via-transparent to-purple-50');
   const [heroImageUrl, setHeroImageUrl] = useState('');
   const [heroSaving, setHeroSaving] = useState(false);
   const [heroMsg, setHeroMsg] = useState<string | null>(null);
+  const [heroMsgType, setHeroMsgType] = useState<'success' | 'error'>('success');
 
   const [qwenSettings, setQwenSettings] = useState('');
+  // 用户是否改动过 textarea 内容，防止误覆盖服务端已存配置
+  const [qwenDirty, setQwenDirty] = useState(false);
   const [qwenSaving, setQwenSaving] = useState(false);
   const [qwenMsg, setQwenMsg] = useState<string | null>(null);
   const [qwenMsgType, setQwenMsgType] = useState<'success' | 'error'>('success');
-  const [qwenConfigured, setQwenConfigured] = useState(false);
+  // null 表示尚未查询到状态，避免先闪「未配置」
+  const [qwenConfigured, setQwenConfigured] = useState<boolean | null>(null);
 
   // qwen CLI 安装状态
   const [qwenCliInstalled, setQwenCliInstalled] = useState<boolean | null>(null);
   const [qwenCliVersion, setQwenCliVersion] = useState<string | null>(null);
 
-  // 数据库运行模式状态
-  const [dbModeEnabled, setDbModeEnabled] = useState(false);
+  // 数据库运行模式状态（null 表示未知）
+  const [dbModeEnabled, setDbModeEnabled] = useState<boolean | null>(null);
   const [dbModeEnvCount, setDbModeEnvCount] = useState(0);
   const [dbModeLoading, setDbModeLoading] = useState(false);
   const [dbModeMsg, setDbModeMsg] = useState<string | null>(null);
@@ -66,71 +94,77 @@ export default function SettingsPage() {
 
   const checkPrivateKey = async () => {
     try {
-      const res = await fetch('/api/github/private-key');
-      const data = await res.json();
+      const data = await apiJson<{ configured: boolean; source: string }>(
+        '/api/github/private-key'
+      );
       setPrivateKeyStatus(data);
-    } catch {
-      setPrivateKeyStatus({ configured: false, source: 'unknown' });
+    } catch (err) {
+      if (isUnauthorized(err)) {
+        redirectToHome();
+        return;
+      }
+      // 网络错误不能伪装成「未配置」，标记来源为 error 以显示中性的「状态未知」
+      setPrivateKeyStatus({ configured: false, source: 'error' });
     }
   };
 
   const fetchBotInfo = async () => {
     try {
-      const res = await fetch('/api/bot/info');
-      if (res.ok) setBotInfo(await res.json());
-    } catch {
-      /* silent */
+      const data = await apiJson<BotInfo>('/api/bot/info');
+      setBotInfo(data);
+    } catch (err) {
+      if (isUnauthorized(err)) redirectToHome();
+      /* 静默失败，保持占位骨架 */
     }
   };
 
   const fetchHeroConfig = async () => {
     try {
-      const res = await fetch('/api/site-config');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.hero_gradient) setHeroGradient(data.hero_gradient);
-        if (data.hero_image_url !== undefined) setHeroImageUrl(data.hero_image_url);
-      }
-    } catch {
-      /* default */
+      const data = await apiJson<{ hero_gradient?: string; hero_image_url?: string }>(
+        '/api/site-config'
+      );
+      if (data.hero_gradient) setHeroGradient(data.hero_gradient);
+      if (data.hero_image_url !== undefined) setHeroImageUrl(data.hero_image_url);
+    } catch (err) {
+      if (isUnauthorized(err)) redirectToHome();
+      /* 失败时保留默认值 */
     }
   };
 
   const fetchQwenSettings = async () => {
     try {
-      const res = await fetch('/api/qwen-settings');
-      if (res.ok) {
-        const data = await res.json();
-        setQwenConfigured(data.configured);
-      }
-    } catch {
-      /* default */
+      const data = await apiJson<{ configured: boolean }>('/api/qwen-settings');
+      setQwenConfigured(data.configured);
+    } catch (err) {
+      if (isUnauthorized(err)) redirectToHome();
+      /* 失败时保持未知态 */
     }
   };
 
   const fetchQwenCliStatus = async () => {
     try {
-      const res = await fetch('/api/qwen-status');
-      if (res.ok) {
-        const data = await res.json();
-        setQwenCliInstalled(data.installed);
-        setQwenCliVersion(data.version);
+      const data = await apiJson<{ installed: boolean; version?: string | null }>(
+        '/api/qwen-status'
+      );
+      setQwenCliInstalled(data.installed);
+      setQwenCliVersion(data.version ?? null);
+    } catch (err) {
+      if (isUnauthorized(err)) {
+        redirectToHome();
+        return;
       }
-    } catch {
       setQwenCliInstalled(false);
     }
   };
 
   const fetchDbModeStatus = async () => {
     try {
-      const res = await fetch('/api/env-db-mode');
-      if (res.ok) {
-        const data = await res.json();
-        setDbModeEnabled(data.enabled);
-        setDbModeEnvCount(data.envCount);
-      }
-    } catch {
-      /* default */
+      const data = await apiJson<{ enabled: boolean; envCount: number }>('/api/env-db-mode');
+      setDbModeEnabled(data.enabled);
+      setDbModeEnvCount(data.envCount);
+    } catch (err) {
+      if (isUnauthorized(err)) redirectToHome();
+      /* 失败时保持未知态，不误报「未启用」 */
     }
   };
 
@@ -138,21 +172,18 @@ export default function SettingsPage() {
     setDbModeLoading(true);
     setDbModeMsg(null);
     try {
-      const res = await fetch('/api/env-db-mode', { method: 'POST' });
-      if (res.ok) {
-        const data = await res.json();
-        setDbModeMsgType('success');
-        setDbModeMsg(t('settings.dbModeEnabled', { count: data.envCount }));
-        setDbModeEnabled(true);
-        setDbModeEnvCount(data.envCount);
-      } else {
-        const err = await res.json();
-        setDbModeMsgType('error');
-        setDbModeMsg(err.error || t('settings.dbModeEnableFailed'));
+      const data = await apiJson<{ envCount: number }>('/api/env-db-mode', { method: 'POST' });
+      setDbModeMsgType('success');
+      setDbModeMsg(t('settings.dbModeEnabled', { count: data.envCount }));
+      setDbModeEnabled(true);
+      setDbModeEnvCount(data.envCount);
+    } catch (err) {
+      if (isUnauthorized(err)) {
+        redirectToHome();
+        return;
       }
-    } catch {
       setDbModeMsgType('error');
-      setDbModeMsg(t('settings.dbModeEnableFailed'));
+      setDbModeMsg(apiErrorMessage(err, t('settings.dbModeEnableFailed')));
     } finally {
       setDbModeLoading(false);
     }
@@ -162,20 +193,18 @@ export default function SettingsPage() {
     setDbModeLoading(true);
     setDbModeMsg(null);
     try {
-      const res = await fetch('/api/env-db-mode', { method: 'DELETE' });
-      if (res.ok) {
-        setDbModeMsgType('success');
-        setDbModeMsg(t('settings.dbModeDisabled'));
-        setDbModeEnabled(false);
-        setDbModeEnvCount(0);
-      } else {
-        const err = await res.json();
-        setDbModeMsgType('error');
-        setDbModeMsg(err.error || t('settings.dbModeDisableFailed'));
+      await apiJson('/api/env-db-mode', { method: 'DELETE' });
+      setDbModeMsgType('success');
+      setDbModeMsg(t('settings.dbModeDisabled'));
+      setDbModeEnabled(false);
+      setDbModeEnvCount(0);
+    } catch (err) {
+      if (isUnauthorized(err)) {
+        redirectToHome();
+        return;
       }
-    } catch {
       setDbModeMsgType('error');
-      setDbModeMsg(t('settings.dbModeDisableFailed'));
+      setDbModeMsg(apiErrorMessage(err, t('settings.dbModeDisableFailed')));
     } finally {
       setDbModeLoading(false);
     }
@@ -195,59 +224,67 @@ export default function SettingsPage() {
     setHeroMsg(null);
     try {
       // 使用 Promise.allSettled 并行保存，确保两个配置都尝试写入
-      // fetch() 在 HTTP 4xx/5xx 时不会 reject，必须手动检查 r.ok
       const results = await Promise.allSettled([
-        fetch('/api/site-config', {
+        apiJson('/api/site-config', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ key: 'hero_gradient', value: heroGradient }),
-        }).then((r) => {
-          if (!r.ok) throw new Error(`HTTP ${r.status}`);
-          return r;
         }),
-        fetch('/api/site-config', {
+        apiJson('/api/site-config', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ key: 'hero_image_url', value: heroImageUrl }),
-        }).then((r) => {
-          if (!r.ok) throw new Error(`HTTP ${r.status}`);
-          return r;
         }),
       ]);
-      const failures = results.filter((r) => r.status === 'rejected');
-      if (failures.length > 0) {
-        setHeroMsg(t('settings.configSaveFailed'));
+      let unauthorized = false;
+      const failedItems: string[] = [];
+      results.forEach((r, idx) => {
+        if (r.status !== 'rejected') return;
+        if (isUnauthorized(r.reason)) unauthorized = true;
+        failedItems.push(HERO_CONFIG_ITEMS[idx]);
+      });
+      if (unauthorized) {
+        redirectToHome();
+        return;
+      }
+      if (failedItems.length > 0) {
+        // 部分失败时带上具体是哪一项失败，便于排查
+        setHeroMsgType('error');
+        setHeroMsg(`${t('settings.configSaveFailed')}: ${failedItems.join(', ')}`);
       } else {
+        setHeroMsgType('success');
         setHeroMsg(t('settings.configSaved'));
       }
-    } catch {
-      setHeroMsg(t('settings.configSaveFailed'));
     } finally {
       setHeroSaving(false);
     }
   };
 
-  const saveQwenSettings = async () => {
+  /**
+   * 保存 qwen 配置。
+   * 显式接受参数而非直接读 state：「清除配置」传空串时，
+   * 若闭包捕获旧 state 会把旧配置原样 PUT 回服务端却提示成功。
+   */
+  const saveQwenSettings = async (value: string = qwenSettings) => {
     setQwenSaving(true);
     setQwenMsg(null);
     try {
-      const res = await fetch('/api/qwen-settings', {
+      await apiJson('/api/qwen-settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ settings: qwenSettings }),
+        body: JSON.stringify({ settings: value }),
       });
-      if (res.ok) {
-        setQwenMsgType('success');
-        setQwenMsg(t('settings.qwenSettingsSaved'));
-        setQwenConfigured(!!qwenSettings.trim());
-      } else {
-        const err = await res.json();
-        setQwenMsgType('error');
-        setQwenMsg(err.error || t('settings.qwenSettingsSaveFailed'));
+      setQwenMsgType('success');
+      setQwenMsg(t('settings.qwenSettingsSaved'));
+      setQwenConfigured(!!value.trim());
+      setQwenDirty(false);
+    } catch (err) {
+      if (isUnauthorized(err)) {
+        redirectToHome();
+        return;
       }
-    } catch {
       setQwenMsgType('error');
-      setQwenMsg(t('settings.qwenSettingsSaveFailed'));
+      setQwenMsg(apiErrorMessage(err, t('settings.qwenSettingsSaveFailed')));
     } finally {
       setQwenSaving(false);
     }
@@ -255,36 +292,37 @@ export default function SettingsPage() {
 
   const handleUploadPrivateKey = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    // 无论成功失败都复位 input，否则再次选择同一个文件不会触发 onChange
+    const input = e.target;
     if (!file) return;
     setUploading(true);
     setUploadMsg(null);
     try {
       const content = await file.text();
-      const res = await fetch('/api/github/private-key', {
+      await apiJson('/api/github/private-key', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ privateKey: content }),
       });
-      if (res.ok) {
-        setUploadMsgType('success');
-        setUploadMsg(t('setup.privateKeySaved'));
-        checkPrivateKey();
-      } else {
-        const err = await res.json();
-        setUploadMsgType('error');
-        setUploadMsg(err.error || t('setup.privateKeySaveFailed'));
+      setUploadMsgType('success');
+      setUploadMsg(t('setup.privateKeySaved'));
+      checkPrivateKey();
+    } catch (err) {
+      if (isUnauthorized(err)) {
+        redirectToHome();
+        return;
       }
-    } catch {
       setUploadMsgType('error');
-      setUploadMsg(t('setup.privateKeySaveFailed'));
+      setUploadMsg(apiErrorMessage(err, t('setup.privateKeySaveFailed')));
     } finally {
       setUploading(false);
+      input.value = '';
     }
   };
 
   return (
     <div className="space-y-4">
-      {botInfo && botInfo.slug && (
+      {botInfo?.slug ? (
         <ProCard className="bg-white border-zinc-200" padding="p-5">
           <div className="flex items-center gap-3 mb-4">
             <Plug className="h-5 w-5 text-zinc-500" />
@@ -322,6 +360,9 @@ export default function SettingsPage() {
             )}
           </div>
         </ProCard>
+      ) : (
+        // bot 信息加载中的等高占位骨架，避免整卡突然弹出
+        <Skeleton className="h-40 rounded-xl border border-zinc-200" />
       )}
 
       <ProCard className="bg-white border-zinc-200" padding="p-5">
@@ -329,19 +370,33 @@ export default function SettingsPage() {
           <Lock className="h-5 w-5 text-zinc-500" />
           <h3 className="text-zinc-900 font-medium">{t('setup.privateKey')}</h3>
         </div>
-        {privateKeyStatus && (
+        {privateKeyStatus === null ? (
+          <div className="mb-4">
+            {/* 状态检查中先占位，避免误闪「未配置」 */}
+            <Skeleton className="h-4 w-28" />
+          </div>
+        ) : (
           <div className="mb-4">
             <div className="flex items-center gap-2">
               {privateKeyStatus.configured ? (
-                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                <>
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                  <span className="text-sm text-zinc-700">{t('setup.privateKeyConfigured')}</span>
+                </>
+              ) : privateKeyStatus.source === 'error' ? (
+                <>
+                  {/* 网络错误等异常显示中性灰色的「状态未知」，不伪装成未配置 */}
+                  <HelpCircle className="h-4 w-4 text-zinc-400" />
+                  <span className="text-sm text-zinc-500">{t('settings.statusUnknown')}</span>
+                </>
               ) : (
-                <AlertTriangle className="h-4 w-4 text-amber-500" />
+                <>
+                  <AlertTriangle className="h-4 w-4 text-amber-500" />
+                  <span className="text-sm text-zinc-700">
+                    {t('setup.privateKeyNotConfigured')}
+                  </span>
+                </>
               )}
-              <span className="text-sm text-zinc-700">
-                {privateKeyStatus.configured
-                  ? t('setup.privateKeyConfigured')
-                  : t('setup.privateKeyNotConfigured')}
-              </span>
             </div>
           </div>
         )}
@@ -355,18 +410,12 @@ export default function SettingsPage() {
           />
           {uploading ? t('setup.uploading') : t('setup.uploadPrivateKey')}
         </label>
-        {uploadMsg && (
-          <div
-            className={`mt-3 flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${uploadMsgType === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}
-          >
-            {uploadMsgType === 'success' ? (
-              <CheckCircle2 className="h-4 w-4 shrink-0" />
-            ) : (
-              <AlertTriangle className="h-4 w-4 shrink-0" />
-            )}
-            {uploadMsg}
-          </div>
-        )}
+        {uploadMsg &&
+          (uploadMsgType === 'success' ? (
+            <SuccessBanner message={uploadMsg} />
+          ) : (
+            <ErrorAlert message={uploadMsg} className="mt-3" />
+          ))}
       </ProCard>
 
       <ProCard className="bg-white border-zinc-200" padding="p-5">
@@ -419,14 +468,15 @@ export default function SettingsPage() {
             size="sm"
           />
         </div>
-        <button
-          onClick={saveHeroConfig}
-          disabled={heroSaving}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
-        >
-          {heroSaving ? t('settings.saving') : t('settings.saveConfig')}
-        </button>
-        {heroMsg && <p className="mt-2 text-xs text-zinc-500">{heroMsg}</p>}
+        <Button variant="default" onClick={saveHeroConfig} loading={heroSaving}>
+          {t('settings.saveConfig')}
+        </Button>
+        {heroMsg &&
+          (heroMsgType === 'success' ? (
+            <SuccessBanner message={heroMsg} />
+          ) : (
+            <ErrorAlert message={heroMsg} className="mt-3" />
+          ))}
       </ProCard>
 
       <ProCard className="bg-white border-zinc-200" padding="p-5">
@@ -437,60 +487,56 @@ export default function SettingsPage() {
         <p className="text-zinc-500 text-xs mb-4">{t('settings.dbModeDescription')}</p>
 
         <div className="flex items-center gap-2 mb-4">
-          {dbModeEnabled ? (
-            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+          {dbModeEnabled === null ? (
+            /* 状态查询中先占位，避免误闪「未启用」 */
+            <Skeleton className="h-4 w-28" />
+          ) : dbModeEnabled ? (
+            <>
+              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+              <span className="text-sm text-zinc-700">
+                {t('settings.dbModeStatusEnabled', { count: dbModeEnvCount })}
+              </span>
+            </>
           ) : (
-            <AlertTriangle className="h-4 w-4 text-amber-500" />
+            <>
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              <span className="text-sm text-zinc-700">{t('settings.dbModeStatusDisabled')}</span>
+            </>
           )}
-          <span className="text-sm text-zinc-700">
-            {dbModeEnabled
-              ? t('settings.dbModeStatusEnabled', { count: dbModeEnvCount })
-              : t('settings.dbModeStatusDisabled')}
-          </span>
         </div>
 
         <div className="flex gap-2">
           {!dbModeEnabled ? (
-            <button
+            <Button
+              variant="default"
+              icon={<Database className="h-4 w-4" />}
               onClick={enableDbMode}
-              disabled={dbModeLoading}
-              className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700 transition-colors disabled:opacity-50"
+              loading={dbModeLoading}
+              disabled={dbModeEnabled === null || dbModeLoading}
+              className="border-indigo-600 bg-indigo-600 text-white hover:border-indigo-700 hover:bg-indigo-700 hover:text-white"
             >
-              {dbModeLoading ? (
-                <RefreshCw className="h-4 w-4 animate-spin" />
-              ) : (
-                <Database className="h-4 w-4" />
-              )}
               {t('settings.dbModeEnable')}
-            </button>
+            </Button>
           ) : (
-            <button
+            <Button
+              variant="default"
+              icon={<Database className="h-4 w-4" />}
               onClick={disableDbMode}
-              disabled={dbModeLoading}
-              className="flex items-center gap-2 rounded-lg bg-zinc-100 px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-200 transition-colors disabled:opacity-50"
+              loading={dbModeLoading}
+              disabled={dbModeEnabled === null || dbModeLoading}
+              className="border-zinc-100 bg-zinc-100 text-zinc-700 hover:border-zinc-200 hover:bg-zinc-200 hover:text-zinc-700"
             >
-              {dbModeLoading ? (
-                <RefreshCw className="h-4 w-4 animate-spin" />
-              ) : (
-                <Database className="h-4 w-4" />
-              )}
               {t('settings.dbModeDisable')}
-            </button>
+            </Button>
           )}
         </div>
 
-        {dbModeMsg && (
-          <div
-            className={`mt-3 flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${dbModeMsgType === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}
-          >
-            {dbModeMsgType === 'success' ? (
-              <CheckCircle2 className="h-4 w-4 shrink-0" />
-            ) : (
-              <AlertTriangle className="h-4 w-4 shrink-0" />
-            )}
-            {dbModeMsg}
-          </div>
-        )}
+        {dbModeMsg &&
+          (dbModeMsgType === 'success' ? (
+            <SuccessBanner message={dbModeMsg} />
+          ) : (
+            <ErrorAlert message={dbModeMsg} className="mt-3" />
+          ))}
 
         <p className="mt-3 text-xs text-zinc-500">{t('settings.dbModeHint')}</p>
       </ProCard>
@@ -528,63 +574,74 @@ export default function SettingsPage() {
         </div>
         <div className="mb-3">
           <div className="flex items-center gap-2 mb-2">
-            {qwenConfigured ? (
-              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+            {qwenConfigured === null ? (
+              /* 状态查询中先占位，避免误闪「未配置」 */
+              <Skeleton className="h-4 w-28" />
+            ) : qwenConfigured ? (
+              <>
+                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                <span className="text-sm text-zinc-700">
+                  {t('settings.qwenSettingsConfigured')}
+                </span>
+              </>
             ) : (
-              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              <>
+                <AlertTriangle className="h-4 w-4 text-amber-500" />
+                <span className="text-sm text-zinc-700">
+                  {t('settings.qwenSettingsNotConfigured')}
+                </span>
+              </>
             )}
-            <span className="text-sm text-zinc-700">
-              {qwenConfigured
-                ? t('settings.qwenSettingsConfigured')
-                : t('settings.qwenSettingsNotConfigured')}
-            </span>
           </div>
         </div>
         <div className="mb-4">
           <p className="text-xs font-medium text-zinc-600 mb-2">
             {t('settings.qwenSettingsJsonLabel')}
           </p>
-          <textarea
+          <Textarea
             value={qwenSettings}
-            onChange={(e) => setQwenSettings(e.target.value)}
+            onChange={(e) => {
+              setQwenSettings(e.target.value);
+              setQwenDirty(true);
+            }}
             placeholder={t('settings.qwenSettingsPlaceholder')}
-            className="w-full h-40 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-900 font-mono resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             spellCheck={false}
+            className="h-40 bg-zinc-50 font-mono"
           />
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={saveQwenSettings}
-            disabled={qwenSaving}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
+          <Button
+            variant="default"
+            onClick={() => saveQwenSettings()}
+            loading={qwenSaving}
+            disabled={qwenSaving || !qwenDirty || (!qwenSettings.trim() && !!qwenConfigured)}
           >
-            {qwenSaving ? t('settings.saving') : t('settings.saveConfig')}
-          </button>
-          {qwenConfigured && (
-            <button
+            {t('settings.saveConfig')}
+          </Button>
+          {!!qwenConfigured && (
+            <Button
+              variant="default"
               onClick={() => {
-                setQwenSettings('');
-                saveQwenSettings();
+                // 必须显式传空串，否则闭包捕获旧 state 会把旧配置写回服务端
+                saveQwenSettings('');
               }}
+              loading={qwenSaving}
               disabled={qwenSaving}
-              className="rounded-lg bg-zinc-100 px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-200 transition-colors disabled:opacity-50"
             >
               {t('settings.clearConfig')}
-            </button>
+            </Button>
           )}
         </div>
-        {qwenMsg && (
-          <div
-            className={`mt-3 flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${qwenMsgType === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}
-          >
-            {qwenMsgType === 'success' ? (
-              <CheckCircle2 className="h-4 w-4 shrink-0" />
-            ) : (
-              <AlertTriangle className="h-4 w-4 shrink-0" />
-            )}
-            {qwenMsg}
-          </div>
+        {/* 服务端刻意不下发已存配置内容；内容为空且已配置时阻止保存以防误覆盖 */}
+        {!!qwenConfigured && !qwenSettings.trim() && (
+          <p className="mt-2 text-xs text-zinc-500">{t('settings.qwenSaveBlockedHint')}</p>
         )}
+        {qwenMsg &&
+          (qwenMsgType === 'success' ? (
+            <SuccessBanner message={qwenMsg} />
+          ) : (
+            <ErrorAlert message={qwenMsg} className="mt-3" />
+          ))}
         <p className="mt-3 text-xs text-zinc-500">{t('settings.qwenSettingsHint')}</p>
       </ProCard>
     </div>

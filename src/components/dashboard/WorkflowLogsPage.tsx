@@ -1,10 +1,16 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/router';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/Button';
 import { ProCard } from '@/components/ui/ProCard';
 import { Select } from '@/components/ui/Select';
+import { ErrorAlert } from '@/components/ui/ErrorAlert';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { apiErrorMessage, apiJson, isUnauthorized, redirectToHome } from '@/lib/api-client';
+import { timeAgo, formatDuration, shaShort } from '@/lib/time';
 import {
   RefreshCw,
   CheckCircle2,
@@ -66,47 +72,18 @@ const EVENT_LABELS: Record<string, string> = {
   security_audit: 'Audit',
 };
 
-function formatDuration(duration: number): string {
-  if (duration < 1000) return `${duration}ms`;
-  const s = Math.round(duration / 1000);
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  return `${m}m ${s % 60}s`;
-}
-
-function timeAgo(
-  dateStr: string,
-  t: (key: string, opts?: Record<string, string>) => string
-): string {
-  const now = Date.now();
-  const then = new Date(dateStr).getTime();
-  const diff = Math.floor((now - then) / 1000);
-  if (diff < 60) return t('common.secondsAgo', { count: String(diff) });
-  if (diff < 3600) return t('common.minutesAgo', { count: String(Math.floor(diff / 60)) });
-  if (diff < 86400) return t('common.hoursAgo', { count: String(Math.floor(diff / 3600)) });
-  return t('common.daysAgo', { count: String(Math.floor(diff / 86400)) });
-}
-
-function shaShort(sha: string | null): string {
-  if (!sha) return '—';
-  return sha.slice(0, 7);
-}
-
 export default function WorkflowLogsPage() {
   const { t } = useTranslation();
+  const router = useRouter();
 
-  // 从 URL 参数初始化仓库
-  const getInitialRepo = () => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const urlRepo = params.get('repo');
-      if (urlRepo) return urlRepo;
-    }
-    return null;
-  };
+  // 组件挂载形态：/dashboard/logs 独立路由，或 /dashboard?page=logs tab
+  const isRouteMode = router.pathname === '/dashboard/logs';
 
-  // 列表/详情视图切换
-  const [selectedRepo, setSelectedRepo] = useState<string | null>(getInitialRepo);
+  // 从路由派生选中仓库（tab 与独立路由均通过 ?repo= 传递）
+  const selectedRepo =
+    router.isReady && typeof router.query.repo === 'string' && router.query.repo
+      ? router.query.repo
+      : null;
 
   // === 列表视图状态 ===
   const [repos, setRepos] = useState<RepoSummary[]>([]);
@@ -125,41 +102,44 @@ export default function WorkflowLogsPage() {
   const [page, setPage] = useState(0);
   const pageSize = 30;
 
-  // 过滤后的运行记录
-  const filteredRuns = runs.filter((run) => {
-    if (filterStatus && run.status !== filterStatus) return false;
-    if (filterEvent && run.event !== filterEvent) return false;
-    return true;
-  });
+  // 竞态守卫序号：仅接受最新一次请求的响应
+  const reposRequestIdRef = useRef(0);
+  const runsRequestIdRef = useRef(0);
 
   // === 列表数据 ===
   const fetchRepos = useCallback(
     async (showRefresh = false) => {
+      const requestId = ++reposRequestIdRef.current;
       if (showRefresh) setListRefreshing(true);
       else setListLoading(true);
       setListError(null);
       try {
-        const res = await fetch('/api/ci/runs');
-        if (res.ok) {
-          const data = await res.json();
-          setRepos(data.repos || []);
-        } else {
-          setListError(t('home.checkStatusFailed'));
+        const data = await apiJson<{ repos?: RepoSummary[] }>('/api/ci/runs');
+        // 响应回来时已不是最新请求则丢弃，避免旧响应覆盖新响应
+        if (reposRequestIdRef.current !== requestId) return;
+        setRepos(data.repos || []);
+      } catch (err) {
+        if (reposRequestIdRef.current !== requestId) return;
+        if (isUnauthorized(err)) {
+          redirectToHome();
+          return;
         }
-      } catch {
-        setListError(t('home.checkStatusFailed'));
+        setListError(apiErrorMessage(err, t('workflowLogs.loadRunsFailed')));
       } finally {
-        setListLoading(false);
-        setListRefreshing(false);
+        if (reposRequestIdRef.current === requestId) {
+          setListLoading(false);
+          setListRefreshing(false);
+        }
       }
     },
     [t]
   );
 
-  // === 详情数据 ===
+  // === 详情数据（筛选与分页作为查询参数交给服务端过滤）===
   const fetchRuns = useCallback(
     async (showRefresh = false) => {
       if (!selectedRepo) return;
+      const requestId = ++runsRequestIdRef.current;
       if (showRefresh) setDetailRefreshing(true);
       else setDetailLoading(true);
       setDetailError(null);
@@ -170,45 +150,81 @@ export default function WorkflowLogsPage() {
           offset: String(page * pageSize),
           botOnly: 'true',
         });
-        const res = await fetch(`/api/ci/runs?${params}`);
-        if (res.ok) {
-          const data = await res.json();
-          setRuns(data.runs || []);
-          setTotal(data.total || 0);
-        } else {
-          setDetailError(t('home.checkStatusFailed'));
+        if (filterStatus) params.set('status', filterStatus);
+        if (filterEvent) params.set('event', filterEvent);
+        const data = await apiJson<{ runs?: CiRun[]; total?: number }>(`/api/ci/runs?${params}`);
+        // 响应回来时已不是最新请求则丢弃，避免快速切换筛选/翻页时旧响应覆盖新响应
+        if (runsRequestIdRef.current !== requestId) return;
+        setRuns(data.runs || []);
+        setTotal(data.total || 0);
+      } catch (err) {
+        if (runsRequestIdRef.current !== requestId) return;
+        if (isUnauthorized(err)) {
+          redirectToHome();
+          return;
         }
-      } catch {
-        setDetailError(t('home.checkStatusFailed'));
+        setDetailError(apiErrorMessage(err, t('workflowLogs.loadRunsFailed')));
       } finally {
-        setDetailLoading(false);
-        setDetailRefreshing(false);
+        if (runsRequestIdRef.current === requestId) {
+          setDetailLoading(false);
+          setDetailRefreshing(false);
+        }
       }
     },
-    [selectedRepo, page, t]
+    [selectedRepo, page, filterStatus, filterEvent, t]
   );
 
+  // 未选中仓库时加载仓库列表（等待路由就绪，避免直链 ?repo= 初载时多拉一次列表）
   useEffect(() => {
+    if (!router.isReady) return;
     if (!selectedRepo) fetchRepos();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchRepos 变化不应触发重新获取
-  }, [selectedRepo]);
+  }, [router.isReady, selectedRepo]);
 
+  // 选中仓库时加载运行记录（筛选与翻页变化也会重新拉取）
   useEffect(() => {
     if (selectedRepo) fetchRuns();
-  }, [selectedRepo, filterStatus, filterEvent, page, fetchRuns]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchRuns 变化不应触发重新获取
+  }, [selectedRepo, filterStatus, filterEvent, page]);
 
-  const handleViewDetail = (repoFullName: string) => {
-    setSelectedRepo(repoFullName);
+  // repo 变化时清空详情数据，避免显示上一个仓库的遗留内容（如 header 上的旧 total）
+  useEffect(() => {
+    setRuns([]);
+    setTotal(0);
     setPage(0);
     setFilterStatus('');
     setFilterEvent('');
-    window.history.replaceState({}, '', `/dashboard/logs?repo=${encodeURIComponent(repoFullName)}`);
+  }, [selectedRepo]);
+
+  // 进入某仓库的运行记录列表：push 产生历史条目，浏览器后退可返回
+  const handleViewDetail = (repoFullName: string) => {
+    if (isRouteMode) {
+      router.push({ pathname: '/dashboard/logs', query: { repo: repoFullName } }, undefined, {
+        shallow: true,
+      });
+    } else {
+      router.push(
+        { pathname: '/dashboard', query: { page: 'logs', repo: repoFullName } },
+        undefined,
+        { shallow: true }
+      );
+    }
   };
 
+  // 返回列表：显式 push 不带 repo 的地址（不用 router.back()，
+  // 避免用户经直链 ?repo= 进入时后退会退出站点）；浏览器后退由 query 同步自然处理
   const handleBack = () => {
-    setSelectedRepo(null);
-    window.history.replaceState({}, '', '/dashboard/logs');
+    if (isRouteMode) {
+      router.push('/dashboard/logs', undefined, { shallow: true });
+    } else {
+      router.push({ pathname: '/dashboard', query: { page: 'logs' } }, undefined, {
+        shallow: true,
+      });
+    }
   };
+
+  // 是否处于筛选状态（决定空状态文案）
+  const hasFilters = filterStatus !== '' || filterEvent !== '';
 
   // === 详情视图 ===
   if (selectedRepo) {
@@ -281,52 +297,43 @@ export default function WorkflowLogsPage() {
           </Select>
         </div>
 
-        {/* 加载中 */}
+        {/* 初载骨架屏 */}
         {detailLoading && (
-          <div className="flex items-center justify-center py-20">
-            <div className="h-8 w-8 animate-spin rounded-full border-3 border-zinc-200 border-t-blue-500" />
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-[72px] w-full rounded-xl" />
+            ))}
           </div>
         )}
 
         {/* 加载错误 */}
         {!detailLoading && detailError && (
-          <ProCard className="bg-red-50 border-red-200" padding="p-6">
-            <div className="text-center">
-              <XCircle className="h-8 w-8 text-red-400 mx-auto mb-2" />
-              <p className="text-red-600 text-sm">{detailError}</p>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => fetchRuns(true)}
-                className="mt-2 text-red-500"
-              >
-                {t('dashboard.refresh')}
-              </Button>
-            </div>
-          </ProCard>
+          <ErrorAlert
+            message={detailError || t('workflowLogs.loadRunsFailed')}
+            onRetry={() => fetchRuns(true)}
+            retryLabel={t('common.retry')}
+          />
         )}
 
-        {/* 空状态 */}
-        {!detailLoading && !detailError && filteredRuns.length === 0 && (
-          <ProCard className="bg-white border-zinc-200 border-dashed" padding="p-8">
-            <div className="text-center">
-              <Clock className="h-10 w-10 text-zinc-300 mx-auto mb-3" />
-              <p className="text-zinc-500 text-sm">{t('repoDetail.noRuns')}</p>
-            </div>
-          </ProCard>
+        {/* 空状态：区分「完全无记录」与「有筛选条件但结果为空」 */}
+        {!detailLoading && !detailError && runs.length === 0 && (
+          <EmptyState
+            icon={<Clock className="h-10 w-10 text-zinc-300" />}
+            title={hasFilters ? t('workflowLogs.filterEmpty') : t('repoDetail.noRuns')}
+          />
         )}
 
         {/* 运行列表 */}
-        {!detailLoading && filteredRuns.length > 0 && (
+        {!detailLoading && runs.length > 0 && (
           <div className="space-y-2">
-            {filteredRuns.map((run) => {
+            {runs.map((run) => {
               const cfg = STATUS_CONFIG[run.status] || STATUS_CONFIG.pending;
               const StatusIcon = cfg.icon;
               const eventLabel = EVENT_LABELS[run.event] || run.event;
               return (
                 <button
                   key={run.id}
-                  onClick={() => (window.location.href = `/dashboard/logs/run/${run.id}`)}
+                  onClick={() => router.push(`/dashboard/logs/run/${run.id}`)}
                   className="w-full text-left"
                 >
                   <ProCard
@@ -442,38 +449,33 @@ export default function WorkflowLogsPage() {
         </Button>
       </div>
 
-      {listLoading && (
-        <div className="flex items-center justify-center py-20">
-          <div className="h-8 w-8 animate-spin rounded-full border-3 border-zinc-200 border-t-blue-500" />
+      {/* 初载骨架屏 */}
+      {listLoading && repos.length === 0 && (
+        <div className="space-y-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-[72px] w-full rounded-xl" />
+          ))}
         </div>
       )}
 
+      {/* 加载错误 */}
       {!listLoading && listError && (
-        <ProCard className="bg-red-50 border-red-200" padding="p-6">
-          <div className="text-center">
-            <XCircle className="h-8 w-8 text-red-400 mx-auto mb-2" />
-            <p className="text-red-600 text-sm">{listError}</p>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => fetchRepos(true)}
-              className="mt-2 text-red-500"
-            >
-              {t('dashboard.refresh')}
-            </Button>
-          </div>
-        </ProCard>
+        <ErrorAlert
+          message={listError || t('workflowLogs.loadRunsFailed')}
+          onRetry={() => fetchRepos(true)}
+          retryLabel={t('common.retry')}
+        />
       )}
 
+      {/* 空状态 */}
       {!listLoading && !listError && repos.length === 0 && (
-        <ProCard className="bg-white border-zinc-200 border-dashed" padding="p-8">
-          <div className="text-center">
-            <Clock className="h-10 w-10 text-zinc-300 mx-auto mb-3" />
-            <p className="text-zinc-500 text-sm">{t('repoDetail.noRuns')}</p>
-          </div>
-        </ProCard>
+        <EmptyState
+          icon={<Clock className="h-10 w-10 text-zinc-300" />}
+          title={t('repoDetail.noRuns')}
+        />
       )}
 
+      {/* 仓库列表 */}
       {!listLoading && repos.length > 0 && (
         <div className="space-y-2">
           {repos.map((repo) => {

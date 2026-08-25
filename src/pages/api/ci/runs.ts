@@ -78,8 +78,30 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
   const offset = getQueryParamNumber(req, 'offset', 0, 0);
   const botOnly = getQueryParamBoolean(req, 'botOnly');
 
+  // 可选过滤参数：状态与事件（白名单校验，非法值直接报错而不是静默返回空集）
+  const VALID_STATUSES = ['pending', 'running', 'success', 'failure', 'cancelled'];
+  const VALID_EVENTS = [
+    'pull_request',
+    'push',
+    'issue_labeled',
+    'issue_comment',
+    'security_audit',
+    'workflow_job',
+    'workflow_run',
+  ];
+  const status = getQueryParam(req, 'status') || '';
+  const event = getQueryParam(req, 'event') || '';
+  if (status && !VALID_STATUSES.includes(status)) {
+    return res.status(400).json({ error: `Invalid status filter: ${status}` });
+  }
+  if (event && !VALID_EVENTS.includes(event)) {
+    return res.status(400).json({ error: `Invalid event filter: ${event}` });
+  }
+
   const where: Record<string, unknown> = { repoFullName: repo };
   if (botOnly) where.isBotInitiated = true;
+  if (status) where.status = status;
+  if (event) where.event = event;
 
   try {
     const [runs, total] = await Promise.all([

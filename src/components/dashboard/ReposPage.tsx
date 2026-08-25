@@ -4,9 +4,13 @@ import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'next/router';
 import { ProCard } from '@/components/ui/ProCard';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { FolderGit2, ExternalLink, Settings } from 'lucide-react';
 import { logger } from '@/lib/logger';
-import type { ReposData, Repo } from './types';
+import { apiErrorMessage, apiJson, isUnauthorized, redirectToHome } from '@/lib/api-client';
+import type { Repo, ReposData } from './types';
 
 interface Props {
   repos: ReposData | null;
@@ -26,7 +30,7 @@ export default function ReposPage({ repos, reposLoading, onRefresh }: Props) {
       setTogglingId(repo.id);
       setToggleError(null);
       try {
-        const res = await fetch('/api/github/repos/toggle', {
+        await apiJson('/api/github/repos/toggle', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -36,15 +40,15 @@ export default function ReposPage({ repos, reposLoading, onRefresh }: Props) {
             repoName: repo.name,
           }),
         });
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          setToggleError(data.error || t('repos.toggleFailed'));
-          logger.error(`Toggle failed: ${res.status}`);
-        }
         onRefresh?.();
-      } catch {
-        setToggleError(t('repos.toggleFailed'));
-        logger.error('Toggle request failed');
+      } catch (err) {
+        if (isUnauthorized(err)) {
+          redirectToHome();
+          return;
+        }
+        logger.error('Toggle failed:', err);
+        // 透出服务端返回的具体原因，而不是笼统的「切换失败」
+        setToggleError(apiErrorMessage(err, t('repos.toggleFailed')));
       } finally {
         setTogglingId(null);
       }
@@ -59,19 +63,24 @@ export default function ReposPage({ repos, reposLoading, onRefresh }: Props) {
     [router]
   );
 
-  if (reposLoading) {
+  // 初次加载（还没有任何数据）：骨架屏占位，形状贴近真实卡片
+  if (repos === null && reposLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-zinc-200 border-t-blue-500" />
+      <div className="space-y-4" aria-hidden="true">
+        <Skeleton className="h-[72px] w-full rounded-xl" />
+        <Skeleton className="h-[72px] w-full rounded-xl" />
+        <Skeleton className="h-[72px] w-full rounded-xl" />
+        <Skeleton className="h-[72px] w-full rounded-xl" />
       </div>
     );
   }
 
   if (!repos) {
     return (
-      <ProCard className="bg-white border-zinc-200" padding="p-6">
-        <p className="text-zinc-500 text-sm">{t('repos.noData')}</p>
-      </ProCard>
+      <EmptyState
+        icon={<FolderGit2 className="h-10 w-10 text-zinc-300" />}
+        title={t('repos.noData')}
+      />
     );
   }
 
@@ -79,19 +88,13 @@ export default function ReposPage({ repos, reposLoading, onRefresh }: Props) {
 
   return (
     <div className="space-y-4">
-      {toggleError && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {toggleError}
-        </div>
-      )}
+      {toggleError && <ErrorAlert message={toggleError} className="mb-2" />}
 
       {allRepos.length === 0 ? (
-        <ProCard className="bg-white border-zinc-200" padding="p-6">
-          <div className="flex items-center gap-3">
-            <FolderGit2 className="h-5 w-5 text-zinc-400" />
-            <p className="text-zinc-500 text-sm">{t('repos.noRepos')}</p>
-          </div>
-        </ProCard>
+        <EmptyState
+          icon={<FolderGit2 className="h-10 w-10 text-zinc-300" />}
+          title={t('repos.noRepos')}
+        />
       ) : (
         allRepos.map((repo) => (
           <ProCard
@@ -138,8 +141,8 @@ export default function ReposPage({ repos, reposLoading, onRefresh }: Props) {
                     handleCardClick(repo);
                   }}
                   className="text-zinc-400 hover:text-zinc-600"
-                  title={t('sidebar.repos')}
-                  aria-label={t('sidebar.repos')}
+                  title={t('repoDetail.repoSettings')}
+                  aria-label={t('repoDetail.repoSettings')}
                 >
                   <Settings className="h-4 w-4" />
                 </button>

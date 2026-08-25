@@ -5,6 +5,10 @@ import { useTranslation } from 'react-i18next';
 import { ProCard } from '@/components/ui/ProCard';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ErrorAlert } from '@/components/ui/ErrorAlert';
+import { apiErrorMessage, apiJson, isUnauthorized, redirectToHome } from '@/lib/api-client';
 import {
   CheckCircle2,
   XCircle,
@@ -13,7 +17,6 @@ import {
   Shield,
   ChevronDown,
   BookOpen,
-  AlertTriangle,
 } from 'lucide-react';
 
 interface EnvVarDetail {
@@ -32,6 +35,8 @@ interface EnvGroup {
   vars: EnvVarDetail[];
 }
 
+/** 登录态失效（401）统一跳回首页重新登录 */
+
 export default function EnvVarsPage() {
   const { t } = useTranslation();
   const [groups, setGroups] = useState<EnvGroup[]>([]);
@@ -44,15 +49,14 @@ export default function EnvVarsPage() {
     setLoading(true);
     setLoadError(null);
     try {
-      const res = await fetch('/api/env-status');
-      if (res.ok) {
-        const data = await res.json();
-        setGroups(data.groups);
-      } else {
-        setLoadError(t('envPage.loadFailed'));
+      const data = await apiJson<{ groups?: EnvGroup[] }>('/api/env-status');
+      setGroups(data.groups || []);
+    } catch (err) {
+      if (isUnauthorized(err)) {
+        redirectToHome();
+        return;
       }
-    } catch {
-      setLoadError(t('envPage.loadFailed'));
+      setLoadError(apiErrorMessage(err, t('envPage.loadFailed')));
     } finally {
       setLoading(false);
     }
@@ -79,10 +83,29 @@ export default function EnvVarsPage() {
     }))
     .filter((g) => g.vars.length > 0);
 
-  if (loading) {
+  // 仅初载（尚无数据）时展示骨架屏；有数据时刷新保留全部内容，仅刷新按钮图标旋转
+  if (loading && groups.length === 0) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-3 border-zinc-200 border-t-blue-500" />
+      <div className="space-y-6">
+        {/* 页头占位 */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-6 w-56" />
+            <Skeleton className="h-4 w-72" />
+          </div>
+        </div>
+        {/* 统计卡骨架 */}
+        <div className="grid grid-cols-3 gap-3">
+          {[0, 1, 2].map((i) => (
+            <Skeleton key={i} className="h-20 rounded-xl" />
+          ))}
+        </div>
+        {/* 变量卡骨架 */}
+        <div className="space-y-2">
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-24 w-full rounded-xl" />
+          ))}
+        </div>
       </div>
     );
   }
@@ -108,10 +131,7 @@ export default function EnvVarsPage() {
             {t('dashboard.refresh')}
           </Button>
         </div>
-        <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          <AlertTriangle className="h-4 w-4 shrink-0" />
-          {loadError}
-        </div>
+        <ErrorAlert message={loadError} onRetry={loadEnvStatus} retryLabel={t('common.retry')} />
       </div>
     );
   }
@@ -168,23 +188,32 @@ export default function EnvVarsPage() {
       </div>
 
       {/* Groups */}
-      <div className="space-y-6">
-        {filteredGroups.map((group) => (
-          <div key={group.name}>
-            <h3 className="text-sm font-medium text-zinc-500 mb-3">{group.name}</h3>
-            <div className="space-y-2">
-              {group.vars.map((v) => (
-                <EnvVarCard
-                  key={v.key}
-                  variable={v}
-                  expanded={expandedVar === v.key}
-                  onToggle={() => setExpandedVar(expandedVar === v.key ? null : v.key)}
-                />
-              ))}
+      {searchQuery && filteredGroups.length === 0 ? (
+        /* 搜索无结果时给出明确空态，而不是一片空白 */
+        <EmptyState
+          variant="minimal"
+          icon={<Search className="mx-auto h-10 w-10 text-zinc-300" />}
+          title={t('envPage.noMatch')}
+        />
+      ) : (
+        <div className="space-y-6">
+          {filteredGroups.map((group) => (
+            <div key={group.name}>
+              <h3 className="text-sm font-medium text-zinc-500 mb-3">{group.name}</h3>
+              <div className="space-y-2">
+                {group.vars.map((v) => (
+                  <EnvVarCard
+                    key={v.key}
+                    variable={v}
+                    expanded={expandedVar === v.key}
+                    onToggle={() => setExpandedVar(expandedVar === v.key ? null : v.key)}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

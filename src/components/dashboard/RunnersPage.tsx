@@ -6,7 +6,10 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { ProCard } from '@/components/ui/ProCard';
-import { StatusCard } from '@/components/ui/StatusCard';
+import { ErrorAlert } from '@/components/ui/ErrorAlert';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { apiErrorMessage, apiJson, isUnauthorized, redirectToHome } from '@/lib/api-client';
+import { timeAgo } from '@/lib/time';
 import {
   RefreshCw,
   Plus,
@@ -17,7 +20,6 @@ import {
   RotateCcw,
   AlertTriangle,
   CheckCircle2,
-  X,
   Circle,
 } from 'lucide-react';
 
@@ -36,6 +38,13 @@ interface RunnerItem {
   updatedAt: string;
 }
 
+/** /api/github/repos 返回结构（仅取本页需要的字段） */
+interface GithubReposResponse {
+  personal?: Array<{ full_name?: string }>;
+  organization?: Array<{ full_name?: string }>;
+  installations?: Array<{ accountLogin?: string; accountType?: string }>;
+}
+
 const STATUS_CONFIG: Record<string, { color: string; bg: string; label: string }> = {
   idle: { color: 'text-zinc-500', bg: 'bg-zinc-100', label: 'runner.statusIdle' },
   running: { color: 'text-emerald-600', bg: 'bg-emerald-100', label: 'runner.statusRunning' },
@@ -44,11 +53,15 @@ const STATUS_CONFIG: Record<string, { color: string; bg: string; label: string }
   offline: { color: 'text-amber-600', bg: 'bg-amber-100', label: 'runner.statusOffline' },
 };
 
+/** 登录态失效（401）统一跳回首页重新登录 */
+
 export default function RunnersPage() {
   const { t } = useTranslation();
   const [runners, setRunners] = useState<RunnerItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // 创建成功的绿色反馈横幅
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<number | null>(null);
 
   // 新建 Runner 表单状态
@@ -63,19 +76,27 @@ export default function RunnersPage() {
   const [repoOptions, setRepoOptions] = useState<string[]>([]);
   const [orgOptions, setOrgOptions] = useState<string[]>([]);
   const [reposLoading, setReposLoading] = useState(false);
+  // 仓库列表加载失败时降级为手动输入，避免用户走进死胡同
+  const [reposLoadFailed, setReposLoadFailed] = useState(false);
+
+  /** 关闭新建表单并清空成功提示 */
+  const closeForm = () => {
+    setShowForm(false);
+    setSuccessMsg(null);
+  };
 
   const fetchRunners = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/admin/runners');
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
-      }
-      const data = await res.json();
+      const data = await apiJson<{ runners?: RunnerItem[] }>('/api/admin/runners');
       setRunners(data.runners || []);
-    } catch {
-      setError(t('runner.failedToLoad'));
+    } catch (err) {
+      if (isUnauthorized(err)) {
+        redirectToHome();
+        return;
+      }
+      setError(apiErrorMessage(err, t('runner.failedToLoad')));
     } finally {
       setLoading(false);
     }
@@ -88,9 +109,7 @@ export default function RunnersPage() {
   const fetchRepos = useCallback(async () => {
     setReposLoading(true);
     try {
-      const res = await fetch('/api/github/repos');
-      if (!res.ok) return;
-      const data = await res.json();
+      const data = await apiJson<GithubReposResponse>('/api/github/repos');
       const repos: string[] = [];
       const orgs: string[] = [];
       for (const r of [...(data.personal || []), ...(data.organization || [])]) {
@@ -109,19 +128,29 @@ export default function RunnersPage() {
       }
       setRepoOptions(repos);
       setOrgOptions(orgs);
-    } catch {
-      // 静默失败，用户可手动输入
+      // 加载成功后复位失败态，作用域目标恢复下拉选择
+      setReposLoadFailed(false);
+    } catch (err) {
+      if (isUnauthorized(err)) {
+        redirectToHome();
+        return;
+      }
+      // 失败时降级为手动输入并在顶部提示，不再静默吞错
+      setReposLoadFailed(true);
+      setError(t('runner.reposLoadFailed'));
     } finally {
       setReposLoading(false);
     }
-  }, []);
+  }, [t]);
 
   const handleCreate = async () => {
+    if (creating) return;
     if (!newName.trim() || !newScopeTarget.trim()) return;
     setCreating(true);
     setError(null);
+    setSuccessMsg(null);
     try {
-      const res = await fetch('/api/admin/runners', {
+      await apiJson('/api/admin/runners', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -134,17 +163,19 @@ export default function RunnersPage() {
             .filter(Boolean),
         }),
       });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || `HTTP ${res.status}`);
-      }
       setNewName('');
       setNewScopeTarget('');
       setNewLabels('self-hosted,linux,x64');
       setShowForm(false);
+      // 表单已关闭，成功横幅显示在页面顶部
+      setSuccessMsg(t('runner.createSuccess'));
       await fetchRunners();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('runner.failedToCreate'));
+      if (isUnauthorized(err)) {
+        redirectToHome();
+        return;
+      }
+      setError(apiErrorMessage(err, t('runner.failedToCreate')));
     } finally {
       setCreating(false);
     }
@@ -153,19 +184,20 @@ export default function RunnersPage() {
   const handleAction = async (runnerId: number, action: string) => {
     setActionLoading(runnerId);
     setError(null);
+    setSuccessMsg(null);
     try {
-      const res = await fetch('/api/admin/runners', {
+      await apiJson('/api/admin/runners', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, runnerId }),
       });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || `HTTP ${res.status}`);
-      }
       await fetchRunners();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('runner.actionFailed'));
+      if (isUnauthorized(err)) {
+        redirectToHome();
+        return;
+      }
+      setError(apiErrorMessage(err, t('runner.actionFailed')));
     } finally {
       setActionLoading(null);
     }
@@ -177,28 +209,19 @@ export default function RunnersPage() {
     }
     setActionLoading(runnerId);
     setError(null);
+    setSuccessMsg(null);
     try {
-      const res = await fetch(`/api/admin/runners?id=${runnerId}`, {
-        method: 'DELETE',
-      });
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
-      }
+      await apiJson(`/api/admin/runners?id=${runnerId}`, { method: 'DELETE' });
       await fetchRunners();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('runner.failedToDelete'));
+      if (isUnauthorized(err)) {
+        redirectToHome();
+        return;
+      }
+      setError(apiErrorMessage(err, t('runner.failedToDelete')));
     } finally {
       setActionLoading(null);
     }
-  };
-
-  const timeAgo = (dateStr: string) => {
-    // eslint-disable-next-line react-hooks/purity -- Date.now() is acceptable for display-only time formatting
-    const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-    if (diff < 60) return t('common.secondsAgo', { count: String(diff) });
-    if (diff < 3600) return t('common.minutesAgo', { count: String(Math.floor(diff / 60)) });
-    if (diff < 86400) return t('common.hoursAgo', { count: String(Math.floor(diff / 3600)) });
-    return t('common.daysAgo', { count: String(Math.floor(diff / 86400)) });
   };
 
   const getStatusConfig = (status: string) => STATUS_CONFIG[status] || STATUS_CONFIG.offline;
@@ -231,8 +254,13 @@ export default function RunnersPage() {
             size="sm"
             icon={<Plus className="h-4 w-4" />}
             onClick={() => {
-              setShowForm(!showForm);
-              if (!showForm) fetchRepos();
+              if (showForm) {
+                closeForm();
+              } else {
+                setShowForm(true);
+                setSuccessMsg(null);
+                fetchRepos();
+              }
             }}
           >
             {t('runner.addButton')}
@@ -242,14 +270,20 @@ export default function RunnersPage() {
 
       {/* 错误提示 */}
       {error && (
-        <ProCard className="bg-red-50 border-red-200">
-          <StatusCard
-            icon={<X className="h-4 w-4" />}
-            title={t('dashboard.error')}
-            status={error}
-            statusType="error"
-          />
-        </ProCard>
+        <ErrorAlert
+          title={t('dashboard.error')}
+          message={error}
+          onRetry={fetchRunners}
+          retryLabel={t('common.retry')}
+        />
+      )}
+
+      {/* 创建成功提示 */}
+      {successMsg && (
+        <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          {successMsg}
+        </div>
       )}
 
       {/* 新建 Runner 表单 */}
@@ -287,40 +321,62 @@ export default function RunnersPage() {
                 <label className="block text-sm font-medium mb-2 text-zinc-700">
                   {t('runner.scopeRepoLabel')}
                 </label>
-                <Select
-                  value={newScopeTarget}
-                  onChange={(e) => setNewScopeTarget(e.target.value)}
-                  size="sm"
-                >
-                  <option value="">
-                    {reposLoading ? t('runner.loadingRepos') : t('runner.selectRepo')}
-                  </option>
-                  {repoOptions.map((repo) => (
-                    <option key={repo} value={repo}>
-                      {repo}
+                {reposLoadFailed ? (
+                  /* 仓库列表加载失败时降级为手动输入 */
+                  <Input
+                    type="text"
+                    value={newScopeTarget}
+                    onChange={(e) => setNewScopeTarget(e.target.value)}
+                    placeholder={t('runner.scopeTargetManualPlaceholder')}
+                    size="sm"
+                  />
+                ) : (
+                  <Select
+                    value={newScopeTarget}
+                    onChange={(e) => setNewScopeTarget(e.target.value)}
+                    size="sm"
+                  >
+                    <option value="">
+                      {reposLoading ? t('runner.loadingRepos') : t('runner.selectRepo')}
                     </option>
-                  ))}
-                </Select>
+                    {repoOptions.map((repo) => (
+                      <option key={repo} value={repo}>
+                        {repo}
+                      </option>
+                    ))}
+                  </Select>
+                )}
               </div>
             ) : (
               <div className="w-full">
                 <label className="block text-sm font-medium mb-2 text-zinc-700">
                   {t('runner.scopeOrgLabel')}
                 </label>
-                <Select
-                  value={newScopeTarget}
-                  onChange={(e) => setNewScopeTarget(e.target.value)}
-                  size="sm"
-                >
-                  <option value="">
-                    {reposLoading ? t('runner.loadingRepos') : t('runner.selectOrg')}
-                  </option>
-                  {orgOptions.map((org) => (
-                    <option key={org} value={org}>
-                      {org}
+                {reposLoadFailed ? (
+                  /* 组织安装列表加载失败时降级为手动输入 */
+                  <Input
+                    type="text"
+                    value={newScopeTarget}
+                    onChange={(e) => setNewScopeTarget(e.target.value)}
+                    placeholder={t('runner.scopeTargetManualPlaceholder')}
+                    size="sm"
+                  />
+                ) : (
+                  <Select
+                    value={newScopeTarget}
+                    onChange={(e) => setNewScopeTarget(e.target.value)}
+                    size="sm"
+                  >
+                    <option value="">
+                      {reposLoading ? t('runner.loadingRepos') : t('runner.selectOrg')}
                     </option>
-                  ))}
-                </Select>
+                    {orgOptions.map((org) => (
+                      <option key={org} value={org}>
+                        {org}
+                      </option>
+                    ))}
+                  </Select>
+                )}
               </div>
             )}
             <Input
@@ -342,7 +398,7 @@ export default function RunnersPage() {
               >
                 {t('runner.createButton')}
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => setShowForm(false)}>
+              <Button variant="ghost" size="sm" onClick={closeForm}>
                 {t('common.close')}
               </Button>
             </div>
@@ -352,9 +408,12 @@ export default function RunnersPage() {
 
       {/* Runner 列表 */}
       <ProCard title={`${t('runner.existingRunners')} (${runners.length})`}>
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-zinc-200 border-t-blue-500" />
+        {loading && runners.length === 0 ? (
+          /* 初载骨架屏；有数据时刷新保持旧列表可见 */
+          <div className="space-y-3">
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} className="h-28 w-full rounded-xl" />
+            ))}
           </div>
         ) : runners.length === 0 ? (
           <div className="text-center py-8">
@@ -407,11 +466,11 @@ export default function RunnersPage() {
                     )}
                     <div>
                       <span className="text-zinc-400">{t('runner.createdAt')}: </span>
-                      <span>{timeAgo(runner.createdAt)}</span>
+                      <span>{timeAgo(runner.createdAt, t)}</span>
                     </div>
                     <div>
                       <span className="text-zinc-400">{t('runner.updatedAt')}: </span>
-                      <span>{timeAgo(runner.updatedAt)}</span>
+                      <span>{timeAgo(runner.updatedAt, t)}</span>
                     </div>
                   </div>
 
