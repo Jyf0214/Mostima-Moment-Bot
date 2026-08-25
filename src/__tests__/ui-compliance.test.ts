@@ -269,14 +269,9 @@ describe('UI 组件渲染正确性', () => {
       'PageContainer.tsx',
       'EmptyState.tsx',
       'ProCard.tsx',
-      'ConfigSection.tsx',
-      'FormField.tsx',
-      'ToggleField.tsx',
       'Skeleton.tsx',
-      'Tag.tsx',
-      'FilterPill.tsx',
       'HeroBanner.tsx',
-      'ButtonGroup.tsx',
+      'ErrorAlert.tsx',
     ];
     for (const comp of expectedComponents) {
       const filePath = path.join(COMPONENTS_DIR, comp);
@@ -300,14 +295,9 @@ describe('UI 组件渲染正确性', () => {
       'PageContainer',
       'EmptyState',
       'ProCard',
-      'ConfigSection',
-      'FormField',
-      'ToggleField',
       'Skeleton',
-      'Tag',
-      'FilterPill',
       'HeroBanner',
-      'ButtonGroup',
+      'ErrorAlert',
     ];
     for (const name of expectedExports) {
       expect(barrel, `barrel 应导出 ${name}`).toContain(name);
@@ -426,23 +416,6 @@ describe('UI 组件结构验证', () => {
     expect(statusCard).toContain('info');
   });
 
-  it('Tag 组件应支持 8 种变体', () => {
-    const tag = readFile(path.join(COMPONENTS_DIR, 'Tag.tsx'));
-    const tagVariants = [
-      'light',
-      'dark',
-      'outline',
-      'emerald',
-      'amber',
-      'danger',
-      'success',
-      'warning',
-    ];
-    for (const v of tagVariants) {
-      expect(tag, `Tag 应包含 ${v} 变体`).toContain(v);
-    }
-  });
-
   it('PageContainer 组件应支持 5 种最大宽度', () => {
     const pc = readFile(path.join(COMPONENTS_DIR, 'PageContainer.tsx'));
     expect(pc).toContain('3xl');
@@ -457,21 +430,24 @@ describe('UI 组件结构验证', () => {
     expect(hero).toContain('backgroundImage');
     expect(hero).toContain('gradient');
   });
+});
 
-  it('FormField 组件应支持 text/textarea/select 三种类型', () => {
-    const ff = readFile(path.join(COMPONENTS_DIR, 'FormField.tsx'));
-    expect(ff).toContain("'text'");
-    expect(ff).toContain("'textarea'");
-    expect(ff).toContain("'select'");
-    // 不应导入 antd
-    expect(ff).not.toContain("from 'antd'");
+// ============================================================
+// 11. 核心组件死代码防护：必须被页面/业务组件实际使用
+// ============================================================
+describe('UI 合规性：核心组件不应是死代码', () => {
+  it('Skeleton 与 EmptyState 应被 pages 或 dashboard 组件实际引用', () => {
+    const consumerDirs = [path.join(SRC_DIR, 'pages'), path.join(SRC_DIR, 'components/dashboard')];
+    const sources = consumerDirs.flatMap(readAllSourceFiles);
+    const all = sources.map(readFile).join('\n');
+    expect(sources.length, '应能读到消费方源码').toBeGreaterThan(0);
+    expect(all, 'Skeleton 应至少被一处引用').toMatch(/<Skeleton/);
+    expect(all, 'EmptyState 应至少被一处引用').toMatch(/<EmptyState/);
   });
 
-  it('ToggleField 组件不应导入 antd', () => {
-    const tf = readFile(path.join(COMPONENTS_DIR, 'ToggleField.tsx'));
-    expect(tf).not.toContain("from 'antd'");
-    // 应使用 role="switch" 的原生 toggle 实现
-    expect(tf).toContain('role="switch"');
-    expect(tf).toContain('aria-checked');
+  it('ErrorAlert 应被 pages 或 dashboard 组件实际引用', () => {
+    const consumerDirs = [path.join(SRC_DIR, 'pages'), path.join(SRC_DIR, 'components/dashboard')];
+    const all = consumerDirs.flatMap(readAllSourceFiles).map(readFile).join('\n');
+    expect(all, 'ErrorAlert 应至少被一处引用').toMatch(/<ErrorAlert/);
   });
 });
