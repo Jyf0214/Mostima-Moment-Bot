@@ -6,6 +6,7 @@ import { cn } from '@/lib/ui';
 import {
   LayoutDashboard,
   Plug,
+  FolderGit2,
   Shield,
   Settings,
   LogOut,
@@ -36,7 +37,7 @@ interface SidebarProps {
 
 const NAV_ITEMS: { id: SidebarPage; icon: React.ElementType; labelKey: string }[] = [
   { id: 'overview', icon: LayoutDashboard, labelKey: 'sidebar.overview' },
-  { id: 'repos', icon: Plug, labelKey: 'sidebar.repos' },
+  { id: 'repos', icon: FolderGit2, labelKey: 'sidebar.repos' },
   { id: 'logs', icon: ScrollText, labelKey: 'sidebar.logs' },
   { id: 'runners', icon: Server, labelKey: 'sidebar.runners' },
   { id: 'env', icon: Shield, labelKey: 'sidebar.envVars' },

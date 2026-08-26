@@ -124,8 +124,9 @@ export default function EnvVarsPage() {
           <Button
             variant="ghost"
             size="sm"
-            icon={<RefreshCw className="h-3.5 w-3.5" />}
+            icon={<RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />}
             onClick={loadEnvStatus}
+            disabled={loading}
             className="text-zinc-500 hover:text-zinc-700"
           >
             {t('dashboard.refresh')}

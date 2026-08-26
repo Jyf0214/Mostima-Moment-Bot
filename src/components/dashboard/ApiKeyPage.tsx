@@ -158,21 +158,23 @@ export default function ApiKeyPage() {
         />
       )}
 
-      {/* 新建密钥成功提示 - 显示完整密钥内容 */}
+      {/* 新建密钥成功提示 - 显示完整密钥内容（琥珀警示色：强调"立即保存"，不用红色误表达为出错） */}
       {createdKey && (
-        <ProCard className="bg-red-50 border-red-300 border-2">
+        <ProCard className="bg-amber-50 border-amber-300 border-2">
           <div className="flex items-start gap-3">
-            <div className="h-6 w-6 rounded-full bg-red-100 flex items-center justify-center shrink-0 mt-0.5">
-              <span className="text-red-600 text-lg font-bold">!</span>
+            <div className="h-6 w-6 rounded-full bg-amber-100 flex items-center justify-center shrink-0 mt-0.5">
+              <span className="text-amber-600 text-lg font-bold">!</span>
             </div>
             <div className="flex-1">
-              <p className="text-sm font-bold text-red-800">{t('apiKey.createdSuccess')}</p>
-              <p className="text-xs text-red-700 mt-1 font-medium">⚠️ {t('apiKey.createdHint')}</p>
+              <p className="text-sm font-bold text-amber-900">{t('apiKey.createdSuccess')}</p>
+              <p className="text-xs text-amber-800 mt-1 font-medium">
+                ⚠️ {t('apiKey.createdHint')}
+              </p>
               <div className="mt-3">
                 <p className="text-xs text-zinc-600 mb-1">API Key:</p>
                 <div className="flex items-center gap-2">
                   <code
-                    className="flex-1 px-3 py-2.5 rounded-lg bg-white border border-red-200 text-zinc-900 text-sm font-mono break-all select-all"
+                    className="flex-1 px-3 py-2.5 rounded-lg bg-white border border-amber-200 text-zinc-900 text-sm font-mono break-all select-all"
                     style={{ userSelect: 'all' }}
                   >
                     {createdKey.key}
@@ -190,7 +192,7 @@ export default function ApiKeyPage() {
                   </Button>
                 </div>
                 {copyFailed && (
-                  <p className="mt-1 text-xs text-red-600">{t('common.copyFailed')}</p>
+                  <p className="mt-1 text-xs text-amber-700">{t('common.copyFailed')}</p>
                 )}
               </div>
             </div>
