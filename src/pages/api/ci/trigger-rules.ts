@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { getConfig, setConfig } from '@/lib/db';
 import { getDefaultRules } from '@/lib/ci/triggers/default-rules';
 import type { TriggerRule } from '@/lib/ci/triggers/types';
-import { requireAuth } from '@/lib/auth-utils';
+import { requireAdmin } from '@/lib/auth-utils';
 import { logger } from '@/lib/logger';
 
 /**
@@ -11,8 +11,8 @@ import { logger } from '@/lib/logger';
  * POST /api/ci/trigger-rules                — 保存仓库的触发规则
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // 验证管理员身份
-  const payload = await requireAuth(req, res);
+  // 触发规则影响 CI 行为且加密落库：与注释一致，必须校验管理员身份
+  const payload = await requireAdmin(req, res);
   if (!payload) return;
 
   if (req.method === 'GET') {

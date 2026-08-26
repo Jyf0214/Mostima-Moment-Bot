@@ -161,6 +161,8 @@
     "close": "Close",
     "retry": "Retry",
     "copyFailed": "Copy failed, please copy manually",
+    "copyError": "Copy error details",
+    "copied": "Copied",
     "noResults": "No matching results"
   },
   "repos": {

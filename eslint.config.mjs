@@ -29,7 +29,8 @@ const eslintConfig = [
     },
   },
   {
-    ignores: [".next/**", "node_modules/**", "dist/**", "src/lib/**", "coverage/**"],
+    // 注意：src/lib 是核心业务库，必须纳入 lint 覆盖，不得加入忽略列表
+    ignores: [".next/**", "node_modules/**", "dist/**", "coverage/**"],
   },
 ];
 

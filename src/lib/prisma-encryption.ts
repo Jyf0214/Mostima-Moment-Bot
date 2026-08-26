@@ -186,35 +186,47 @@ export function createEncryptedPrismaClient(): PrismaClient {
   const extended = client.$extends({
     query: {
       $allModels: {
+        // 注意：Prisma 扩展的 $allOperations 回调中，model 是与 args 平级的顶层参数；
+        // 此前误写成 args.model（恒为 undefined），导致加密/解密整体空转
         async $allOperations({
+          model,
           operation,
           args,
           query,
         }: {
+          model?: string;
           operation: string;
           args: Record<string, unknown>;
           query: (args: Record<string, unknown>) => Promise<unknown>;
         }) {
-          const model = (args.model as string) || '';
+          const targetModel = model || '';
           const encKey = await getEncryptionKey();
 
           // 写入操作：加密
           if (['create', 'createMany', 'update', 'updateMany', 'upsert'].includes(operation)) {
             if (args.data && typeof args.data === 'object') {
-              args.data = encryptObject(args.data as Record<string, unknown>, model, encKey);
+              args.data = encryptObject(args.data as Record<string, unknown>, targetModel, encKey);
             }
             if (args.create && typeof args.create === 'object') {
-              args.create = encryptObject(args.create as Record<string, unknown>, model, encKey);
+              args.create = encryptObject(
+                args.create as Record<string, unknown>,
+                targetModel,
+                encKey
+              );
             }
             if (args.update && typeof args.update === 'object') {
-              args.update = encryptObject(args.update as Record<string, unknown>, model, encKey);
+              args.update = encryptObject(
+                args.update as Record<string, unknown>,
+                targetModel,
+                encKey
+              );
             }
           }
 
           const result = await query(args);
 
           // 读取操作：解密
-          return processResult(result, model, encKey);
+          return processResult(result, targetModel, encKey);
         },
       },
     },

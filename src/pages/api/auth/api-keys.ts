@@ -20,7 +20,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   });
 
   if (!admin) {
-    return res.status(403).json({ error: 'Admin not found' });
+    // 与 admin/runners、repos/toggle 保持一致：会话有效但档案缺失统一 404
+    return res.status(404).json({ error: 'Admin not found' });
   }
 
   // GET - 列出密钥

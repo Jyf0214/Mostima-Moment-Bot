@@ -1,5 +1,4 @@
 import { generateJWT, getAppId, getPrivateKey } from './auth';
-import { logger } from '@/lib/logger';
 
 /** 安装令牌缓存：installationId → { token, expiresAt } */
 const tokenCache = new Map<number, { token: string; expiresAt: number }>();

@@ -19,11 +19,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const clientId = process.env.GITHUB_CLIENT_ID;
-  const redirectUri = `${process.env.APP_URL}/api/auth/callback`;
+  const appUrl = process.env.APP_URL;
 
   if (!clientId) {
     return res.status(500).json({ error: 'GitHub Client ID not configured' });
   }
+
+  // 与 Client ID 同级校验：APP_URL 缺失时 redirect_uri 会变成
+  // "undefined/api/auth/callback"，OAuth 必然失败，必须显式报错而非静默拼坏链接
+  if (!appUrl) {
+    return res.status(500).json({ error: 'APP_URL not configured' });
+  }
+
+  const redirectUri = `${appUrl}/api/auth/callback`;
 
   // 生成加密安全的 state 参数防止 CSRF
   const state = crypto.randomUUID();

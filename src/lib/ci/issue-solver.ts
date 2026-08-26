@@ -251,5 +251,8 @@ export async function solveIssue(
     const msg = error instanceof Error ? error.message : String(error);
     logger.error(`[Issue Solver] Git push failed: ${msg}`);
     logCollector?.finishStep('Push', { conclusion: 'failure', output: msg });
+    // 必须向上抛出：吞掉错误会让 webhook 把本次修复运行记为 success，
+    // 面板显示成功但修复代码根本没推上去，用户也收不到任何失败通知
+    throw new Error(`Issue fix failed: ${msg}`);
   }
 }

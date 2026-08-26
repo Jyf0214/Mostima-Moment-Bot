@@ -52,40 +52,103 @@ export function validateIssueNumber(issueNumber: number): number {
 /**
  * 获取或创建工作区目录
  *
- * 将目标仓库克隆到 ~/repo-name/ 下。若目录已存在则拉取最新代码。
+ * 将目标仓库克隆到 ~/owner__repo/ 下。若目录已存在则重置到默认分支。
  * 返回工作区绝对路径。
  *
- * @param repoFullName - GitHub 仓库全名，如 "owner/repo-name"
+ * 此前目录名只取仓库名（忽略 owner），不同账号的同名仓库会映射到同一目录，
+ * 造成跨仓库代码污染；且并发 webhook 会同时对同一目录克隆/重置。
  */
+/** 每个目录的互斥锁：并发到达的 webhook 串行化初始化，避免双克隆与半成品目录 */
+const workspaceLocks = new Map<string, Promise<void>>();
+
+function withWorkspaceLock<T>(dir: string, fn: () => Promise<T>): Promise<T> {
+  const prev = workspaceLocks.get(dir) ?? Promise.resolve();
+  // 前一个任务无论成败都不阻塞后续；对外保留原始结果
+  const run = prev.then(fn, fn);
+  const stored = run.then(
+    () => undefined,
+    () => undefined
+  );
+  workspaceLocks.set(dir, stored);
+  void stored.finally(() => {
+    if (workspaceLocks.get(dir) === stored) {
+      workspaceLocks.delete(dir);
+    }
+  });
+  return run;
+}
+
+/** 探测远端默认分支（origin/HEAD），失败时回落 main */
+async function detectDefaultBranch(cwd: string): Promise<string> {
+  const r = await spawnAsync('git', ['symbolic-ref', '--short', 'refs/remotes/origin/HEAD'], {
+    cwd,
+  });
+  const out = (r.stdout || '').trim();
+  if (r.exitCode === 0 && out.startsWith('origin/')) {
+    return out.slice('origin/'.length);
+  }
+  return 'main';
+}
+
+/** 切回默认分支并硬重置；任一步失败即抛错，由调用方决定是否重新克隆 */
+async function resetToDefaultBranch(cwd: string, defaultBranch: string): Promise<void> {
+  const steps: string[][] = [
+    ['checkout', defaultBranch],
+    ['reset', '--hard', `origin/${defaultBranch}`],
+    ['clean', '-fd'],
+  ];
+  for (const args of steps) {
+    const r = await spawnAsync('git', args, { cwd });
+    if (r.exitCode !== 0) {
+      throw new Error(
+        `git ${args.join(' ')} failed (exit ${r.exitCode}): ${(r.stderr || r.stdout || '').slice(0, 300)}`
+      );
+    }
+  }
+}
+
 export async function getOrCreateWorkspace(repoFullName: string): Promise<string> {
   if (!repoFullName || !repoFullName.includes('/')) {
     throw new Error(`Invalid repo full name: ${repoFullName}`);
   }
 
-  const repoName = repoFullName.split('/')[1];
-  const workspaceDir = join(homedir(), repoName);
-
-  if (existsSync(workspaceDir)) {
-    // 已存在：拉取最新代码，重置到 main 分支
-    logger.info(`[Workspace] Repo exists, fetching latest: ${workspaceDir}`);
-    const fetchResult = await spawnAsync('git', ['fetch', 'origin'], { cwd: workspaceDir });
-    if (fetchResult.exitCode !== 0) {
-      logger.warn(`[Workspace] git fetch failed, re-cloning`, fetchResult.stderr);
-      await spawnAsync('rm', ['-rf', workspaceDir]);
-      await cloneRepo(repoFullName, workspaceDir);
-    } else {
-      // 切回 main 并重置
-      await spawnAsync('git', ['checkout', 'main'], { cwd: workspaceDir });
-      await spawnAsync('git', ['reset', '--hard', 'origin/main'], { cwd: workspaceDir });
-      await spawnAsync('git', ['clean', '-fd'], { cwd: workspaceDir });
-    }
-  } else {
-    // 不存在：克隆仓库
-    await cloneRepo(repoFullName, workspaceDir);
+  const [owner, repoName] = repoFullName.split('/');
+  // 目录名进入用户主目录，必须防路径穿越（如 "a/../../etc"）
+  if (!/^[\w.-]+$/.test(owner) || !/^[\w.-]+$/.test(repoName)) {
+    throw new Error(`Unsafe repo full name: ${repoFullName}`);
   }
+  const workspaceDir = join(homedir(), `${owner}__${repoName}`);
 
-  logger.info(`[Workspace] Workspace ready: ${workspaceDir}`);
-  return workspaceDir;
+  return withWorkspaceLock(workspaceDir, async () => {
+    if (existsSync(workspaceDir)) {
+      logger.info(`[Workspace] Repo exists, fetching latest: ${workspaceDir}`);
+      const fetchResult = await spawnAsync('git', ['fetch', 'origin'], { cwd: workspaceDir });
+      let needClone = fetchResult.exitCode !== 0;
+
+      if (!needClone) {
+        // 切回默认分支并重置；默认分支可能是 master 而非 main
+        try {
+          const defaultBranch = await detectDefaultBranch(workspaceDir);
+          await resetToDefaultBranch(workspaceDir, defaultBranch);
+        } catch (err) {
+          logger.warn('[Workspace] Reset to default branch failed, re-cloning', err);
+          needClone = true;
+        }
+      }
+
+      if (needClone) {
+        logger.warn(`[Workspace] Re-cloning ${repoFullName}`);
+        await spawnAsync('rm', ['-rf', workspaceDir]);
+        await cloneRepo(repoFullName, workspaceDir);
+      }
+    } else {
+      // 不存在：克隆仓库
+      await cloneRepo(repoFullName, workspaceDir);
+    }
+
+    logger.info(`[Workspace] Workspace ready: ${workspaceDir}`);
+    return workspaceDir;
+  });
 }
 
 /**
@@ -124,21 +187,40 @@ export async function checkoutPRBranch(prNumber: number, workspaceDir?: string):
   const branchName = validateBranchName(pr.head.ref as string);
   logger.info(`Checking out branch: ${branchName}`);
 
-  // 2. 清理工作区
-  await spawnAsync('git', ['checkout', '.'], { cwd });
+  // 2. 清理工作区（失败即抛，避免带着脏状态切分支）
+  const cleanResult = await spawnAsync('git', ['checkout', '.'], { cwd });
+  if (cleanResult.exitCode !== 0) {
+    throw new Error(`git checkout . failed: ${(cleanResult.stderr || '').slice(0, 300)}`);
+  }
   await spawnAsync('git', ['clean', '-fd'], { cwd });
 
   // 3. 切换分支
-  await spawnAsync('git', ['fetch', 'origin', branchName], { cwd });
-  await spawnAsync('git', ['checkout', branchName], { cwd });
-  await spawnAsync('git', ['pull', 'origin', branchName], { cwd });
+  const fetchBranch = await spawnAsync('git', ['fetch', 'origin', branchName], { cwd });
+  if (fetchBranch.exitCode !== 0) {
+    throw new Error(
+      `git fetch ${branchName} failed (exit ${fetchBranch.exitCode}): ${(fetchBranch.stderr || '').slice(0, 300)}`
+    );
+  }
+  const coResult = await spawnAsync('git', ['checkout', branchName], { cwd });
+  if (coResult.exitCode !== 0) {
+    throw new Error(
+      `git checkout ${branchName} failed (exit ${coResult.exitCode}): ${(coResult.stderr || '').slice(0, 300)}`
+    );
+  }
+  const pullResult = await spawnAsync('git', ['pull', 'origin', branchName], { cwd });
+  if (pullResult.exitCode !== 0) {
+    throw new Error(
+      `git pull ${branchName} failed (exit ${pullResult.exitCode}): ${(pullResult.stderr || '').slice(0, 300)}`
+    );
+  }
 
-  // 4. 同步主分支
-  const mergeResult = await spawnAsync('git', ['merge', 'origin/main', '--no-edit'], {
+  // 4. 同步主分支（默认分支可能是 master 而非 main）
+  const defaultBranch = await detectDefaultBranch(cwd);
+  const mergeResult = await spawnAsync('git', ['merge', `origin/${defaultBranch}`, '--no-edit'], {
     cwd,
   });
   if (mergeResult.exitCode !== 0) {
     throw new Error('Merge conflict detected');
   }
-  logger.info('Successfully merged with main branch');
+  logger.info(`Successfully merged with ${defaultBranch} branch`);
 }

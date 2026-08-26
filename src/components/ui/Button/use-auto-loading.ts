@@ -79,11 +79,14 @@ export function useAutoLoading(
   const isLoading = isControlled ? loading : internalLoading;
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 组件卸载时清理定时器
+  // 组件卸载时清理定时器（必须在 cleanup 内读 ref：
+  // mount 时求值恒为 null，真正的延时定时器永远不会被清理）
   useEffect(() => {
-    const timer = timerRef.current;
     return () => {
-      if (timer) clearTimeout(timer);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
     };
   }, []);
 

@@ -76,10 +76,7 @@ export default function WorkflowLogsPage() {
   const { t } = useTranslation();
   const router = useRouter();
 
-  // 组件挂载形态：/dashboard/logs 独立路由，或 /dashboard?page=logs tab
-  const isRouteMode = router.pathname === '/dashboard/logs';
-
-  // 从路由派生选中仓库（tab 与独立路由均通过 ?repo= 传递）
+  // 从路由派生选中仓库（统一走 /dashboard?page=logs&repo= 单一 URL 形态）
   const selectedRepo =
     router.isReady && typeof router.query.repo === 'string' && router.query.repo
       ? router.query.repo
@@ -198,29 +195,21 @@ export default function WorkflowLogsPage() {
 
   // 进入某仓库的运行记录列表：push 产生历史条目，浏览器后退可返回
   const handleViewDetail = (repoFullName: string) => {
-    if (isRouteMode) {
-      router.push({ pathname: '/dashboard/logs', query: { repo: repoFullName } }, undefined, {
+    router.push(
+      { pathname: '/dashboard', query: { page: 'logs', repo: repoFullName } },
+      undefined,
+      {
         shallow: true,
-      });
-    } else {
-      router.push(
-        { pathname: '/dashboard', query: { page: 'logs', repo: repoFullName } },
-        undefined,
-        { shallow: true }
-      );
-    }
+      }
+    );
   };
 
   // 返回列表：显式 push 不带 repo 的地址（不用 router.back()，
   // 避免用户经直链 ?repo= 进入时后退会退出站点）；浏览器后退由 query 同步自然处理
   const handleBack = () => {
-    if (isRouteMode) {
-      router.push('/dashboard/logs', undefined, { shallow: true });
-    } else {
-      router.push({ pathname: '/dashboard', query: { page: 'logs' } }, undefined, {
-        shallow: true,
-      });
-    }
+    router.push({ pathname: '/dashboard', query: { page: 'logs' } }, undefined, {
+      shallow: true,
+    });
   };
 
   // 是否处于筛选状态（决定空状态文案）

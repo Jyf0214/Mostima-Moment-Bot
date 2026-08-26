@@ -8,8 +8,10 @@ type TranslateFn = (key: string, opts?: Record<string, string>) => string;
 
 /** 相对时间：x秒前 / x分钟前 / x小时前 / x天前 */
 export function timeAgo(dateStr: string, t: TranslateFn): string {
-  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-  if (Number.isNaN(diff)) return '-';
+  const rawMs = Date.now() - new Date(dateStr).getTime();
+  if (Number.isNaN(rawMs)) return '-';
+  // 未来时间戳/时钟偏移会产生负数，显示"-5秒前"没有意义，钳到 0
+  const diff = Math.max(0, Math.floor(rawMs / 1000));
   if (diff < 60) return t('common.secondsAgo', { count: String(diff) });
   if (diff < 3600) return t('common.minutesAgo', { count: String(Math.floor(diff / 60)) });
   if (diff < 86400) return t('common.hoursAgo', { count: String(Math.floor(diff / 3600)) });

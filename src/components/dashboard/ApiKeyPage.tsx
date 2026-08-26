@@ -34,6 +34,8 @@ export default function ApiKeyPage() {
   const [keys, setKeys] = useState<ApiKeyItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  // 正在删除的密钥 id：删除期间禁用对应按钮，防止连点重复发 DELETE
+  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [newKeyName, setNewKeyName] = useState('');
   const [createdKey, setCreatedKey] = useState<CreatedKey | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -93,6 +95,8 @@ export default function ApiKeyPage() {
     if (!window.confirm(t('apiKey.deleteConfirm', { name }))) {
       return;
     }
+    if (deletingId !== null) return;
+    setDeletingId(id);
     try {
       await apiJson(`/api/auth/api-keys?id=${id}`, { method: 'DELETE' });
       await fetchKeys();
@@ -102,6 +106,8 @@ export default function ApiKeyPage() {
         return;
       }
       setError(apiErrorMessage(err, t('apiKey.failedToDelete')));
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -269,6 +275,8 @@ export default function ApiKeyPage() {
                   size="sm"
                   icon={<Trash2 className="h-4 w-4" />}
                   onClick={() => handleDelete(key.id, key.name)}
+                  loading={deletingId === key.id}
+                  disabled={deletingId !== null}
                   className="text-zinc-400 hover:text-red-500"
                 >
                   {t('apiKey.delete')}

@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import crypto from 'crypto';
 import { prisma } from '@/lib/prisma';
-import { requireAuth, verifyAuthToken } from '@/lib/auth-utils';
+import { requireAuth, requireAdmin } from '@/lib/auth-utils';
 import { getQueryParam, getQueryParamNumber, getQueryParamBoolean } from '@/lib/api-utils';
 
 /**
@@ -216,40 +216,26 @@ async function handleGetRepos(req: NextApiRequest, res: NextApiResponse) {
 }
 
 async function handlePost(req: NextApiRequest, res: NextApiResponse) {
-  // 认证逻辑：优先使用 INTERNAL_API_KEY，否则要求 JWT 管理员认证
+  // 认证逻辑：优先使用 INTERNAL_API_KEY，否则要求管理员认证
   const authHeader = req.headers.authorization;
   const internalKey = process.env.INTERNAL_API_KEY;
 
-  if (internalKey && authHeader) {
-    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
-    // 使用 timing-safe 比较防止时序攻击
-    const keyBuf = Buffer.from(internalKey, 'utf-8');
-    const tokenBuf = Buffer.from(token, 'utf-8');
-    if (keyBuf.length === tokenBuf.length && crypto.timingSafeEqual(keyBuf, tokenBuf)) {
-      // 内部密钥认证通过，允许写入
-    } else {
-      // 未匹配内部密钥时，要求 JWT 管理员认证
-      const authToken = req.cookies.auth_token;
-      if (!authToken) {
-        return res.status(401).json({ error: 'Not authenticated' });
-      }
-      try {
-        verifyAuthToken(authToken);
-      } catch {
-        return res.status(401).json({ error: 'Invalid token' });
-      }
-    }
-  } else {
-    // 未匹配内部密钥或未设置密钥时，一律要求 JWT 管理员认证
-    const authToken = req.cookies.auth_token;
-    if (!authToken) {
-      return res.status(401).json({ error: 'Not authenticated' });
-    }
-    try {
-      verifyAuthToken(authToken);
-    } catch {
-      return res.status(401).json({ error: 'Invalid token' });
-    }
+  // 内部密钥（timing-safe 比较）或管理员会话，二者满足其一即可写入。
+  // 此前 JWT 分支只认 cookie、与同文件 GET 的 requireAuth 双轨不一致：
+  // 同一个 Bearer JWT 调 GET 成功、调 POST 却 401
+  const isInternalKey =
+    !!internalKey &&
+    !!authHeader &&
+    (() => {
+      const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
+      const keyBuf = Buffer.from(internalKey, 'utf-8');
+      const tokenBuf = Buffer.from(token, 'utf-8');
+      return keyBuf.length === tokenBuf.length && crypto.timingSafeEqual(keyBuf, tokenBuf);
+    })();
+
+  if (!isInternalKey) {
+    const payload = await requireAdmin(req, res);
+    if (!payload) return;
   }
 
   const {

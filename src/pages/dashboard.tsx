@@ -156,7 +156,9 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {reposError && (
+      {/* 仓库加载失败横幅只在 overview/repos tab 展示，
+          避免切到 settings/logs 等无关页面时仍挂着仓库报错 */}
+      {reposError && (activePage === 'overview' || activePage === 'repos') && (
         <div className="mb-6">
           <ErrorAlert
             message={reposError}

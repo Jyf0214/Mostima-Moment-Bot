@@ -8,7 +8,7 @@
  * - 监控 Runner 状态
  */
 
-import { execSync, exec as execCb } from 'child_process';
+import { execSync, exec as execCb, execFile as execFileCb } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs';
 import path from 'path';
@@ -17,6 +17,22 @@ import { logger } from '@/lib/logger';
 import { getAppId, getPrivateKey, generateJWT } from '@/lib/github/auth';
 
 const execAsync = promisify(execCb);
+const execFileAsync = promisify(execFileCb);
+
+/**
+ * Runner 注册参数白名单：
+ * name/labels/scopeTarget 来自管理员输入，历史上被直接拼进 shell 字符串，
+ * 构成命令注入面；除改用数组参数外，入口处再做一层字符白名单防御
+ */
+const RUNNER_SAFE_PATTERN = /^[a-zA-Z0-9._\-/,]+$/;
+
+function assertRunnerInputSafe(field: string, value: string): void {
+  if (!RUNNER_SAFE_PATTERN.test(value)) {
+    throw new Error(
+      `Runner ${field} contains illegal characters (allowed: alphanumerics . _ - / ,)`
+    );
+  }
+}
 
 // Runner 二进制文件路径
 const RUNNER_HOME = process.env.RUNNER_HOME || '/home/node/actions-runner';
@@ -169,21 +185,33 @@ export async function registerRunner(runnerId: number): Promise<void> {
   }
 
   // 配置 Runner
+  // 管理员可控输入先过白名单，再以数组参数交给 config.sh（不经 shell 展开）
+  assertRunnerInputSafe('name', runner.name);
+  assertRunnerInputSafe('scopeTarget', runner.scopeTarget);
+  for (const label of runner.labels) {
+    assertRunnerInputSafe('label', label);
+  }
   const labels = runner.labels.join(',');
-  const configCmd = [
-    `cd ${workDir}`,
-    `&& ./config.sh`,
-    `--url https://github.com/${runner.scopeType === 'org' ? runner.scopeTarget : runner.scopeTarget}`,
-    `--token "${regToken}"`,
-    `--name "${runner.name}"`,
-    `--labels "${labels}"`,
-    `--work "${workDir}/_work"`,
-    `--replace`,
-    `--unattended`,
-  ].join(' ');
 
   try {
-    await execAsync(configCmd, { timeout: 60000 });
+    await execFileAsync(
+      './config.sh',
+      [
+        '--url',
+        `https://github.com/${runner.scopeTarget}`,
+        '--token',
+        regToken,
+        '--name',
+        runner.name,
+        '--labels',
+        labels,
+        '--work',
+        path.join(workDir, '_work'),
+        '--replace',
+        '--unattended',
+      ],
+      { cwd: workDir, timeout: 60000 }
+    );
     logger.debug(`[Runner] Runner ${runner.id} configured successfully in ${workDir}`);
 
     // 更新数据库
@@ -295,8 +323,12 @@ export async function stopRunner(runnerId: number): Promise<void> {
   // 取消 Runner 注册（如果需要）
   if (runner.workDir && fs.existsSync(runner.workDir)) {
     try {
-      const removeCmd = `cd ${runner.workDir} && ./config.sh remove --token "${runner.runnerToken || ''}" --unattended`;
-      await execAsync(removeCmd, { timeout: 30000 });
+      // workDir/token 均为系统生成值，仍统一走数组参数避免 shell 展开
+      await execFileAsync(
+        './config.sh',
+        ['remove', '--token', runner.runnerToken || '', '--unattended'],
+        { cwd: runner.workDir, timeout: 30000 }
+      );
     } catch {
       // Runner 可能已经从 GitHub 端移除，忽略
     }

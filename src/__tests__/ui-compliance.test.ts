@@ -281,29 +281,6 @@ describe('UI 组件渲染正确性', () => {
     }
   });
 
-  it('barrel export (index.ts) 应导出所有组件', () => {
-    const barrelPath = path.join(COMPONENTS_DIR, 'index.ts');
-    expect(fs.existsSync(barrelPath)).toBe(true);
-    const barrel = readFile(barrelPath);
-
-    const expectedExports = [
-      'Button',
-      'Input',
-      'Textarea',
-      'Select',
-      'StatusCard',
-      'PageContainer',
-      'EmptyState',
-      'ProCard',
-      'Skeleton',
-      'HeroBanner',
-      'ErrorAlert',
-    ];
-    for (const name of expectedExports) {
-      expect(barrel, `barrel 应导出 ${name}`).toContain(name);
-    }
-  });
-
   it('组件应有正确的 props 接口定义', () => {
     // Button 应支持 variant, size, loading 等核心 props
     const buttonTypes = readFile(path.join(COMPONENTS_DIR, 'Button/button-types.ts'));
@@ -336,11 +313,26 @@ describe('UI 组件渲染正确性', () => {
   });
 
   it('组件应导出 TypeScript 类型定义', () => {
-    const barrelPath = path.join(COMPONENTS_DIR, 'index.ts');
-    const barrel = readFile(barrelPath);
-    // barrel 应导出至少 10 个类型
-    const typeExports = barrel.match(/type\s+\w+Props/g) || [];
-    expect(typeExports.length).toBeGreaterThanOrEqual(10);
+    // 桶文件 index.ts 已删除（全项目均为深路径导入），改为逐个组件文件检查
+    const componentFiles = [
+      'Input.tsx',
+      'Textarea.tsx',
+      'Select.tsx',
+      'StatusCard.tsx',
+      'PageContainer.tsx',
+      'EmptyState.tsx',
+      'ProCard.tsx',
+      'Skeleton.tsx',
+      'HeroBanner.tsx',
+      'ErrorAlert.tsx',
+    ];
+    let typeExportCount = 0;
+    for (const comp of componentFiles) {
+      const content = readFile(path.join(COMPONENTS_DIR, comp));
+      typeExportCount += (content.match(/interface\s+\w+Props|type\s+\w+Props/g) || []).length;
+    }
+    // 全部组件合计应导出至少 10 个 Props 类型
+    expect(typeExportCount).toBeGreaterThanOrEqual(10);
   });
 });
 

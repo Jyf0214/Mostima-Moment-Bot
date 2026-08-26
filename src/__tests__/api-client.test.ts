@@ -57,7 +57,8 @@ describe('apiJson', () => {
     );
     const err = (await apiJson('/api/x').catch((e: unknown) => e)) as ApiError;
     expect(err.status).toBe(502);
-    expect(err.message).toBe('HTTP 502');
+    // 非 JSON 错误响应应携带响应体片段，便于看清具体错在哪（如网关错误页）
+    expect(err.message).toContain('bad gateway');
   });
 
   it('网络错误抛出 status=0 的 ApiError', async () => {

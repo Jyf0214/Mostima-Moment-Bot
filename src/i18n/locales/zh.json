@@ -161,6 +161,8 @@
     "close": "关闭",
     "retry": "重试",
     "copyFailed": "复制失败，请手动复制",
+    "copyError": "复制错误信息",
+    "copied": "已复制",
     "noResults": "没有匹配的结果"
   },
   "repos": {

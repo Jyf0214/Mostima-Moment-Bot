@@ -27,7 +27,30 @@ vi.mock('@/lib/exec', () => ({
   spawnAsync: mockSpawnAsync,
 }));
 
+// Mock 文件系统：隔离真实 ~/.qwen 目录，验证 settings.json 的读写行为
+vi.mock('fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('fs')>();
+  return {
+    ...actual,
+    existsSync: vi.fn().mockReturnValue(false),
+    writeFileSync: vi.fn(),
+    mkdirSync: vi.fn(),
+    readFileSync: actual.readFileSync,
+  };
+});
+
 import { runQwen } from '@/lib/qwen/runner';
+import { writeFileSync, existsSync } from 'fs';
+import { prisma } from '@/lib/prisma';
+
+const findUniqueMock = prisma.appConfig.findUnique as unknown as ReturnType<typeof vi.fn>;
+const existsSyncMock = existsSync as unknown as ReturnType<typeof vi.fn>;
+const writeFileSyncMock = writeFileSync as unknown as ReturnType<typeof vi.fn>;
+
+/** 模拟仪表盘「设置」页已填写 settings.json 内容（存于 AppConfig） */
+function mockSettingsConfigured(value = '{"api_key":"test","model":"qwen-plus"}') {
+  findUniqueMock.mockResolvedValue({ configValue: value });
+}
 
 function successResult(stdout: string): SpawnResult {
   return { stdout, stderr: '', exitCode: 0 };
@@ -43,6 +66,8 @@ describe('Qwen Runner - ENOENT 处理', () => {
     mockSpawnAsync.mockRejectedValue(
       Object.assign(new Error('spawn qwen ENOENT'), { code: 'ENOENT' })
     );
+    // 走到执行路径的用例需要 settings.json 已配置
+    mockSettingsConfigured();
   });
 
   afterEach(() => {
@@ -120,6 +145,7 @@ describe('Qwen Runner - ENOENT 处理', () => {
 describe('Qwen Runner - 预检', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSettingsConfigured();
   });
 
   afterEach(() => {
@@ -156,5 +182,60 @@ describe('Qwen Runner - 预检', () => {
     // 预检通过 + 首次执行 = 2次调用
     expect(mockSpawnAsync.mock.calls.length).toBeGreaterThanOrEqual(2);
     p.catch(() => {});
+  });
+});
+
+describe('Qwen Runner - settings.json 配置校验', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // 默认：数据库未配置、本地无 settings.json 文件
+    findUniqueMock.mockResolvedValue(null);
+    existsSyncMock.mockReturnValue(false);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('CLI 正常但 settings.json 未配置时应快速失败并给出指引', async () => {
+    mockSpawnAsync.mockResolvedValue(successResult('qwen version 1.0.0'));
+
+    const result = await runQwen('test prompt', { sessionId: 'settings-missing' });
+
+    expect(result.success).toBe(false);
+    expect(result.attempts).toBe(1);
+    expect(result.output).toContain('settings.json 未配置');
+    expect(result.output).toContain('仪表盘');
+    // 仅预检调用一次，不进入真实执行与重试
+    expect(mockSpawnAsync).toHaveBeenCalledTimes(1);
+  });
+
+  it('数据库中已填写 settings.json 时应写入文件并正常执行', async () => {
+    const content = '{"api_key":"k","model":"qwen-plus"}';
+    mockSettingsConfigured(content);
+    mockSpawnAsync.mockResolvedValue(successResult('done'));
+
+    const result = await runQwen('test prompt', { sessionId: 'settings-ok' });
+
+    expect(result.success).toBe(true);
+    expect(writeFileSyncMock).toHaveBeenCalled();
+    const [path, written] = writeFileSyncMock.mock.calls[0];
+    expect(String(path)).toContain('.qwen');
+    expect(written).toBe(content);
+
+    // 注入 qwen CLI 的环境变量不应再包含已废弃的 API 密钥变量
+    const opts = mockSpawnAsync.mock.calls[1][2] as { env: Record<string, string> };
+    expect(opts.env.UNLIMITED_OPENAI_API_KEY).toBeUndefined();
+  });
+
+  it('数据库未配置但存在手工维护的 settings.json 时应继续执行', async () => {
+    existsSyncMock.mockImplementation((p: unknown) => String(p).endsWith('settings.json'));
+    mockSpawnAsync.mockResolvedValue(successResult('ok'));
+
+    const result = await runQwen('test prompt', { sessionId: 'settings-manual' });
+
+    expect(result.success).toBe(true);
+    // 手工维护场景不应覆盖用户的 settings.json
+    expect(writeFileSyncMock).not.toHaveBeenCalled();
   });
 });

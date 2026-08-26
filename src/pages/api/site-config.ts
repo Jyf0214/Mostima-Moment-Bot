@@ -15,6 +15,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const key = getQueryParam(req, 'key');
 
     if (key) {
+      // 与 PUT 同一白名单：单键读取也只允许 hero_ 前缀，
+      // 否则公开端点可被用来拖走 jwt_secret / 私钥等敏感配置
+      if (!key.startsWith('hero_')) {
+        return res.status(400).json({ error: 'Only hero_ prefix keys are allowed' });
+      }
       const config = await prisma.appConfig.findUnique({
         where: { configKey: key },
       });

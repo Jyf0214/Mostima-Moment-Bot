@@ -639,7 +639,9 @@ export default function RunDetailPage() {
         variant="ghost"
         size="sm"
         icon={<ArrowLeft className="h-4 w-4" />}
-        onClick={() => router.push(`/dashboard/logs?repo=${encodeURIComponent(run.repoFullName)}`)}
+        onClick={() =>
+          router.push({ pathname: '/dashboard', query: { page: 'logs', repo: run.repoFullName } })
+        }
         className="text-zinc-500 hover:text-zinc-900 mb-6"
       >
         {t('repoDetail.back')}

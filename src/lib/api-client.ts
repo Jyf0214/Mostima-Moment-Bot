@@ -32,12 +32,47 @@ export interface ApiJsonOptions extends RequestInit {
 export async function apiJson<T = unknown>(url: string, options: ApiJsonOptions = {}): Promise<T> {
   const { timeoutMs = DEFAULT_TIMEOUT_MS, ...init } = options;
   const controller = new AbortController();
+  // 超时预算覆盖到响应体读取完毕：此前 timer 在响应头到达后即清除，
+  // 挂起的响应体会让请求永久悬挂、按钮永远转圈
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   let res: Response;
   try {
     res = await fetch(url, { ...init, signal: controller.signal });
+    let text = '';
+    try {
+      text = await res.text();
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        throw new ApiError(0, `timeout after ${timeoutMs}ms while reading response body`);
+      }
+      throw new ApiError(0, err instanceof Error ? err.message : String(err));
+    }
+
+    let data: unknown = null;
+    if (text) {
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = null;
+        // 非 JSON 响应体：失败时把片段带进错误信息，避免只看到笼统的 HTTP xxx
+        if (!res.ok) {
+          throw new ApiError(res.status, text.slice(0, 300) || `HTTP ${res.status}`);
+        }
+      }
+    }
+
+    if (!res.ok) {
+      const serverMessage =
+        data && typeof data === 'object' && typeof (data as { error?: unknown }).error === 'string'
+          ? (data as { error: string }).error
+          : '';
+      throw new ApiError(res.status, serverMessage || `HTTP ${res.status}`);
+    }
+
+    return data as T;
   } catch (err) {
+    if (err instanceof ApiError) throw err;
     if (err instanceof DOMException && err.name === 'AbortError') {
       throw new ApiError(0, `timeout after ${timeoutMs}ms`);
     }
@@ -45,26 +80,6 @@ export async function apiJson<T = unknown>(url: string, options: ApiJsonOptions 
   } finally {
     clearTimeout(timer);
   }
-
-  let data: unknown = null;
-  const text = await res.text();
-  if (text) {
-    try {
-      data = JSON.parse(text);
-    } catch {
-      data = null;
-    }
-  }
-
-  if (!res.ok) {
-    const serverMessage =
-      data && typeof data === 'object' && typeof (data as { error?: unknown }).error === 'string'
-        ? (data as { error: string }).error
-        : '';
-    throw new ApiError(res.status, serverMessage || `HTTP ${res.status}`);
-  }
-
-  return data as T;
 }
 
 /**

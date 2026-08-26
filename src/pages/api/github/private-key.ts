@@ -3,7 +3,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { setConfig, getConfig } from '@/lib/db';
-import { verifyAuthToken } from '@/lib/auth-utils';
+import { requireAdmin } from '@/lib/auth-utils';
 
 /**
  * GitHub App 私钥管理
@@ -11,18 +11,10 @@ import { verifyAuthToken } from '@/lib/auth-utils';
  * POST — 上传/更新私钥（存储到 AppConfig，加密）
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // 验证管理员身份
-  const authToken = req.cookies.auth_token;
-  if (!authToken) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
-
-  try {
-    verifyAuthToken(authToken);
-  } catch (err) {
-    logger.warn('[GitHub Private Key] JWT verification failed:', err);
-    return res.status(401).json({ error: 'Invalid token' });
-  }
+  // 私钥属高危配置：必须校验管理员身份。
+  // 此前只校验登录态（注释却写"管理员"），任意登录用户都能替换私钥
+  const payload = await requireAdmin(req, res);
+  if (!payload) return;
 
   if (req.method === 'GET') {
     try {

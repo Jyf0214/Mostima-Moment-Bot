@@ -1,5 +1,5 @@
 import { CheckResult } from './runner';
-import { execFileSync } from 'child_process';
+import { spawnAsync } from '../exec';
 import type { LogCollector } from './log-collector';
 
 /**
@@ -27,14 +27,17 @@ const ALLOWED_COMMANDS: ReadonlyMap<string, [program: string, args: string[]]> =
  *
  * 安全措施：
  * 1. 命令白名单校验 — 只允许 runner.ts 中预定义的命令
- * 2. 使用 execFileSync — 绕过 shell 解析，参数不经过 shell 展开
+ * 2. 使用 spawnAsync 数组参数 — 不经过 shell 展开
+ *
+ * 必须异步执行：此前用 execFileSync 同步等待（单步最长 10 分钟），
+ * 会冻结整个 Node 事件循环，期间健康检查、其他 webhook、仪表盘全部无响应
  */
-export function executeCheckStep(
+export async function executeCheckStep(
   name: string,
   command: string,
   workspaceDir: string,
   logCollector?: LogCollector
-): CheckResult {
+): Promise<CheckResult> {
   const startTime = Date.now();
 
   // 白名单校验：拒绝未授权的命令
@@ -56,30 +59,40 @@ export function executeCheckStep(
 
   try {
     const [program, args] = allowed;
-    const result = execFileSync(program, args, {
+    const result = await spawnAsync(program, args, {
       cwd: workspaceDir,
-      stdio: 'pipe',
       timeout: STEP_TIMEOUT_MS,
-      encoding: 'utf-8',
     });
 
-    logCollector?.finishStep(name, { conclusion: 'success', output: result || undefined });
-    return {
-      step: name,
-      status: 'PASS',
-      duration: Date.now() - startTime,
-      exitCode: 0,
-    };
-  } catch (error) {
-    const err = error as NodeJS.ErrnoException & { stderr?: Buffer; status?: number };
-    const output = err.stderr?.toString() || err.message;
+    if (result.exitCode === 0) {
+      logCollector?.finishStep(name, { conclusion: 'success', output: result.stdout || undefined });
+      return {
+        step: name,
+        status: 'PASS',
+        duration: Date.now() - startTime,
+        exitCode: 0,
+      };
+    }
+
+    const output = result.stderr || result.stdout || `Exit code: ${result.exitCode}`;
     logCollector?.finishStep(name, { conclusion: 'failure', output });
     return {
       step: name,
       status: 'FAIL',
       duration: Date.now() - startTime,
       output,
-      exitCode: err.status || 1,
+      exitCode: result.exitCode || 1,
+    };
+  } catch (error) {
+    const err = error as NodeJS.ErrnoException;
+    const output = err.message || 'Check step failed';
+    logCollector?.finishStep(name, { conclusion: 'failure', output });
+    return {
+      step: name,
+      status: 'FAIL',
+      duration: Date.now() - startTime,
+      output,
+      exitCode: 1,
     };
   }
 }

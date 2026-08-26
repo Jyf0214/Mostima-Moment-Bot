@@ -21,7 +21,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { logger } from '@/lib/logger';
-import { apiJson, isUnauthorized, redirectToHome } from '@/lib/api-client';
+import { apiJson, apiErrorMessage, isUnauthorized, redirectToHome } from '@/lib/api-client';
 
 interface TriggerRule {
   id: string;
@@ -143,7 +143,8 @@ export default function RepoDetailPage() {
         return;
       }
       setSaveMsgType('error');
-      setSaveMsg(t('repoDetail.saveFailed'));
+      // 透传服务端具体原因，不能只给通用"保存失败"
+      setSaveMsg(apiErrorMessage(err, t('repoDetail.saveFailed')));
     } finally {
       setSaving(false);
     }
@@ -175,7 +176,8 @@ export default function RepoDetailPage() {
         return;
       }
       setSaveMsgType('error');
-      setSaveMsg(t('repoDetail.saveFailed'));
+      // 透传服务端具体原因，不能只给通用"保存失败"
+      setSaveMsg(apiErrorMessage(err, t('repoDetail.saveFailed')));
     } finally {
       setResetting(false);
     }
@@ -474,7 +476,7 @@ export default function RepoDetailPage() {
                   size="sm"
                   icon={<ExternalLink className="h-3.5 w-3.5" />}
                   onClick={() =>
-                    router.push(`/dashboard/logs?repo=${encodeURIComponent(repoName)}`)
+                    router.push({ pathname: '/dashboard', query: { page: 'logs', repo: repoName } })
                   }
                   className="shrink-0 bg-cyan-50 text-cyan-600 hover:bg-cyan-100 border border-cyan-100"
                 >

@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { execFileSync } from 'child_process';
 import { requireAuth } from '@/lib/auth-utils';
+import { logger } from '@/lib/logger';
 
 /**
  * 检查 qwen CLI 是否已安装
@@ -23,10 +24,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     return res.status(200).json({ installed: true, version });
   } catch (error) {
-    const err = error as { code?: string };
+    const err = error as { code?: string; message?: string };
+    // 未安装（ENOENT）是正常状态；其他错误必须如实上报，不能伪装成"未安装"
     if (err.code === 'ENOENT') {
       return res.status(200).json({ installed: false, version: null });
     }
-    return res.status(200).json({ installed: false, version: null });
+    logger.error('[Qwen Status] Failed to check qwen CLI:', err.message);
+    return res.status(200).json({
+      installed: false,
+      version: null,
+      error: err.message || 'Failed to execute qwen CLI',
+    });
   }
 }

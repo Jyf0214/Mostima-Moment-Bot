@@ -175,7 +175,20 @@ export class LogCollector {
       }
       json = JSON.stringify(data, null, 2);
       if (json.length > MAX_TOTAL_LOGS) {
-        json = json.slice(0, MAX_TOTAL_LOGS);
+        // 仍超限时从最早的步骤开始整体丢弃，保证产出的是合法 JSON；
+        // 直接 slice 字符串会截出残缺 JSON，前端结构化视图将解析失败
+        while (json.length > MAX_TOTAL_LOGS && data.steps.length > 1) {
+          data.steps.shift();
+          data.steps[0].output = '...\n(earlier steps truncated)\n' + (data.steps[0].output || '');
+          json = JSON.stringify(data, null, 2);
+        }
+        if (json.length > MAX_TOTAL_LOGS) {
+          json = JSON.stringify({
+            ...data,
+            steps: data.steps.slice(-1),
+            truncated: true,
+          });
+        }
       }
     }
     return json;

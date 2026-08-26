@@ -60,16 +60,18 @@ export function getOrCreateSessionId(key: string): { sessionId: string; isResume
 
 /**
  * 配置 Qwen Settings
- * 每次启动时从数据库读取并写入 ~/.qwen/settings.json
- * 优先从数据库读取，其次从环境变量读取
+ * 每次启动时从数据库读取仪表盘填写的 settings.json 内容并写入 ~/.qwen/settings.json。
+ * Qwen 的认证与模型参数统一收敛到 settings.json，不再支持环境变量配置。
+ *
+ * @returns 是否存在可用的 Qwen 配置
  */
-export async function configureSettings(): Promise<void> {
+export async function configureSettings(): Promise<boolean> {
   ensureQwenDir();
   const settingsPath = join(QWEN_DIR, 'settings.json');
 
   let settingsJson: string | null = null;
 
-  // 优先从数据库读取
+  // 从数据库读取仪表盘中填写的 settings.json 内容
   try {
     const config = await prisma.appConfig.findUnique({
       where: { configKey: 'qwen_settings' },
@@ -81,15 +83,22 @@ export async function configureSettings(): Promise<void> {
     logger.warn('[Qwen Runner] Failed to read qwen_settings from database:', error);
   }
 
-  // 其次从环境变量读取
-  if (!settingsJson) {
-    settingsJson = process.env.QWEN_SETTINGS_JSON || null;
-  }
-
-  if (settingsJson && settingsJson.trim()) {
+  if (settingsJson) {
     writeFileSync(settingsPath, settingsJson, 'utf-8');
     logger.info('[Qwen Runner] Settings configured successfully');
+    return true;
   }
+
+  // 数据库未配置时，允许使用手工维护的 ~/.qwen/settings.json
+  if (existsSync(settingsPath)) {
+    logger.info('[Qwen Runner] Using manually maintained ~/.qwen/settings.json');
+    return true;
+  }
+
+  logger.warn(
+    '[Qwen Runner] Qwen settings.json 未配置：请在仪表盘「设置」页填写 Qwen Code 的 settings.json 内容'
+  );
+  return false;
 }
 
 /**
@@ -164,18 +173,17 @@ export async function runQwen(prompt: string, options: RunOptions = {}): Promise
   } = options;
 
   ensureQwenDir();
-  await configureSettings();
 
-  // 预检：确认 qwen CLI 已安装
+  // 预检：确认 qwen CLI 已安装（带超时，防止挂起导致整个 runQwen 永久 pending）
   try {
     const preflight = await spawnAsync('qwen', ['--version'], {
       env: process.env as NodeJS.ProcessEnv,
+      timeout: 15_000,
     });
     if (preflight.exitCode !== 0) {
       throw new Error('qwen CLI check failed');
     }
-  } catch (error) {
-    const err = error as NodeJS.ErrnoException;
+  } catch {
     const msg =
       'qwen CLI 未安装或不在 PATH 中。请确保 Docker 构建时已执行 npm install -g @qwen-code/qwen-code@latest，或在部署环境中手动安装。';
     logger.error(`[Qwen Runner] ${msg}`);
@@ -194,6 +202,24 @@ export async function runQwen(prompt: string, options: RunOptions = {}): Promise
     };
   }
 
+  // 配置校验：settings.json 必须就绪（仪表盘填写或手工维护），缺失时快速失败并给出指引
+  if (!(await configureSettings())) {
+    const msg =
+      'Qwen settings.json 未配置：请在仪表盘「设置」页填写并保存 Qwen Code 的 settings.json 内容。';
+    logger.error(`[Qwen Runner] ${msg}`);
+    logCollector?.finishStep(forceResume ? 'Qwen Resume' : 'Qwen Execute', {
+      conclusion: 'failure',
+      output: msg,
+    });
+    return {
+      success: false,
+      output: msg,
+      sessionId: providedSessionId || crypto.randomUUID(),
+      duration: 0,
+      attempts: 1,
+    };
+  }
+
   const sessionId = providedSessionId || crypto.randomUUID();
   const isResume = forceResume ?? false;
   let attempt = 1;
@@ -202,12 +228,12 @@ export async function runQwen(prompt: string, options: RunOptions = {}): Promise
   let output = '';
 
   // 环境变量
+  // Qwen 的认证与模型配置统一来自 ~/.qwen/settings.json，不再注入 API 密钥类环境变量
   const env: NodeJS.ProcessEnv = {
     ...process.env,
     NODE_PENDING_DEPRECATION: '0',
     QWEN_CODE_UNATTENDED_RETRY: '1',
     QWEN_CODE_SUPPRESS_YOLO_WARNING: '1',
-    UNLIMITED_OPENAI_API_KEY: process.env.UNLIMITED_OPENAI_API_KEY || '',
     GITHUB_TOKEN: process.env.GITHUB_TOKEN || '',
   };
 
@@ -343,6 +369,12 @@ export async function runQwen(prompt: string, options: RunOptions = {}): Promise
       success = true;
       logger.info('[Qwen Runner] Self-healing succeeded.');
       logCollector?.appendOutput(`[Resume] Succeeded after ${Date.now() - retryStart}ms\n`);
+      // 重试成功也必须闭合最初开启的步骤，否则该步骤永远停留在 in_progress，
+      // 后续步骤会被挂到它下面形成错误的日志层级
+      logCollector?.finishStep(isResume ? 'Qwen Resume' : 'Qwen Execute', {
+        conclusion: 'success',
+        output: output.slice(-5000) || undefined,
+      });
     } else {
       const duration = Date.now() - retryStart;
       logger.warn(`[Qwen Runner] Attempt ${attempt} failed. Duration: ${duration}ms`);

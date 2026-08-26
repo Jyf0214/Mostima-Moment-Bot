@@ -77,13 +77,21 @@ export async function auditPR(
     const msg = error instanceof Error ? error.message : String(error);
     logger.error(`[Security Auditor] Failed to checkout PR: ${msg}`);
     logCollector?.finishStep('Checkout', { conclusion: 'failure', output: msg });
-    return;
+    // checkout 失败必须向上抛出：静默 return 会让 webhook 把本次审计记为 success
+    throw new Error(`Failed to checkout PR #${safePRNumber}: ${msg}`);
   }
 
   // 4. 防死循环判定
   logCollector?.startStep('Cycle Check', 'Anti-infinite-loop detection');
   let cycleCount = 0;
-  const cycleFile = join(workspaceDir, '.qwen', 'audit_count.txt');
+  // 计数文件必须存放在仓库工作区之外（~/.qwen/）：
+  // 工作区在每次 webhook 前都会被 git clean -fd 清理，untracked 文件随即丢失，
+  // 导致熔断计数永远为 0、防死循环保护失效
+  const qwenStateDir = join(process.env.HOME || '/root', '.qwen');
+  if (!existsSync(qwenStateDir)) {
+    mkdirSync(qwenStateDir, { recursive: true });
+  }
+  const cycleFile = join(qwenStateDir, `audit_cycle_${safePRNumber}.txt`);
   try {
     const lastAuthor = execFileSync('git', ['log', '-1', '--pretty=format:%an'], {
       cwd: workspaceDir,
@@ -103,11 +111,6 @@ export async function auditPR(
 
     logCollector?.appendOutput(`Cycle count: ${cycleCount}/5\n`);
 
-    // 使用 Node.js fs 替代 shell mkdir -p，避免命令注入
-    const qwenDir = join(workspaceDir, '.qwen');
-    if (!existsSync(qwenDir)) {
-      mkdirSync(qwenDir, { recursive: true });
-    }
     writeFileSync(cycleFile, String(cycleCount), 'utf-8');
     logCollector?.finishStep('Cycle Check', { conclusion: 'success' });
   } catch (error) {

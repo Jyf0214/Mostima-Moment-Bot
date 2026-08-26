@@ -62,8 +62,10 @@ async function checkDatabaseHasData(): Promise<boolean> {
     dbCheckTime = now;
     return dbHasData;
   } catch {
-    // 数据库连接失败，保守处理：假设为空（需要完整环境变量）
-    return false;
+    // 数据库连接失败：与 /api/env-check 保持同一策略——不能假定「库里没数据」，
+    // 否则 DB 抖动期间已配置完成的站点会被误判为缺 Tier2 配置、
+    // 已登录用户被中途踢到 /env-error
+    return true;
   }
 }
 

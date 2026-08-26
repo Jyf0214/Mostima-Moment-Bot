@@ -393,7 +393,8 @@ describe('/api/ci/runs API', () => {
     it('应该通过 JWT cookie 认证', async () => {
       mockPrisma.ciRun.create.mockResolvedValue({ id: 1 });
 
-      const token = createTestToken({ githubId: 12345 });
+      // POST 写入运行记录要求管理员身份（与 requireAdmin 收紧后的契约一致）
+      const token = createTestToken({ githubId: 12345, isAdmin: true });
       const { req, res } = mockReqRes('POST', {
         body: { repo: 'owner/repo', event: 'push' },
         cookies: { auth_token: token },

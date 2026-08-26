@@ -271,11 +271,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // 1. 验证签名
   const signature = req.headers['x-hub-signature-256'] as string;
-  const secret = process.env.ENCRYPTION_KEY;
+  // 信任域分离：webhook 密钥配置在 GitHub（多名管理员可见），
+  // 不应复用派生全部库内加密数据的 ENCRYPTION_KEY；
+  // GITHUB_WEBHOOK_SECRET 未配置时回落旧值以保持存量部署兼容
+  const secret = process.env.GITHUB_WEBHOOK_SECRET || process.env.ENCRYPTION_KEY;
 
   if (!secret) {
-    logger.error('ENCRYPTION_KEY is not configured');
-    return res.status(500).json({ error: 'Server configuration error: ENCRYPTION_KEY not set' });
+    logger.error('Webhook secret is not configured');
+    return res
+      .status(500)
+      .json({
+        error: 'Server configuration error: GITHUB_WEBHOOK_SECRET / ENCRYPTION_KEY not set',
+      });
   }
 
   if (!verifyWebhookSignature(rawBody, signature, secret)) {
