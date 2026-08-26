@@ -437,6 +437,7 @@
     "qwenSettingsSaveFailed": "Qwen 配置保存失败",
     "clearConfig": "清除配置",
     "qwenSettingsHint": "配置 Qwen AI 模型设置，用于 Issue 修复和安全审计。需要有效的 JSON 格式。",
+    "qwenClearConfirm": "确定要清除已保存的 Qwen settings.json 配置吗？此操作不可撤销。",
     "dbMode": "数据库运行模式",
     "dbModeDescription": "启用后，系统将自动从数据库加载环境变量，无需在 .env 文件中配置所有变量。仅需 ENCRYPTION_KEY 和 DATABASE_URL。",
     "dbModeStatusEnabled": "已启用（{{count}} 个环境变量已存储）",
@@ -448,6 +449,7 @@
     "dbModeDisabled": "数据库模式已禁用",
     "dbModeDisableFailed": "禁用数据库模式失败",
     "dbModeHint": "启用后，下次启动只需提供 ENCRYPTION_KEY 和 DATABASE_URL 即可运行。",
+    "dbModeDisableConfirm": "确定要停用数据库运行模式吗？环境变量将恢复为仅从环境读取。",
     "statusUnknown": "状态未知",
     "qwenSaveBlockedHint": "已存在配置。为防止误覆盖，请先粘贴新配置再保存；如需清空请使用「清除配置」。"
   },
