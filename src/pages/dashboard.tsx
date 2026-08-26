@@ -7,6 +7,7 @@ import { logger } from '@/lib/logger';
 import { apiErrorMessage, apiJson, isUnauthorized, redirectToHome } from '@/lib/api-client';
 import { Button } from '@/components/ui/Button';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
+import { SuccessAlert } from '@/components/ui/SuccessAlert';
 import type { SidebarPage } from '@/components/dashboard/Sidebar';
 import OverviewPage from '@/components/dashboard/OverviewPage';
 import ReposPage from '@/components/dashboard/ReposPage';
@@ -17,7 +18,7 @@ import ApiKeyPage from '@/components/dashboard/ApiKeyPage';
 import SettingsPage from '@/components/dashboard/SettingsPage';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import type { ReposData } from '@/components/dashboard/types';
-import { CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 
 const VALID_PAGES: SidebarPage[] = [
   'overview',
@@ -139,22 +140,12 @@ export default function DashboardPage() {
         ) : undefined
       }
     >
-      {installMsg && (
-        <div
-          className={`mb-6 flex items-center gap-3 rounded-xl border px-4 py-3 text-sm ${
-            installMsgType === 'success'
-              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-              : 'border-red-200 bg-red-50 text-red-700'
-          }`}
-        >
-          {installMsgType === 'success' ? (
-            <CheckCircle2 className="h-4 w-4 shrink-0" />
-          ) : (
-            <AlertTriangle className="h-4 w-4 shrink-0" />
-          )}
-          {installMsg}
-        </div>
-      )}
+      {installMsg &&
+        (installMsgType === 'success' ? (
+          <SuccessAlert message={installMsg} className="mb-6" />
+        ) : (
+          <ErrorAlert message={installMsg} className="mb-6" />
+        ))}
 
       {/* 仓库加载失败横幅只在 overview/repos tab 展示，
           避免切到 settings/logs 等无关页面时仍挂着仓库报错 */}

@@ -6,6 +6,7 @@ import { useRouter } from 'next/router';
 import { Button } from '@/components/ui/Button';
 import { ProCard } from '@/components/ui/ProCard';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
+import { Toggle } from '@/components/ui/Toggle';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import {
   ArrowLeft,
@@ -278,21 +279,11 @@ export default function RepoDetailPage() {
                     className="flex items-center justify-between rounded-lg border border-zinc-200 bg-white p-3"
                   >
                     <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => toggleRule(rule.id)}
-                        role="switch"
-                        aria-checked={rule.enabled}
-                        aria-label={rule.name}
-                        className={`relative h-5 w-9 rounded-full transition-colors ${
-                          rule.enabled ? 'bg-purple-500' : 'bg-zinc-100'
-                        }`}
-                      >
-                        <span
-                          className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
-                            rule.enabled ? 'left-[18px] translate-x-0' : 'left-[2px]'
-                          }`}
-                        />
-                      </button>
+                      <Toggle
+                        checked={rule.enabled}
+                        onChange={() => toggleRule(rule.id)}
+                        label={rule.name}
+                      />
                       <div>
                         <p className="text-zinc-900 text-sm font-medium">{rule.name}</p>
                         <p className="text-zinc-400 text-xs">
@@ -356,21 +347,11 @@ export default function RepoDetailPage() {
                     className="flex items-center justify-between rounded-lg border border-zinc-200 bg-white p-3"
                   >
                     <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => toggleRule(rule.id)}
-                        role="switch"
-                        aria-checked={rule.enabled}
-                        aria-label={rule.name}
-                        className={`relative h-5 w-9 rounded-full transition-colors ${
-                          rule.enabled ? 'bg-purple-500' : 'bg-zinc-100'
-                        }`}
-                      >
-                        <span
-                          className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
-                            rule.enabled ? 'left-[18px] translate-x-0' : 'left-[2px]'
-                          }`}
-                        />
-                      </button>
+                      <Toggle
+                        checked={rule.enabled}
+                        onChange={() => toggleRule(rule.id)}
+                        label={rule.name}
+                      />
                       <div>
                         <p className="text-zinc-900 text-sm font-medium">{rule.name}</p>
                         <p className="text-zinc-400 text-xs">

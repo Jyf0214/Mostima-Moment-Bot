@@ -33,6 +33,8 @@ interface SidebarProps {
   onToggleCollapse: () => void;
   userLogin: string;
   onLogout: () => void;
+  /** 登出请求进行中：禁用按钮并旋转图标 */
+  loggingOut?: boolean;
 }
 
 const NAV_ITEMS: { id: SidebarPage; icon: React.ElementType; labelKey: string }[] = [
@@ -52,6 +54,7 @@ export default function Sidebar({
   onToggleCollapse,
   userLogin,
   onLogout,
+  loggingOut,
 }: SidebarProps) {
   const { t } = useTranslation();
   const [botName, setBotName] = useState('Bot');
@@ -153,11 +156,12 @@ export default function Sidebar({
           {!collapsed && <span className="text-zinc-500 text-xs truncate">@{userLogin}</span>}
           <button
             onClick={onLogout}
-            className="text-zinc-400 hover:text-red-500 transition-colors"
+            disabled={loggingOut}
+            className="text-zinc-400 hover:text-red-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             title={t('home.logout')}
             aria-label={t('home.logout')}
           >
-            <LogOut className="h-3.5 w-3.5" />
+            <LogOut className={`h-3.5 w-3.5 ${loggingOut ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </div>

@@ -84,8 +84,12 @@ export default function DashboardLayout({
       cancelled = true;
     };
   }, [scheduleHomeRedirect]);
+  // 登出进行中：禁用侧边栏登出入口，防止慢网络下连点发出多份请求且无任何反馈
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const handleLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
     } catch {
@@ -130,6 +134,7 @@ export default function DashboardLayout({
         onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         userLogin={user?.githubLogin || ''}
         onLogout={handleLogout}
+        loggingOut={loggingOut}
       />
       <div className="flex-1 overflow-y-auto">
         <div className="p-6 sm:p-8 max-w-5xl">

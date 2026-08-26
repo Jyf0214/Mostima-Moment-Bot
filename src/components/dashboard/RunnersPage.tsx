@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { ProCard } from '@/components/ui/ProCard';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
+import { SuccessAlert } from '@/components/ui/SuccessAlert';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { apiErrorMessage, apiJson, isUnauthorized, redirectToHome } from '@/lib/api-client';
 import { timeAgo } from '@/lib/time';
@@ -279,12 +280,7 @@ export default function RunnersPage() {
       )}
 
       {/* 创建成功提示 */}
-      {successMsg && (
-        <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-          <CheckCircle2 className="h-4 w-4 shrink-0" />
-          {successMsg}
-        </div>
-      )}
+      {successMsg && <SuccessAlert message={successMsg} className="mb-1" />}
 
       {/* 新建 Runner 表单 */}
       {showForm && (

@@ -6,6 +6,7 @@ import { useRouter } from 'next/router';
 import { ProCard } from '@/components/ui/ProCard';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Toggle } from '@/components/ui/Toggle';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { FolderGit2, ExternalLink, Settings } from 'lucide-react';
 import { logger } from '@/lib/logger';
@@ -25,8 +26,7 @@ export default function ReposPage({ repos, reposLoading, onRefresh }: Props) {
   const [toggleError, setToggleError] = useState<string | null>(null);
 
   const handleToggle = useCallback(
-    async (repo: Repo, e: React.MouseEvent) => {
-      e.stopPropagation();
+    async (repo: Repo) => {
       setTogglingId(repo.id);
       setToggleError(null);
       try {
@@ -111,20 +111,20 @@ export default function ReposPage({ repos, reposLoading, onRefresh }: Props) {
                 <p className="text-zinc-900 text-sm font-medium truncate">{repo.full_name}</p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <button
-                  onClick={(e) => handleToggle(repo, e)}
-                  disabled={togglingId === repo.id}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
-                    repo.enabled ? 'bg-emerald-500' : 'bg-zinc-300'
-                  }`}
-                  aria-label={repo.enabled ? t('repos.disable') : t('repos.enable')}
+                {/* 外层 span 阻止冒泡，避免点击开关触发整卡跳转 */}
+                <span
+                  className="inline-flex"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
                 >
-                  <span
-                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ${
-                      repo.enabled ? 'translate-x-6' : 'translate-x-1'
-                    }`}
+                  <Toggle
+                    checked={repo.enabled}
+                    onChange={() => handleToggle(repo)}
+                    disabled={togglingId === repo.id}
+                    label={repo.enabled ? t('repos.disable') : t('repos.enable')}
                   />
-                </button>
+                </span>
                 <a
                   href={repo.html_url}
                   target="_blank"

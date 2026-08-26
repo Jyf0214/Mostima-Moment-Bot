@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Textarea';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { SuccessAlert } from '@/components/ui/SuccessAlert';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { apiErrorMessage, apiJson, isUnauthorized, redirectToHome } from '@/lib/api-client';
 import {
@@ -35,16 +36,6 @@ interface BotInfo {
 const HERO_CONFIG_ITEMS = ['gradient', 'image_url'] as const;
 
 /** 登录态失效（401）统一跳回首页重新登录 */
-
-/** 成功提示横幅：与 ErrorAlert 对应的绿色样式 */
-function SuccessBanner({ message }: { message: string }) {
-  return (
-    <div className="mt-3 flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-      <CheckCircle2 className="h-4 w-4 shrink-0" />
-      {message}
-    </div>
-  );
-}
 
 export default function SettingsPage() {
   const { t } = useTranslation();
@@ -418,7 +409,7 @@ export default function SettingsPage() {
         </label>
         {uploadMsg &&
           (uploadMsgType === 'success' ? (
-            <SuccessBanner message={uploadMsg} />
+            <SuccessAlert message={uploadMsg} />
           ) : (
             <ErrorAlert message={uploadMsg} className="mt-3" />
           ))}
@@ -479,7 +470,7 @@ export default function SettingsPage() {
         </Button>
         {heroMsg &&
           (heroMsgType === 'success' ? (
-            <SuccessBanner message={heroMsg} />
+            <SuccessAlert message={heroMsg} />
           ) : (
             <ErrorAlert message={heroMsg} className="mt-3" />
           ))}
@@ -539,7 +530,7 @@ export default function SettingsPage() {
 
         {dbModeMsg &&
           (dbModeMsgType === 'success' ? (
-            <SuccessBanner message={dbModeMsg} />
+            <SuccessAlert message={dbModeMsg} />
           ) : (
             <ErrorAlert message={dbModeMsg} className="mt-3" />
           ))}
@@ -656,7 +647,7 @@ export default function SettingsPage() {
         )}
         {qwenMsg &&
           (qwenMsgType === 'success' ? (
-            <SuccessBanner message={qwenMsg} />
+            <SuccessAlert message={qwenMsg} />
           ) : (
             <ErrorAlert message={qwenMsg} className="mt-3" />
           ))}
