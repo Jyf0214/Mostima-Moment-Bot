@@ -37,14 +37,31 @@ interface SidebarProps {
   loggingOut?: boolean;
 }
 
-const NAV_ITEMS: { id: SidebarPage; icon: React.ElementType; labelKey: string }[] = [
-  { id: 'overview', icon: LayoutDashboard, labelKey: 'sidebar.overview' },
-  { id: 'repos', icon: FolderGit2, labelKey: 'sidebar.repos' },
-  { id: 'logs', icon: ScrollText, labelKey: 'sidebar.logs' },
-  { id: 'runners', icon: Server, labelKey: 'sidebar.runners' },
-  { id: 'env', icon: Shield, labelKey: 'sidebar.envVars' },
-  { id: 'apikeys', icon: Key, labelKey: 'sidebar.apiKeys' },
-  { id: 'settings', icon: Settings, labelKey: 'sidebar.settings' },
+/** 侧边栏按功能域分三组：总览 / CI 运转 / 系统配置（此前七项平铺无层次） */
+const NAV_GROUPS: {
+  labelKey: string;
+  items: { id: SidebarPage; icon: React.ElementType; labelKey: string }[];
+}[] = [
+  {
+    labelKey: 'sidebar.groupOverview',
+    items: [{ id: 'overview', icon: LayoutDashboard, labelKey: 'sidebar.overview' }],
+  },
+  {
+    labelKey: 'sidebar.groupCi',
+    items: [
+      { id: 'repos', icon: FolderGit2, labelKey: 'sidebar.repos' },
+      { id: 'logs', icon: ScrollText, labelKey: 'sidebar.logs' },
+      { id: 'runners', icon: Server, labelKey: 'sidebar.runners' },
+    ],
+  },
+  {
+    labelKey: 'sidebar.groupSystem',
+    items: [
+      { id: 'env', icon: Shield, labelKey: 'sidebar.envVars' },
+      { id: 'apikeys', icon: Key, labelKey: 'sidebar.apiKeys' },
+      { id: 'settings', icon: Settings, labelKey: 'sidebar.settings' },
+    ],
+  },
 ];
 
 export default function Sidebar({
@@ -101,28 +118,40 @@ export default function Sidebar({
         aria-label={t('sidebar.navLabel') || 'Main navigation'}
         className="flex-1 py-3 px-2 space-y-1 overflow-y-auto min-h-0"
       >
-        {NAV_ITEMS.map((item) => {
-          const Icon = item.icon;
-          const isActive = activePage === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => onNavigate(item.id)}
-              aria-label={t(item.labelKey)}
-              title={collapsed ? t(item.labelKey) : undefined}
-              className={cn(
-                'w-full flex items-center rounded-xl text-sm transition-all',
-                collapsed ? 'justify-center h-10' : 'gap-3 px-3 py-2.5',
-                isActive
-                  ? 'bg-gradient-to-r from-zinc-900 to-zinc-800 text-white shadow-sm'
-                  : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
-              )}
-            >
-              <Icon className="h-4 w-4 shrink-0" />
-              {!collapsed && <span className="truncate">{t(item.labelKey)}</span>}
-            </button>
-          );
-        })}
+        {NAV_GROUPS.map((group) => (
+          <div key={group.labelKey} className="mb-2">
+            {!collapsed ? (
+              <p className="px-3 pt-2 pb-1 text-[10px] font-medium uppercase tracking-wider text-zinc-400">
+                {t(group.labelKey)}
+              </p>
+            ) : (
+              /* 折叠模式下组标题退化为细分隔线，保留视觉分组 */
+              <div className="mx-2 my-2 border-t border-zinc-100" />
+            )}
+            {group.items.map((item) => {
+              const Icon = item.icon;
+              const isActive = activePage === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => onNavigate(item.id)}
+                  aria-label={t(item.labelKey)}
+                  title={collapsed ? t(item.labelKey) : undefined}
+                  className={cn(
+                    'w-full flex items-center rounded-xl text-sm transition-all',
+                    collapsed ? 'justify-center h-10' : 'gap-3 px-3 py-2.5',
+                    isActive
+                      ? 'bg-gradient-to-r from-zinc-900 to-zinc-800 text-white shadow-sm'
+                      : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
+                  )}
+                >
+                  <Icon className="h-4 w-4 shrink-0" />
+                  {!collapsed && <span className="truncate">{t(item.labelKey)}</span>}
+                </button>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
       {/* Bottom */}

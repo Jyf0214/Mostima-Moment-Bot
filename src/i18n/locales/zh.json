@@ -183,6 +183,9 @@
     "settings": "设置",
     "collapse": "收起",
     "expand": "展开",
+    "groupOverview": "总览",
+    "groupCi": "CI 运转",
+    "groupSystem": "系统配置",
     "navLabel": "主导航"
   },
   "repoDetail": {

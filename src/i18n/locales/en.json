@@ -183,6 +183,9 @@
     "settings": "Settings",
     "collapse": "Collapse",
     "expand": "Expand",
+    "groupOverview": "Overview",
+    "groupCi": "CI Operations",
+    "groupSystem": "System",
     "navLabel": "Main navigation"
   },
   "repoDetail": {
