@@ -229,44 +229,33 @@ export default function RunnersPage() {
 
   return (
     <div className="space-y-6">
-      {/* 标题区 */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100">
-            <Server className="h-5 w-5 text-zinc-500" />
-          </div>
-          <div>
-            <h2 className="text-lg font-bold text-zinc-900">{t('runner.title')}</h2>
-            <p className="text-zinc-500 text-xs">{t('runner.subtitle')}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={<RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />}
-            onClick={fetchRunners}
-            className="text-zinc-500 hover:text-zinc-700"
-          >
-            {t('dashboard.refresh')}
-          </Button>
-          <Button
-            variant="default"
-            size="sm"
-            icon={<Plus className="h-4 w-4" />}
-            onClick={() => {
-              if (showForm) {
-                closeForm();
-              } else {
-                setShowForm(true);
-                setSuccessMsg(null);
-                fetchRepos();
-              }
-            }}
-          >
-            {t('runner.addButton')}
-          </Button>
-        </div>
+      {/* 操作区：页面标题由布局层统一渲染，避免同屏出现两个大标题 */}
+      <div className="flex items-center justify-end gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          icon={<RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />}
+          onClick={fetchRunners}
+          className="text-zinc-500 hover:text-zinc-700"
+        >
+          {t('dashboard.refresh')}
+        </Button>
+        <Button
+          variant="default"
+          size="sm"
+          icon={<Plus className="h-4 w-4" />}
+          onClick={() => {
+            if (showForm) {
+              closeForm();
+            } else {
+              setShowForm(true);
+              setSuccessMsg(null);
+              fetchRepos();
+            }
+          }}
+        >
+          {t('runner.addButton')}
+        </Button>
       </div>
 
       {/* 错误提示 */}

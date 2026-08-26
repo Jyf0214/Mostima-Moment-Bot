@@ -9,15 +9,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { apiErrorMessage, apiJson, isUnauthorized, redirectToHome } from '@/lib/api-client';
-import {
-  CheckCircle2,
-  XCircle,
-  RefreshCw,
-  Search,
-  Shield,
-  ChevronDown,
-  BookOpen,
-} from 'lucide-react';
+import { CheckCircle2, XCircle, RefreshCw, Search, ChevronDown, BookOpen } from 'lucide-react';
 
 interface EnvVarDetail {
   key: string;
@@ -113,14 +105,8 @@ export default function EnvVarsPage() {
   if (loadError) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-bold text-zinc-900 flex items-center gap-2">
-              <Shield className="h-5 w-5 text-zinc-500" />
-              {t('envPage.title')}
-            </h2>
-            <p className="text-zinc-500 text-sm mt-1">{t('envPage.subtitle')}</p>
-          </div>
+        {/* 操作区：页面标题由布局层统一渲染，避免同屏出现两个大标题 */}
+        <div className="flex items-center justify-end">
           <Button
             variant="ghost"
             size="sm"
@@ -139,20 +125,14 @@ export default function EnvVarsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-zinc-900 flex items-center gap-2">
-            <Shield className="h-5 w-5 text-zinc-500" />
-            {t('envPage.title')}
-          </h2>
-          <p className="text-zinc-500 text-sm mt-1">{t('envPage.subtitle')}</p>
-        </div>
+      {/* 操作区：页面标题由布局层统一渲染，避免同屏出现两个大标题 */}
+      <div className="flex items-center justify-end">
         <Button
           variant="ghost"
           size="sm"
           icon={<RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />}
           onClick={loadEnvStatus}
+          disabled={loading}
           className="text-zinc-500 hover:text-zinc-700"
         >
           {t('dashboard.refresh')}

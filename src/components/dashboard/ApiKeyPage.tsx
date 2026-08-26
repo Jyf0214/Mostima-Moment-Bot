@@ -126,17 +126,8 @@ export default function ApiKeyPage() {
 
   return (
     <div className="space-y-6">
-      {/* 标题区 */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100">
-            <Key className="h-5 w-5 text-zinc-500" />
-          </div>
-          <div>
-            <h2 className="text-lg font-bold text-zinc-900">{t('apiKey.title')}</h2>
-            <p className="text-zinc-500 text-xs">{t('apiKey.subtitle')}</p>
-          </div>
-        </div>
+      {/* 操作区：页面标题由布局层统一渲染，避免同屏出现两个大标题 */}
+      <div className="flex items-center justify-end">
         <Button
           variant="ghost"
           size="sm"
