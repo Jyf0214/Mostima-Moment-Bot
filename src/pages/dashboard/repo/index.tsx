@@ -38,6 +38,39 @@ interface TriggerRule {
   checks: Array<{ name: string; type: string; command?: string }>;
 }
 
+/** 规则开关行：CI/CD 与审计/自动修复两组共用（此前是两段近乎复制的 JSX） */
+function RuleRow({
+  rule,
+  onToggle,
+  description,
+  trailing,
+}: {
+  rule: TriggerRule;
+  onToggle: (id: string) => void;
+  description: React.ReactNode;
+  trailing?: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center justify-between rounded-lg border border-zinc-200 bg-white p-3">
+      <div className="flex items-center gap-3">
+        <Toggle checked={rule.enabled} onChange={() => onToggle(rule.id)} label={rule.name} />
+        <div>
+          <p className="text-zinc-900 text-sm font-medium">{rule.name}</p>
+          <p className="text-zinc-400 text-xs">{description}</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-1">
+        {trailing}
+        {rule.enabled ? (
+          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+        ) : (
+          <XCircle className="h-3.5 w-3.5 text-zinc-300" />
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function RepoDetailPage() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -274,32 +307,17 @@ export default function RepoDetailPage() {
 
               <div className="space-y-3">
                 {cicdRules.map((rule) => (
-                  <div
+                  <RuleRow
                     key={rule.id}
-                    className="flex items-center justify-between rounded-lg border border-zinc-200 bg-white p-3"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Toggle
-                        checked={rule.enabled}
-                        onChange={() => toggleRule(rule.id)}
-                        label={rule.name}
-                      />
-                      <div>
-                        <p className="text-zinc-900 text-sm font-medium">{rule.name}</p>
-                        <p className="text-zinc-400 text-xs">
-                          {rule.events.join(' / ')}{' '}
-                          {rule.branches && `→ ${rule.branches.include.join(', ')}`}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      {rule.enabled ? (
-                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                      ) : (
-                        <XCircle className="h-3.5 w-3.5 text-zinc-300" />
-                      )}
-                    </div>
-                  </div>
+                    rule={rule}
+                    onToggle={toggleRule}
+                    description={
+                      <>
+                        {rule.events.join(' / ')}{' '}
+                        {rule.branches && `→ ${rule.branches.include.join(', ')}`}
+                      </>
+                    }
+                  />
                 ))}
               </div>
 
@@ -342,38 +360,25 @@ export default function RepoDetailPage() {
 
               <div className="space-y-3">
                 {auditRules.concat(autoFixRules).map((rule) => (
-                  <div
+                  <RuleRow
                     key={rule.id}
-                    className="flex items-center justify-between rounded-lg border border-zinc-200 bg-white p-3"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Toggle
-                        checked={rule.enabled}
-                        onChange={() => toggleRule(rule.id)}
-                        label={rule.name}
-                      />
-                      <div>
-                        <p className="text-zinc-900 text-sm font-medium">{rule.name}</p>
-                        <p className="text-zinc-400 text-xs">
-                          {rule.events.join(' / ')}
-                          {rule.actions && ` → ${rule.actions.join(', ')}`}
-                          {rule.labels && ` [${rule.labels.join(', ')}]`}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      {rule.requiredAuthorAssociation && (
+                    rule={rule}
+                    onToggle={toggleRule}
+                    description={
+                      <>
+                        {rule.events.join(' / ')}
+                        {rule.actions && ` → ${rule.actions.join(', ')}`}
+                        {rule.labels && ` [${rule.labels.join(', ')}]`}
+                      </>
+                    }
+                    trailing={
+                      rule.requiredAuthorAssociation ? (
                         <span className="text-[10px] text-zinc-300 rounded px-1.5 py-0.5">
                           {rule.requiredAuthorAssociation.join(' | ')}
                         </span>
-                      )}
-                      {rule.enabled ? (
-                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                      ) : (
-                        <XCircle className="h-3.5 w-3.5 text-zinc-300" />
-                      )}
-                    </div>
-                  </div>
+                      ) : undefined
+                    }
+                  />
                 ))}
               </div>
             </ProCard>
